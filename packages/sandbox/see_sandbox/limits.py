@@ -1,0 +1,21 @@
+from __future__ import annotations
+
+TIMEOUT_MS = 10_000
+WORKER_START_TIMEOUT_MS = 60_000
+MEMORY_BYTES = 256 * 1024 * 1024
+MAX_CODE_BYTES = 32 * 1024
+MAX_INPUT_BYTES = 256 * 1024
+MAX_OUTPUT_BYTES = 256 * 1024
+MAX_LOG_BYTES = 8 * 1024
+MAX_AST_NODES = 5_000
+MAX_LITERAL_CHARS = 10_000
+
+LIMITS = {
+    "timeoutMs": TIMEOUT_MS,
+    "workerStartTimeoutMs": WORKER_START_TIMEOUT_MS,
+    "memoryBytes": MEMORY_BYTES,
+    "maxCodeBytes": MAX_CODE_BYTES,
+    "maxInputBytes": MAX_INPUT_BYTES,
+    "maxOutputBytes": MAX_OUTPUT_BYTES,
+    "maxLogBytes": MAX_LOG_BYTES,
+}

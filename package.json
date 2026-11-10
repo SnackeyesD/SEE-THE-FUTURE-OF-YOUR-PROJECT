@@ -1,0 +1,42 @@
+{
+  "name": "see-the-future",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Application desktop local-first « bring your own AI » pour simuler son idée de business.",
+  "workspaces": [
+    "apps/desktop",
+    "packages/protocol",
+    "packages/ui"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @see/desktop",
+    "dev:web": "npm run dev:web -w @see/desktop",
+    "build": "npm run build -w @see/desktop",
+    "build:web": "npm run build:web -w @see/desktop",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "protocol:generate": "npm run generate -w @see/protocol",
+    "protocol:check": "npm run check -w @see/protocol",
+    "sidecar:sync": "uv sync --project apps/desktop/src-tauri/sidecar",
+    "sidecar:lint": "uv run --project apps/desktop/src-tauri/sidecar ruff check apps/desktop/src-tauri/sidecar",
+    "sidecar:test": "uv run --project apps/desktop/src-tauri/sidecar pytest apps/desktop/src-tauri/sidecar/tests",
+    "engine:sync": "uv sync --project packages/engine",
+    "engine:lint": "uv run --project packages/engine ruff check packages/engine",
+    "engine:test": "uv run --project packages/engine pytest packages/engine/tests",
+    "providers:sync": "uv sync --project packages/providers",
+    "providers:lint": "uv run --project packages/providers ruff check packages/providers",
+    "providers:test": "uv run --project packages/providers pytest packages/providers/tests",
+    "storage:sync": "uv sync --project packages/storage",
+    "storage:lint": "uv run --project packages/storage ruff check packages/storage",
+    "storage:test": "uv run --project packages/storage pytest packages/storage/tests",
+    "agent:sync": "uv sync --project packages/agent-core",
+    "agent:lint": "uv run --project packages/agent-core ruff check packages/agent-core",
+    "agent:test": "uv run --project packages/agent-core pytest packages/agent-core/tests",
+    "icons": "powershell -ExecutionPolicy Bypass -File infra/scripts/generate-icons.ps1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "npm@11.11.1"
+}

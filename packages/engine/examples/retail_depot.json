@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "Dépôt de boissons — quartier",
+  "model": "retail_depot",
+  "currency": "XOF",
+  "horizonMonths": 12,
+  "seasonality": [0.85, 0.8, 0.9, 1.0, 1.05, 1.1, 1.15, 1.2, 1.1, 1.0, 0.95, 1.25],
+  "notes": "Exemple de référence pour tester le moteur et la CLI. Les valeurs sont illustratives.",
+  "assumptions": {
+    "initial_cash": {
+      "value": 3500000,
+      "source": "estimation",
+      "confidence": 0.7
+    },
+    "unit_price": {
+      "value": 500,
+      "distribution": { "kind": "normal", "mean": 500, "std": 25 },
+      "min": 400,
+      "source": "relevé terrain",
+      "confidence": 0.8
+    },
+    "unit_cost": {
+      "value": 320,
+      "distribution": { "kind": "normal", "mean": 320, "std": 15 },
+      "min": 250,
+      "source": "fournisseur",
+      "confidence": 0.8
+    },
+    "fixed_costs_monthly": {
+      "value": 250000,
+      "distribution": { "kind": "normal", "mean": 250000, "std": 20000 },
+      "min": 150000,
+      "source": "estimation",
+      "confidence": 0.6
+    },
+    "demand_mean_monthly": {
+      "value": 2300,
+      "distribution": { "kind": "normal", "mean": 2300, "std": 300 },
+      "min": 500,
+      "source": "estimation",
+      "confidence": 0.5
+    },
+    "demand_cv": {
+      "value": 0.25,
+      "distribution": { "kind": "triangular", "low": 0.15, "mode": 0.25, "high": 0.4 },
+      "source": "estimation",
+      "confidence": 0.4
+    },
+    "loss_rate": {
+      "value": 0.03,
+      "distribution": { "kind": "uniform", "low": 0.01, "high": 0.06 },
+      "source": "observation",
+      "confidence": 0.5
+    },
+    "logistics_cost_per_unit": {
+      "value": 20,
+      "source": "fournisseur",
+      "confidence": 0.8
+    },
+    "target_stock_months": {
+      "value": 1.0,
+      "distribution": { "kind": "uniform", "low": 2.0, "high": 3.0 },
+      "source": "pratique du gérant",
+      "confidence": 0.5
+    },
+    "reorder_lead_time_months": {
+      "value": 1.0,
+      "distribution": { "kind": "empirical", "values": [1, 2], "weights": [0.7, 0.3] },
+      "source": "fournisseur",
+      "confidence": 0.6
+    },
+    "initial_stock": {
+      "value": 3500,
+      "source": "inventaire",
+      "confidence": 0.9
+    },
+    "tax_rate": {
+      "value": 0.25,
+      "source": "réglementation",
+      "confidence": 0.9
+    }
+  }
+}

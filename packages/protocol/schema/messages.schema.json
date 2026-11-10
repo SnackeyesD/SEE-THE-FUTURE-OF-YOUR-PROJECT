@@ -1,0 +1,1693 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seethefuture.local/protocol/messages.schema.json",
+  "title": "See The Future IPC protocol",
+  "description": "Source unique des messages JSON-RPC 2.0 échangés entre le shell Tauri et le sidecar Python.",
+  "version": "1.6.0",
+  "$defs": {
+    "RequestId": {
+      "description": "Identifiant de requête JSON-RPC (entier ou chaîne).",
+      "anyOf": [{ "type": "integer" }, { "type": "string" }]
+    },
+    "JSONRPCErrorObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "integer" },
+        "message": { "type": "string" },
+        "data": {}
+      }
+    },
+    "JSONRPCRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jsonrpc", "method"],
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "$ref": "#/$defs/RequestId" },
+        "method": { "type": "string" },
+        "params": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "JSONRPCResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jsonrpc", "id"],
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "$ref": "#/$defs/RequestId" },
+        "result": {},
+        "error": { "$ref": "#/$defs/JSONRPCErrorObject" }
+      }
+    },
+    "MethodName": {
+      "description": "Méthodes exposées par le sidecar.",
+      "enum": [
+        "ping",
+        "health",
+        "log",
+        "shutdown",
+        "simulate",
+        "simulate.progress",
+        "project.list",
+        "project.create",
+        "project.open",
+        "project.rename",
+        "project.duplicate",
+        "project.archive",
+        "project.restore",
+        "project.trash",
+        "project.delete",
+        "project.export",
+        "project.import",
+        "project.size",
+        "project.data",
+        "project.brief.save",
+        "project.scenario.save",
+        "project.simulate",
+        "integrity.check",
+        "storage.backup",
+        "provider.catalog",
+        "provider.profile.list",
+        "provider.profile.save",
+        "provider.profile.delete",
+        "provider.role.list",
+        "provider.role.set",
+        "provider.role.delete",
+        "provider.test",
+        "provider.models",
+        "provider.chat",
+        "provider.usage",
+        "provider.budget.get",
+        "provider.budget.set",
+        "provider.budget.delete",
+        "agent.prepare",
+        "agent.state",
+        "agent.start",
+        "agent.reset",
+        "agent.turn",
+        "agent.permission.list",
+        "agent.permission.set",
+        "agent.permission.delete",
+        "agent.trace",
+        "agent.trace.export",
+        "agent.tools"
+      ]
+    },
+    "PingParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "echo": { "type": "string" }
+      }
+    },
+    "PingResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pong", "timestamp"],
+      "properties": {
+        "pong": { "type": "boolean" },
+        "echo": { "type": "string" },
+        "timestamp": { "type": "string" }
+      }
+    },
+    "HealthResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "sidecarVersion", "protocolVersion", "pid", "python"],
+      "properties": {
+        "status": { "type": "string" },
+        "sidecarVersion": { "type": "string" },
+        "protocolVersion": { "type": "string" },
+        "pid": { "type": "integer" },
+        "python": { "type": "string" }
+      }
+    },
+    "LogParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "message"],
+      "properties": {
+        "level": { "enum": ["debug", "info", "warn", "error"] },
+        "message": { "type": "string" }
+      }
+    },
+    "LogResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logged"],
+      "properties": {
+        "logged": { "type": "boolean" }
+      }
+    },
+    "ShutdownResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok"],
+      "properties": {
+        "ok": { "type": "boolean" }
+      }
+    },
+    "SidecarStatus": {
+      "description": "État du sidecar, exposé par le shell Rust à l'UI.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["running"],
+      "properties": {
+        "running": { "type": "boolean" },
+        "pid": { "type": "integer" },
+        "error": { "type": "string" }
+      }
+    },
+    "DistributionSpec": {
+      "description": "Paramètres d'une loi de probabilité utilisée pour une hypothèse.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["normal", "lognormal", "triangular", "uniform", "poisson", "empirical"]
+        },
+        "mean": { "type": "number" },
+        "std": { "type": "number" },
+        "sigma": { "type": "number" },
+        "low": { "type": "number" },
+        "mode": { "type": "number" },
+        "high": { "type": "number" },
+        "values": {
+          "type": "array",
+          "items": { "type": "number" }
+        },
+        "weights": {
+          "type": "array",
+          "items": { "type": "number" }
+        }
+      }
+    },
+    "Hypothesis": {
+      "description": "Hypothèse métier, déterministe ou incertaine, avec sa provenance.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value"],
+      "properties": {
+        "value": { "type": "number" },
+        "distribution": { "$ref": "#/$defs/DistributionSpec" },
+        "source": { "type": "string" },
+        "confidence": { "type": "number" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "description": { "type": "string" }
+      }
+    },
+    "Scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "schemaVersion": { "const": "1.0.0" },
+        "name": { "type": "string" },
+        "model": { "enum": ["retail_depot"] },
+        "currency": { "type": "string" },
+        "horizonMonths": { "type": "integer" },
+        "assumptions": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/Hypothesis" }
+        },
+        "seasonality": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": { "type": "number" }
+            },
+            { "type": "null" }
+          ]
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "SimulationConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runs": { "type": "integer" },
+        "seed": { "type": "integer" },
+        "batchSize": { "type": "integer" },
+        "histogramBins": { "type": "integer" }
+      }
+    },
+    "Metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "meanProfit",
+        "medianProfit",
+        "stdProfit",
+        "minProfit",
+        "maxProfit",
+        "p10",
+        "p50",
+        "p90",
+        "lossProbability",
+        "profitPositiveProbability",
+        "meanRevenue",
+        "meanCosts",
+        "meanTax",
+        "meanCashEnd",
+        "meanUnitsSold",
+        "meanUnitsLost",
+        "meanStockoutMonths",
+        "meanEndStock",
+        "meanInventoryValue",
+        "meanProfitMargin"
+      ],
+      "properties": {
+        "meanProfit": { "type": "number" },
+        "medianProfit": { "type": "number" },
+        "stdProfit": { "type": "number" },
+        "minProfit": { "type": "number" },
+        "maxProfit": { "type": "number" },
+        "p10": { "type": "number" },
+        "p50": { "type": "number" },
+        "p90": { "type": "number" },
+        "lossProbability": { "type": "number" },
+        "profitPositiveProbability": { "type": "number" },
+        "meanRevenue": { "type": "number" },
+        "meanCosts": { "type": "number" },
+        "meanTax": { "type": "number" },
+        "meanCashEnd": { "type": "number" },
+        "meanUnitsSold": { "type": "number" },
+        "meanUnitsLost": { "type": "number" },
+        "meanStockoutMonths": { "type": "number" },
+        "meanEndStock": { "type": "number" },
+        "meanInventoryValue": { "type": "number" },
+        "meanProfitMargin": { "type": "number" }
+      }
+    },
+    "HistogramBin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lower", "upper", "count", "probability"],
+      "properties": {
+        "lower": { "type": "number" },
+        "upper": { "type": "number" },
+        "count": { "type": "integer" },
+        "probability": { "type": "number" }
+      }
+    },
+    "Histogram": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bins"],
+      "properties": {
+        "bins": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/HistogramBin" }
+        }
+      }
+    },
+    "MonthlyAverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "month",
+        "meanRevenue",
+        "meanProfit",
+        "meanDemand",
+        "meanUnitsSold",
+        "meanStockEnd",
+        "stockoutProbability"
+      ],
+      "properties": {
+        "index": { "type": "integer" },
+        "month": { "type": "integer" },
+        "meanRevenue": { "type": "number" },
+        "meanProfit": { "type": "number" },
+        "meanDemand": { "type": "number" },
+        "meanUnitsSold": { "type": "number" },
+        "meanStockEnd": { "type": "number" },
+        "stockoutProbability": { "type": "number" }
+      }
+    },
+    "MonthlyAverages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["values"],
+      "properties": {
+        "values": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/MonthlyAverage" }
+        }
+      }
+    },
+    "SensitivityEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hypothesis", "correlation", "contribution"],
+      "properties": {
+        "hypothesis": { "type": "string" },
+        "correlation": { "type": "number" },
+        "contribution": { "type": "number" }
+      }
+    },
+    "BreakEven": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "monthlyFixedCosts",
+        "unitMargin",
+        "breakEvenUnitsMonthly",
+        "breakEvenRevenueMonthly"
+      ],
+      "properties": {
+        "monthlyFixedCosts": { "type": "number" },
+        "unitMargin": { "type": "number" },
+        "breakEvenUnitsMonthly": {
+          "anyOf": [{ "type": "number" }, { "type": "null" }]
+        },
+        "breakEvenRevenueMonthly": {
+          "anyOf": [{ "type": "number" }, { "type": "null" }]
+        }
+      }
+    },
+    "SimulationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runId",
+        "engineVersion",
+        "scenarioName",
+        "model",
+        "currency",
+        "horizonMonths",
+        "runs",
+        "seed",
+        "durationMs",
+        "metrics",
+        "histogram",
+        "monthly",
+        "sensitivity",
+        "breakEven"
+      ],
+      "properties": {
+        "runId": { "type": "string" },
+        "engineVersion": { "type": "string" },
+        "scenarioName": { "type": "string" },
+        "model": { "type": "string" },
+        "currency": { "type": "string" },
+        "horizonMonths": { "type": "integer" },
+        "runs": { "type": "integer" },
+        "seed": { "type": "integer" },
+        "durationMs": { "type": "number" },
+        "metrics": { "$ref": "#/$defs/Metrics" },
+        "histogram": { "$ref": "#/$defs/Histogram" },
+        "monthly": { "$ref": "#/$defs/MonthlyAverages" },
+        "sensitivity": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SensitivityEntry" }
+        },
+        "breakEven": { "$ref": "#/$defs/BreakEven" }
+      }
+    },
+    "SimulateParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario"],
+      "properties": {
+        "scenario": { "$ref": "#/$defs/Scenario" },
+        "config": { "$ref": "#/$defs/SimulationConfig" },
+        "progress": { "type": "boolean" }
+      }
+    },
+    "SimulateProgressParams": {
+      "description": "Notification JSON-RPC émise pendant une simulation longue.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["progress"],
+      "properties": {
+        "progress": { "type": "number" }
+      }
+    },
+    "Project": {
+      "description": "Projet local, source de vérité des hypothèses et des résultats.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "description",
+        "currency",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "schemaVersion",
+        "metadata"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "currency": { "type": "string" },
+        "sector": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "status": { "enum": ["active", "archived", "trashed"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "schemaVersion": { "type": "integer" },
+        "engineVersion": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "deletedAt": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "ProjectListParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "includeArchived": { "type": "boolean" },
+        "includeTrashed": { "type": "boolean" }
+      }
+    },
+    "ProjectCreateParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "currency": { "type": "string" },
+        "sector": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "ProjectIdParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" }
+      }
+    },
+    "ProjectRenameParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "name"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "name": { "type": "string" }
+      }
+    },
+    "ProjectDuplicateParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "name": { "type": "string" }
+      }
+    },
+    "ProjectExportParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "destination"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "destination": { "type": "string" }
+      }
+    },
+    "ProjectImportParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {
+        "source": { "type": "string" },
+        "name": { "type": "string" }
+      }
+    },
+    "ProjectResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project"],
+      "properties": {
+        "project": { "$ref": "#/$defs/Project" }
+      }
+    },
+    "ProjectListResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projects"],
+      "properties": {
+        "projects": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Project" }
+        }
+      }
+    },
+    "ProjectDeleteResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deleted"],
+      "properties": {
+        "deleted": { "type": "boolean" }
+      }
+    },
+    "ProjectExportResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "checksum", "bytes"],
+      "properties": {
+        "path": { "type": "string" },
+        "checksum": { "type": "string" },
+        "bytes": { "type": "integer" }
+      }
+    },
+    "ProjectSizeResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["databaseBytes", "resultsBytes", "totalBytes"],
+      "properties": {
+        "databaseBytes": { "type": "integer" },
+        "resultsBytes": { "type": "integer" },
+        "totalBytes": { "type": "integer" }
+      }
+    },
+    "IntegrityCheckResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "message"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "message": { "type": "string" }
+      }
+    },
+    "BriefRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "projectId", "version", "content", "status", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "version": { "type": "integer" },
+        "content": { "type": "object" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "ScenarioRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "projectId", "name", "model", "scenario", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "name": { "type": "string" },
+        "model": { "type": "string" },
+        "scenario": { "$ref": "#/$defs/Scenario" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "SimulationRunRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "projectId",
+        "scenarioId",
+        "engineVersion",
+        "seed",
+        "runs",
+        "durationMs",
+        "summary",
+        "result",
+        "createdAt"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "scenarioId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "engineVersion": { "type": "string" },
+        "seed": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+        "runs": { "type": "integer" },
+        "durationMs": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "summary": { "type": "object" },
+        "result": {
+          "anyOf": [{ "$ref": "#/$defs/SimulationResult" }, { "type": "null" }]
+        },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "ProjectDataParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" }
+      }
+    },
+    "ProjectDataResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "brief", "scenario", "run"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "brief": {
+          "anyOf": [{ "$ref": "#/$defs/BriefRecord" }, { "type": "null" }]
+        },
+        "scenario": {
+          "anyOf": [{ "$ref": "#/$defs/ScenarioRecord" }, { "type": "null" }]
+        },
+        "run": {
+          "anyOf": [{ "$ref": "#/$defs/SimulationRunRecord" }, { "type": "null" }]
+        }
+      }
+    },
+    "ProjectBriefSaveParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "content"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "content": { "type": "object" },
+        "status": { "enum": ["draft", "validated"] }
+      }
+    },
+    "ProjectBriefSaveResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["brief"],
+      "properties": {
+        "brief": { "$ref": "#/$defs/BriefRecord" }
+      }
+    },
+    "ProjectScenarioSaveParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "name", "scenario"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "name": { "type": "string" },
+        "model": { "type": "string" },
+        "scenario": { "$ref": "#/$defs/Scenario" }
+      }
+    },
+    "ProjectScenarioSaveResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario"],
+      "properties": {
+        "scenario": { "$ref": "#/$defs/ScenarioRecord" }
+      }
+    },
+    "ProjectSimulateParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "scenario": { "$ref": "#/$defs/Scenario" },
+        "config": { "$ref": "#/$defs/SimulationConfig" },
+        "progress": { "type": "boolean" }
+      }
+    },
+    "ProjectSimulateResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run", "scenario", "result"],
+      "properties": {
+        "run": { "$ref": "#/$defs/SimulationRunRecord" },
+        "scenario": { "$ref": "#/$defs/ScenarioRecord" },
+        "result": { "$ref": "#/$defs/SimulationResult" }
+      }
+    },
+    "BackupParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "destination": { "type": "string" }
+      }
+    },
+    "BackupResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string" }
+      }
+    },
+    "ProviderId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "ProviderCatalogEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "kind", "requiresKey", "capabilitiesVersion"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "kind": { "type": "string" },
+        "baseUrl": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "requiresKey": { "type": "boolean" },
+        "defaultModel": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "capabilitiesVersion": { "type": "string" }
+      }
+    },
+    "ProviderCatalogResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["providers", "capabilitiesVersion"],
+      "properties": {
+        "providers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ProviderCatalogEntry" }
+        },
+        "capabilitiesVersion": { "type": "string" }
+      }
+    },
+    "ProviderCapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nativeTools", "nativeStructuredOutput", "reasoning", "vision"],
+      "properties": {
+        "contextWindow": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+        "nativeTools": { "type": "boolean" },
+        "nativeStructuredOutput": { "type": "boolean" },
+        "reasoning": { "type": "boolean" },
+        "vision": { "type": "boolean" },
+        "inputPricePerMillion": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "outputPricePerMillion": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "currency": { "type": "string" },
+        "source": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "ProviderModelInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "capabilities"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "capabilities": { "$ref": "#/$defs/ProviderCapabilities" }
+      }
+    },
+    "ProviderProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "projectId",
+        "name",
+        "provider",
+        "capabilities",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "name": { "type": "string" },
+        "provider": { "type": "string" },
+        "baseUrl": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "model": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "keychainRef": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "capabilities": { "type": "object" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "ProviderProfileListParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" }
+      }
+    },
+    "ProviderProfileListResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profiles"],
+      "properties": {
+        "profiles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ProviderProfile" }
+        }
+      }
+    },
+    "ProviderProfileSaveParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "name", "provider"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "name": { "type": "string" },
+        "provider": { "type": "string" },
+        "baseUrl": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "model": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "keychainRef": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "capabilities": { "type": "object" }
+      }
+    },
+    "ProviderProfileDeleteParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profileId"],
+      "properties": {
+        "profileId": { "type": "string" }
+      }
+    },
+    "ProviderProfileResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile"],
+      "properties": {
+        "profile": { "$ref": "#/$defs/ProviderProfile" }
+      }
+    },
+    "ProviderDeleteResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deleted"],
+      "properties": {
+        "deleted": { "type": "boolean" }
+      }
+    },
+    "RoleName": {
+      "enum": ["interviewer", "modeler", "narrator", "delegate", "coder"]
+    },
+    "RoleAssignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "projectId",
+        "role",
+        "providerProfileId",
+        "model",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "role": { "$ref": "#/$defs/RoleName" },
+        "providerProfileId": { "type": "string" },
+        "model": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "RoleListParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" }
+      }
+    },
+    "RoleListResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assignments"],
+      "properties": {
+        "assignments": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/RoleAssignment" }
+        }
+      }
+    },
+    "RoleSetParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "role", "providerProfileId", "model"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "role": { "$ref": "#/$defs/RoleName" },
+        "providerProfileId": { "type": "string" },
+        "model": { "type": "string" }
+      }
+    },
+    "RoleDeleteParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "role"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "role": { "$ref": "#/$defs/RoleName" }
+      }
+    },
+    "RoleAssignmentResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assignment"],
+      "properties": {
+        "assignment": { "$ref": "#/$defs/RoleAssignment" }
+      }
+    },
+    "ChatMessageInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "content"],
+      "properties": {
+        "role": { "enum": ["system", "user", "assistant", "tool"] },
+        "content": { "type": "string" },
+        "name": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "toolCallId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "toolCalls": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ProviderToolCall" }
+        }
+      }
+    },
+    "ProviderToolCall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "arguments"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "arguments": { "type": "object" }
+      }
+    },
+    "ProviderToolDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "parameters": { "type": "object" }
+      }
+    },
+    "ProviderChatRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "messages"],
+      "properties": {
+        "model": { "type": "string" },
+        "messages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ChatMessageInput" }
+        },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+        "maxTokens": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "minimum": 1 },
+        "tools": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ProviderToolDefinition" }
+        },
+        "responseFormat": { "enum": ["text", "json"] }
+      }
+    },
+    "ProviderChatParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "profile", "request"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "profile": { "$ref": "#/$defs/ProviderProfile" },
+        "apiKey": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "request": { "$ref": "#/$defs/ProviderChatRequest" }
+      }
+    },
+    "ProviderTokenUsage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputTokens", "outputTokens", "totalTokens", "costMicros", "currency"],
+      "properties": {
+        "inputTokens": { "type": "integer" },
+        "outputTokens": { "type": "integer" },
+        "totalTokens": { "type": "integer" },
+        "costMicros": { "type": "integer" },
+        "currency": { "type": "string" }
+      }
+    },
+    "ProviderFallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "reason"],
+      "properties": {
+        "provider": { "type": "string" },
+        "reason": { "type": "string" }
+      }
+    },
+    "ProviderChatResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "toolCalls", "usage", "provider", "model"],
+      "properties": {
+        "text": { "type": "string" },
+        "reasoning": { "type": "string" },
+        "toolCalls": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ProviderToolCall" }
+        },
+        "usage": { "$ref": "#/$defs/ProviderTokenUsage" },
+        "provider": { "type": "string" },
+        "model": { "type": "string" },
+        "finishReason": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "fallbacks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ProviderFallback" }
+        },
+        "budget": { "$ref": "#/$defs/BudgetResult" }
+      }
+    },
+    "ProviderTestParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile"],
+      "properties": {
+        "profile": { "$ref": "#/$defs/ProviderProfile" },
+        "apiKey": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "ProviderTestResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "message", "latencyMs", "models"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "message": { "type": "string" },
+        "latencyMs": { "type": "number" },
+        "models": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ProviderModelInfo" }
+        }
+      }
+    },
+    "ProviderModelsParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile"],
+      "properties": {
+        "profile": { "$ref": "#/$defs/ProviderProfile" },
+        "apiKey": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "ProviderModelsResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["models"],
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ProviderModelInfo" }
+        }
+      }
+    },
+    "ProviderUsageParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" }
+      }
+    },
+    "ProviderUsageEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "inputTokens",
+        "outputTokens",
+        "costMicros",
+        "createdAt"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "providerProfileId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "kind": { "type": "string" },
+        "inputTokens": { "type": "integer" },
+        "outputTokens": { "type": "integer" },
+        "costMicros": { "type": "integer" },
+        "metadata": { "type": "object" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "ProviderUsageResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entries", "inputTokens", "outputTokens", "costMicros"],
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ProviderUsageEntry" }
+        },
+        "inputTokens": { "type": "integer" },
+        "outputTokens": { "type": "integer" },
+        "costMicros": { "type": "integer" }
+      }
+    },
+    "BudgetParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" }
+      }
+    },
+    "BudgetSetParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "limitMicros"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "limitMicros": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "BudgetResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "limitMicros", "spentMicros"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "limitMicros": { "type": "integer" },
+        "spentMicros": { "type": "integer" },
+        "createdAt": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "updatedAt": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "AgentStateName": {
+      "enum": [
+        "idea",
+        "interviewing",
+        "brief_draft",
+        "brief_validated",
+        "hypotheses_set",
+        "simulating",
+        "results_ready",
+        "narrating",
+        "done"
+      ]
+    },
+    "AgentPermissionMode": {
+      "enum": ["allow", "ask", "deny"]
+    },
+    "AgentTurnStatus": {
+      "enum": [
+        "text",
+        "permission_required",
+        "requires_review",
+        "permission_denied",
+        "tool_error",
+        "max_iterations"
+      ]
+    },
+    "AgentSession": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "state", "role", "thread", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "projectId": { "type": "string" },
+        "state": { "$ref": "#/$defs/AgentStateName" },
+        "role": { "$ref": "#/$defs/RoleName" },
+        "thread": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ChatMessageInput" }
+        },
+        "createdAt": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "updatedAt": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "AgentProjectParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" }
+      }
+    },
+    "AgentSessionResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session"],
+      "properties": {
+        "session": { "$ref": "#/$defs/AgentSession" }
+      }
+    },
+    "AgentPrepareParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "role": { "$ref": "#/$defs/RoleName" }
+      }
+    },
+    "AgentPrepareResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "model", "profile", "state"],
+      "properties": {
+        "role": { "$ref": "#/$defs/RoleName" },
+        "model": { "type": "string" },
+        "profile": { "$ref": "#/$defs/ProviderProfile" },
+        "state": { "$ref": "#/$defs/AgentStateName" }
+      }
+    },
+    "AgentPendingPermission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "callId", "decision", "reason"],
+      "properties": {
+        "tool": { "type": "string" },
+        "callId": { "type": "string" },
+        "decision": { "$ref": "#/$defs/AgentPermissionMode" },
+        "reason": { "type": "string" }
+      }
+    },
+    "AgentToolEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["callId", "tool", "ok", "requiresReview"],
+      "properties": {
+        "callId": { "type": "string" },
+        "tool": { "type": "string" },
+        "ok": { "type": "boolean" },
+        "result": {},
+        "error": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+        "requiresReview": { "type": "boolean" }
+      }
+    },
+    "AgentTurnParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "profile": { "$ref": "#/$defs/ProviderProfile" },
+        "apiKey": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "role": { "$ref": "#/$defs/RoleName" },
+        "message": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "approvals": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "maxIterations": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "exportPath": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "AgentTurnResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "role",
+        "state",
+        "text",
+        "pendingPermissions",
+        "toolEvents",
+        "usage",
+        "budget",
+        "session",
+        "projectId"
+      ],
+      "properties": {
+        "status": { "$ref": "#/$defs/AgentTurnStatus" },
+        "role": { "$ref": "#/$defs/RoleName" },
+        "state": { "$ref": "#/$defs/AgentStateName" },
+        "text": { "type": "string" },
+        "pendingPermissions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/AgentPendingPermission" }
+        },
+        "toolEvents": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/AgentToolEvent" }
+        },
+        "usage": { "type": "object" },
+        "budget": { "$ref": "#/$defs/BudgetResult" },
+        "session": { "$ref": "#/$defs/AgentSession" },
+        "projectId": { "type": "string" }
+      }
+    },
+    "AgentPermission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "projectId", "tool", "scope", "decision", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "tool": { "type": "string" },
+        "scope": { "type": "string" },
+        "decision": { "$ref": "#/$defs/AgentPermissionMode" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "AgentPermissionEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "projectId", "tool", "scope", "decision", "actor", "createdAt"],
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "tool": { "type": "string" },
+        "scope": { "type": "string" },
+        "decision": { "$ref": "#/$defs/AgentPermissionMode" },
+        "reason": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "actor": { "enum": ["agent", "user", "system"] },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "AgentPermissionListResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["permissions", "defaults", "alwaysAsk", "events"],
+      "properties": {
+        "permissions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/AgentPermission" }
+        },
+        "defaults": { "type": "object" },
+        "alwaysAsk": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/AgentPermissionEvent" }
+        }
+      }
+    },
+    "AgentPermissionSetParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "tool", "decision"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "tool": { "type": "string" },
+        "scope": { "type": "string" },
+        "decision": { "$ref": "#/$defs/AgentPermissionMode" },
+        "reason": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "AgentPermissionSetResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["permission", "permissions", "defaults", "alwaysAsk", "events"],
+      "properties": {
+        "permission": { "$ref": "#/$defs/AgentPermission" },
+        "permissions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/AgentPermission" }
+        },
+        "defaults": { "type": "object" },
+        "alwaysAsk": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/AgentPermissionEvent" }
+        }
+      }
+    },
+    "AgentPermissionDeleteParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "tool"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "tool": { "type": "string" },
+        "scope": { "type": "string" }
+      }
+    },
+    "AgentPermissionDeleteResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deleted", "permissions", "defaults", "alwaysAsk", "events"],
+      "properties": {
+        "deleted": { "type": "boolean" },
+        "permissions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/AgentPermission" }
+        },
+        "defaults": { "type": "object" },
+        "alwaysAsk": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/AgentPermissionEvent" }
+        }
+      }
+    },
+    "AgentTraceParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "limit": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "AgentTraceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "projectId", "turn", "event", "createdAt"],
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "sessionId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "turn": { "type": "integer" },
+        "event": { "type": "object" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "AgentTraceResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["events", "count"],
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/AgentTraceEntry" }
+        },
+        "count": { "type": "integer" }
+      }
+    },
+    "AgentTraceExportParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "destination"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "destination": { "type": "string" }
+      }
+    },
+    "AgentTraceExportResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "count"],
+      "properties": {
+        "path": { "type": "string" },
+        "count": { "type": "integer" }
+      }
+    },
+    "AgentToolInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description", "parameters", "defaultPermission", "alwaysAsk"],
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "parameters": { "type": "object" },
+        "defaultPermission": { "$ref": "#/$defs/AgentPermissionMode" },
+        "alwaysAsk": { "type": "boolean" }
+      }
+    },
+    "AgentToolsResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tools"],
+      "properties": {
+        "tools": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/AgentToolInfo" }
+        }
+      }
+    },
+    "SandboxIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "line", "column", "severity"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "line": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+        "column": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+        "severity": { "type": "string", "enum": ["error", "warning"] }
+      }
+    },
+    "SandboxLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timeoutMs",
+        "workerStartTimeoutMs",
+        "memoryBytes",
+        "maxCodeBytes",
+        "maxInputBytes",
+        "maxOutputBytes",
+        "maxLogBytes"
+      ],
+      "properties": {
+        "timeoutMs": { "type": "integer" },
+        "workerStartTimeoutMs": { "type": "integer" },
+        "memoryBytes": { "type": "integer" },
+        "maxCodeBytes": { "type": "integer" },
+        "maxInputBytes": { "type": "integer" },
+        "maxOutputBytes": { "type": "integer" },
+        "maxLogBytes": { "type": "integer" }
+      }
+    },
+    "SandboxAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "codeHash", "issues", "allowedImports", "limits"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "codeHash": { "type": "string" },
+        "issues": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SandboxIssue" }
+        },
+        "allowedImports": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "limits": { "$ref": "#/$defs/SandboxLimits" }
+      }
+    },
+    "SandboxAnalyzeParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": { "type": "string" }
+      }
+    },
+    "SandboxAnalyzeResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["analysis"],
+      "properties": {
+        "analysis": { "$ref": "#/$defs/SandboxAnalysis" }
+      }
+    },
+    "SandboxDecision": {
+      "type": "string",
+      "enum": ["approved", "rejected"]
+    },
+    "SandboxStatus": {
+      "type": "string",
+      "enum": ["succeeded", "failed", "timeout", "cancelled", "rejected"]
+    },
+    "SandboxAuditRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "projectId",
+        "code",
+        "codeHash",
+        "purpose",
+        "decision",
+        "status",
+        "analysis",
+        "result",
+        "error",
+        "durationMs",
+        "createdAt"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "code": { "type": "string" },
+        "codeHash": { "type": "string" },
+        "purpose": { "type": "string" },
+        "decision": { "$ref": "#/$defs/SandboxDecision" },
+        "status": { "$ref": "#/$defs/SandboxStatus" },
+        "analysis": { "$ref": "#/$defs/SandboxAnalysis" },
+        "result": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+        "error": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "durationMs": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "SandboxAuditRecordParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "code", "codeHash", "decision", "status"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "code": { "type": "string" },
+        "codeHash": { "type": "string" },
+        "purpose": { "type": "string" },
+        "decision": { "$ref": "#/$defs/SandboxDecision" },
+        "status": { "$ref": "#/$defs/SandboxStatus" },
+        "result": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+        "error": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "durationMs": { "anyOf": [{ "type": "number" }, { "type": "null" }] }
+      }
+    },
+    "SandboxAuditRecordResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record"],
+      "properties": {
+        "record": { "$ref": "#/$defs/SandboxAuditRecord" }
+      }
+    },
+    "SandboxAuditListParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "limit": { "type": "integer" }
+      }
+    },
+    "SandboxAuditListResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["records", "count"],
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SandboxAuditRecord" }
+        },
+        "count": { "type": "integer" }
+      }
+    },
+    "SandboxAuditExportParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" }
+      }
+    },
+    "SandboxAuditExportResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "count"],
+      "properties": {
+        "path": { "type": "string" },
+        "count": { "type": "integer" }
+      }
+    }
+  }
+}

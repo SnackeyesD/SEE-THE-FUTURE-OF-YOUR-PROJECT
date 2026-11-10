@@ -1,0 +1,87 @@
+{
+  "scenario": {
+    "schemaVersion": "1.0.0",
+    "name": "Golden retail_depot",
+    "model": "retail_depot",
+    "currency": "XOF",
+    "horizonMonths": 3,
+    "seasonality": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    "assumptions": {
+      "initial_cash": { "value": 500 },
+      "unit_price": { "value": 20 },
+      "unit_cost": { "value": 8 },
+      "fixed_costs_monthly": { "value": 100 },
+      "demand_mean_monthly": { "value": 50 },
+      "demand_cv": { "value": 0 },
+      "loss_rate": { "value": 0 },
+      "logistics_cost_per_unit": { "value": 1 },
+      "target_stock_months": { "value": 0 },
+      "reorder_lead_time_months": { "value": 1 },
+      "initial_stock": { "value": 1000 },
+      "tax_rate": { "value": 0 }
+    }
+  },
+  "config": { "runs": 100, "seed": 42, "batchSize": 37, "histogramBins": 5 },
+  "expected": {
+    "metrics": {
+      "meanProfit": 1350,
+      "medianProfit": 1350,
+      "stdProfit": 0,
+      "minProfit": 1350,
+      "maxProfit": 1350,
+      "p10": 1350,
+      "p50": 1350,
+      "p90": 1350,
+      "lossProbability": 0,
+      "profitPositiveProbability": 1,
+      "meanRevenue": 3000,
+      "meanCosts": 1650,
+      "meanTax": 0,
+      "meanCashEnd": 3050,
+      "meanUnitsSold": 150,
+      "meanUnitsLost": 0,
+      "meanStockoutMonths": 0,
+      "meanEndStock": 850,
+      "meanInventoryValue": 6800,
+      "meanProfitMargin": 0.45
+    },
+    "monthly": [
+      {
+        "index": 1,
+        "month": 1,
+        "meanRevenue": 1000,
+        "meanProfit": 450,
+        "meanDemand": 50,
+        "meanUnitsSold": 50,
+        "meanStockEnd": 950,
+        "stockoutProbability": 0
+      },
+      {
+        "index": 2,
+        "month": 2,
+        "meanRevenue": 1000,
+        "meanProfit": 450,
+        "meanDemand": 50,
+        "meanUnitsSold": 50,
+        "meanStockEnd": 900,
+        "stockoutProbability": 0
+      },
+      {
+        "index": 3,
+        "month": 3,
+        "meanRevenue": 1000,
+        "meanProfit": 450,
+        "meanDemand": 50,
+        "meanUnitsSold": 50,
+        "meanStockEnd": 850,
+        "stockoutProbability": 0
+      }
+    ],
+    "breakEven": {
+      "monthlyFixedCosts": 100,
+      "unitMargin": 11,
+      "breakEvenUnitsMonthly": 9.090909090909092,
+      "breakEvenRevenueMonthly": 181.81818181818184
+    }
+  }
+}

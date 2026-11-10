@@ -1,0 +1,39 @@
+[project]
+name = "see-agent-core"
+version = "0.1.0"
+description = "Boucle d'agent, outils, permissions et garde-fous de See The Future (phase 05)."
+requires-python = ">=3.11"
+dependencies = [
+    "see-engine",
+    "see-providers",
+    "see-sandbox",
+    "pydantic>=2.7,<3",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.2", "pytest-asyncio>=0.24", "ruff>=0.7"]
+
+[tool.uv.sources]
+see-engine = { path = "../engine", editable = true }
+see-providers = { path = "../providers", editable = true }
+see-sandbox = { path = "../sandbox", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent_core"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

@@ -1,0 +1,34 @@
+[project]
+name = "see-sidecar"
+version = "0.1.0"
+description = "Sidecar Python de See The Future (JSON-RPC sur stdio)."
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.7,<3", "see-agent-core", "see-engine", "see-providers", "see-sandbox", "see-storage"]
+
+[dependency-groups]
+dev = ["pytest>=8.2", "ruff>=0.7"]
+
+[tool.uv.sources]
+see-agent-core = { path = "../../../../packages/agent-core", editable = true }
+see-engine = { path = "../../../../packages/engine", editable = true }
+see-providers = { path = "../../../../packages/providers", editable = true }
+see-sandbox = { path = "../../../../packages/sandbox", editable = true }
+see-storage = { path = "../../../../packages/storage", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sidecar"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

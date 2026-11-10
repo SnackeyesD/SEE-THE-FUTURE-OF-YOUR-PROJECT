@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run protocol:check
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:web
+
+  python:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --project packages/engine
+      - run: uv sync --project packages/storage
+      - run: uv sync --project apps/desktop/src-tauri/sidecar
+      - run: uv run --project packages/engine ruff check packages/engine
+      - run: uv run --project packages/engine pytest packages/engine/tests
+      - run: uv run --project packages/storage ruff check packages/storage
+      - run: uv run --project packages/storage pytest packages/storage/tests
+      - run: uv run --project apps/desktop/src-tauri/sidecar ruff check apps/desktop/src-tauri/sidecar
+      - run: uv run --project apps/desktop/src-tauri/sidecar pytest apps/desktop/src-tauri/sidecar/tests
+
+  rust:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run protocol:check
+      - run: npm run build:web
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --project apps/desktop/src-tauri/sidecar
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml

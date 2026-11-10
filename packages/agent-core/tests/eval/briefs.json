@@ -1,0 +1,242 @@
+[
+  {
+    "id": "depot-boissons",
+    "idea": "Ouvrir un dépôt de boissons dans mon quartier",
+    "brief": {
+      "problem": "Les habitants manquent de boissons fraîches à proximité",
+      "customer": "Ménages et petits commerces du quartier",
+      "valueProposition": "Livraison rapide à prix accessible",
+      "revenueModel": "Marge sur la vente au détail",
+      "costStructure": "Achat des stocks, loyer et logistique",
+      "geography": "Abidjan, Côte d'Ivoire"
+    }
+  },
+  {
+    "id": "salon-coiffure",
+    "idea": "Un salon de coiffure mobile",
+    "brief": {
+      "problem": "Les clientes perdent du temps à se déplacer",
+      "customer": "Femmes actives en zone urbaine",
+      "valueProposition": "Coiffure à domicile sur rendez-vous",
+      "revenueModel": "Prestations et abonnements mensuels",
+      "costStructure": "Matériel, transport et salaires",
+      "geography": "Dakar, Sénégal"
+    }
+  },
+  {
+    "id": "ferme-urbaine",
+    "idea": "Produire des légumes sur les toits",
+    "brief": {
+      "problem": "Les légumes frais sont chers et peu traçables",
+      "customer": "Restaurants et ménages aisés",
+      "valueProposition": "Légumes frais cultivés localement",
+      "revenueModel": "Vente directe et paniers hebdomadaires",
+      "costStructure": "Serres, substrats, eau et main-d'œuvre",
+      "geography": "Lagos, Nigeria"
+    }
+  },
+  {
+    "id": "reparation-telephones",
+    "idea": "Atelier de réparation de téléphones",
+    "brief": {
+      "problem": "Les réparations sont lentes et peu fiables",
+      "customer": "Particuliers et petits commerçants",
+      "valueProposition": "Réparation rapide avec garantie",
+      "revenueModel": "Main-d'œuvre et pièces détachées",
+      "costStructure": "Pièces, outillage et loyer",
+      "geography": "Accra, Ghana"
+    }
+  },
+  {
+    "id": "cours-particuliers",
+    "idea": "Plateforme de cours particuliers à domicile",
+    "brief": {
+      "problem": "Trouver un professeur fiable est difficile",
+      "customer": "Parents d'élèves du secondaire",
+      "valueProposition": "Professeurs vérifiés et suivi personnalisé",
+      "revenueModel": "Commission sur les cours",
+      "costStructure": "Acquisition, vérification et support",
+      "geography": "Casablanca, Maroc"
+    }
+  },
+  {
+    "id": "livraison-repas",
+    "idea": "Livraison de repas pour bureaux",
+    "brief": {
+      "problem": "Les employés perdent du temps à déjeuner",
+      "customer": "Entreprises et employés de bureau",
+      "valueProposition": "Repas livrés à l'heure au bureau",
+      "revenueModel": "Marge sur les repas et abonnements",
+      "costStructure": "Cuisine, livraison et emballage",
+      "geography": "Abidjan, Côte d'Ivoire"
+    }
+  },
+  {
+    "id": "pressing",
+    "idea": "Pressing avec collecte à domicile",
+    "brief": {
+      "problem": "Le linge professionnel s'accumule faute de temps",
+      "customer": "Cadres et professions libérales",
+      "valueProposition": "Collecte et livraison du linge",
+      "revenueModel": "Prestations à l'unité et forfaits",
+      "costStructure": "Machines, produits et transport",
+      "geography": "Kigali, Rwanda"
+    }
+  },
+  {
+    "id": "epicerie-en-ligne",
+    "idea": "Épicerie en ligne pour quartiers",
+    "brief": {
+      "problem": "Les courses prennent du temps et les prix varient",
+      "customer": "Familles urbaines pressées",
+      "valueProposition": "Courses livrées avec prix affichés",
+      "revenueModel": "Marge produit et frais de livraison",
+      "costStructure": "Stock, logistique et application",
+      "geography": "Nairobi, Kenya"
+    }
+  },
+  {
+    "id": "menuiserie",
+    "idea": "Petite menuiserie sur commande",
+    "brief": {
+      "problem": "Les meubles standard ne conviennent pas aux espaces",
+      "customer": "Propriétaires et jeunes ménages",
+      "valueProposition": "Meubles sur mesure en bois local",
+      "revenueModel": "Vente de meubles sur devis",
+      "costStructure": "Bois, atelier et main-d'œuvre",
+      "geography": "Bamako, Mali"
+    }
+  },
+  {
+    "id": "agence-voyage",
+    "idea": "Agence de voyages pour groupes",
+    "brief": {
+      "problem": "Organiser un voyage de groupe est complexe",
+      "customer": "Entreprises et associations",
+      "valueProposition": "Forfaits de voyage clés en main",
+      "revenueModel": "Commission et frais de service",
+      "costStructure": "Conseil, réservations et support",
+      "geography": "Cotonou, Bénin"
+    }
+  },
+  {
+    "id": "micro-assurance",
+    "idea": "Micro-assurance pour petits commerçants",
+    "brief": {
+      "problem": "Les petits commerçants sont vulnérables aux imprévus",
+      "customer": "Commerçants de marché et artisans",
+      "valueProposition": "Couverture simple et payable au mois",
+      "revenueModel": "Prime mensuelle",
+      "costStructure": "Gestion des sinistres et acquisition",
+      "geography": "Lomé, Togo"
+    }
+  },
+  {
+    "id": "recyclage-plastique",
+    "idea": "Collecte et recyclage du plastique",
+    "brief": {
+      "problem": "Les déchets plastiques envahissent les quartiers",
+      "customer": "Municipalités et entreprises",
+      "valueProposition": "Collecte régulière et matière recyclée",
+      "revenueModel": "Vente de matière et contrats de collecte",
+      "costStructure": "Collecte, tri et transformation",
+      "geography": "Douala, Cameroun"
+    }
+  },
+  {
+    "id": "coworking",
+    "idea": "Espace de coworking pour freelances",
+    "brief": {
+      "problem": "Les freelances manquent d'un lieu fiable pour travailler",
+      "customer": "Freelances et petites équipes",
+      "valueProposition": "Bureaux flexibles avec internet stable",
+      "revenueModel": "Abonnements et locations de salle",
+      "costStructure": "Loyer, équipement et services",
+      "geography": "Tunis, Tunisie"
+    }
+  },
+  {
+    "id": "boulangerie",
+    "idea": "Boulangerie de quartier avec précommandes",
+    "brief": {
+      "problem": "Le pain frais manque tôt le matin",
+      "customer": "Ménages et restaurants du quartier",
+      "valueProposition": "Pain frais réservé et prêt à l'heure",
+      "revenueModel": "Vente de pain et pâtisseries",
+      "costStructure": "Farine, four et main-d'œuvre",
+      "geography": "Ouagadougou, Burkina Faso"
+    }
+  },
+  {
+    "id": "application-budget",
+    "idea": "Application de budget pour petits revenus",
+    "brief": {
+      "problem": "Les familles ne suivent pas leurs dépenses",
+      "customer": "Ménages à revenus modestes",
+      "valueProposition": "Suivi simple des dépenses hors ligne",
+      "revenueModel": "Abonnement premium",
+      "costStructure": "Développement et support",
+      "geography": "Abidjan, Côte d'Ivoire"
+    }
+  },
+  {
+    "id": "location-materiel",
+    "idea": "Location de matériel de bricolage",
+    "brief": {
+      "problem": "Acheter du matériel rarement utilisé coûte cher",
+      "customer": "Particuliers et petits artisans",
+      "valueProposition": "Matériel disponible à la journée",
+      "revenueModel": "Location journalière et caution",
+      "costStructure": "Achat, entretien et stockage",
+      "geography": "Antananarivo, Madagascar"
+    }
+  },
+  {
+    "id": "restaurant-vegetarien",
+    "idea": "Restaurant végétarien de midi",
+    "brief": {
+      "problem": "L'offre végétarienne de qualité est rare",
+      "customer": "Employés et étudiants du centre-ville",
+      "valueProposition": "Repas végétariens équilibrés à midi",
+      "revenueModel": "Vente de repas et plats à emporter",
+      "costStructure": "Ingrédients, cuisine et loyer",
+      "geography": "Rabat, Maroc"
+    }
+  },
+  {
+    "id": "formation-numerique",
+    "idea": "Formations numériques pour commerçants",
+    "brief": {
+      "problem": "Les commerçants n'utilisent pas les outils numériques",
+      "customer": "Commerçants indépendants",
+      "valueProposition": "Formations courtes et appliquées",
+      "revenueModel": "Sessions payantes et accompagnement",
+      "costStructure": "Formateurs, salle et supports",
+      "geography": "Conakry, Guinée"
+    }
+  },
+  {
+    "id": "fruits-transformes",
+    "idea": "Jus de fruits locaux pasteurisés",
+    "brief": {
+      "problem": "Les fruits se perdent faute de débouchés",
+      "customer": "Épiceries et consommateurs urbains",
+      "valueProposition": "Jus naturels sans conservateur",
+      "revenueModel": "Vente de bouteilles et contrats",
+      "costStructure": "Fruits, production et distribution",
+      "geography": "Bobo-Dioulasso, Burkina Faso"
+    }
+  },
+  {
+    "id": "garde-enfants",
+    "idea": "Réseau de garde d'enfants à domicile",
+    "brief": {
+      "problem": "Les parents manquent de solutions de garde fiables",
+      "customer": "Jeunes parents actifs",
+      "valueProposition": "Gardes vérifiées et réservables",
+      "revenueModel": "Commission sur les réservations",
+      "costStructure": "Vérification, assurance et support",
+      "geography": "Abidjan, Côte d'Ivoire"
+    }
+  }
+]
