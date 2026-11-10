@@ -6,10 +6,16 @@ const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
   plugins: [react()],
+  worker: {
+    format: "es",
+  },
   resolve: {
     alias: {
       "@see/protocol": fileURLToPath(
         new URL("../../packages/protocol/src/index.ts", import.meta.url),
+      ),
+      "@see/sandbox": fileURLToPath(
+        new URL("../../packages/sandbox/src/index.ts", import.meta.url),
       ),
       "@see/ui": fileURLToPath(new URL("../../packages/ui/src/index.ts", import.meta.url)),
     },

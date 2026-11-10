@@ -2,7 +2,7 @@
 
 Application desktop **local-first** « bring your own AI » : l'utilisateur branche le fournisseur IA de son choix (clé API personnelle ou modèle local), et le moteur calcule les simulations.
 
-> État actuel : **phase 03 — persistance locale**. Le moteur Monte Carlo est intégré au sidecar ; les projets vivent dans SQLite (WAL) et s'exportent en archives `.simproj` vérifiées.
+> État actuel : **phase 07 — sandbox & scripts générés**. Le moteur Monte Carlo, les fournisseurs BYOK, l'agent et la persistance locale sont intégrés ; les scripts générés s'exécutent uniquement dans une sandbox Pyodide après revue humaine et sont audités.
 
 ## Prérequis
 
@@ -22,8 +22,11 @@ Application desktop **local-first** « bring your own AI » : l'utilisateur bran
 npm install
 npm run sidecar:sync
 npm run protocol:generate
+npm run sandbox:sync
 npm run dev
 ```
+
+`npm run sandbox:sync` copie Pyodide, `numpy` et `pandas` dans `apps/desktop/public/pyodide/` (assets locaux ignorés par Git).
 
 `npm run dev` lance Tauri (UI + shell Rust + sidecar Python). Pour travailler uniquement sur l'UI dans un navigateur :
 
@@ -51,6 +54,9 @@ Le mode navigateur affiche un avertissement : l'IPC Tauri n'y est pas disponible
 | `npm run storage:test` | Tests de la persistance locale |
 | `npm run storage:lint` | Ruff sur le stockage |
 | `npm run storage:sync` | Installe les dépendances du stockage |
+| `npm run sandbox:sync` | Copie Pyodide et télécharge numpy/pandas localement |
+| `npm run sandbox:test` | Tests de l'analyse statique et du contrat |
+| `npm run sandbox:lint` | Ruff sur la sandbox |
 | `npm run typecheck` | TypeScript strict |
 | `npm run icons` | Régénère les icônes Tauri |
 | `npm test` | Tests JS/TS des workspaces |
@@ -78,9 +84,9 @@ docs/adr/                     # décisions d'architecture
 
 Le shell Rust et le sidecar Python échangent du **JSON-RPC 2.0** en **NDJSON** sur stdio (une ligne JSON par message). Les types sont générés depuis `packages/protocol/schema/messages.schema.json`.
 
-Commandes disponibles : `ping`, `health`, `log`, `simulate`, cycle de vie `project.*` (liste, création, ouverture, renommage, duplication, archivage, corbeille, suppression, export/import, taille), `project.data`, `project.brief.save`, `project.scenario.save`, `project.simulate`, les méthodes `agent.*` (état, tour, permissions, trace, outils), `provider.*`, `integrity.check` et `storage.backup`.
+Commandes disponibles : `ping`, `health`, `log`, `simulate`, cycle de vie `project.*` (liste, création, ouverture, renommage, duplication, archivage, corbeille, suppression, export/import, taille), `project.data`, `project.brief.save`, `project.scenario.save`, `project.simulate`, les méthodes `agent.*` (état, tour, permissions, trace, outils), `provider.*`, `sandbox.*` (analyse, audit, export), `integrity.check` et `storage.backup`.
 
-Voir [`docs/adr/0002-transport-ipc.md`](docs/adr/0002-transport-ipc.md) et [`docs/adr/0004-persistance-locale-simproj.md`](docs/adr/0004-persistance-locale-simproj.md).
+Voir [`docs/adr/0002-transport-ipc.md`](docs/adr/0002-transport-ipc.md), [`docs/adr/0004-persistance-locale-simproj.md`](docs/adr/0004-persistance-locale-simproj.md) et [`docs/adr/0008-sandbox-scripts-generes.md`](docs/adr/0008-sandbox-scripts-generes.md).
 
 ## Dépannage
 

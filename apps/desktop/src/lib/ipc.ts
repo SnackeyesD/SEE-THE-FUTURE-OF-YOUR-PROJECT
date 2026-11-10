@@ -39,6 +39,15 @@ import type {
   RoleAssignmentResult,
   RoleListResult,
   RoleName,
+  SandboxAnalysis,
+  SandboxAnalyzeParams,
+  SandboxAnalyzeResult,
+  SandboxAuditExportParams,
+  SandboxAuditExportResult,
+  SandboxAuditListParams,
+  SandboxAuditListResult,
+  SandboxAuditRecordParams,
+  SandboxAuditRecordResult,
   SidecarStatus,
 } from "@see/protocol";
 import { invoke, isTauri } from "@tauri-apps/api/core";
@@ -242,4 +251,32 @@ export function agentTools(): Promise<AgentToolsResult> {
   return agentCall("agent.tools", {});
 }
 
-export type { RoleAssignment };
+function sandboxCall<T>(method: string, params: object): Promise<T> {
+  return invoke<T>("sandbox_call", { method, params: params as Record<string, unknown> });
+}
+
+export function analyzeSandboxCode(
+  params: SandboxAnalyzeParams,
+): Promise<SandboxAnalyzeResult> {
+  return sandboxCall("sandbox.analyze", params);
+}
+
+export function recordSandboxAudit(
+  params: SandboxAuditRecordParams,
+): Promise<SandboxAuditRecordResult> {
+  return sandboxCall("sandbox.audit.record", params);
+}
+
+export function listSandboxAudit(
+  params: SandboxAuditListParams,
+): Promise<SandboxAuditListResult> {
+  return sandboxCall("sandbox.audit.list", params);
+}
+
+export function exportSandboxAudit(
+  params: SandboxAuditExportParams,
+): Promise<SandboxAuditExportResult> {
+  return sandboxCall("sandbox.audit.export", params);
+}
+
+export type { RoleAssignment, SandboxAnalysis };

@@ -1,17 +1,23 @@
 import type {
   AgentPendingPermission,
   AgentSession,
+  AgentToolEvent,
   AgentTurnParams,
   HealthResult,
   Project,
   ProjectDataResult,
   RoleName,
+  SandboxAnalysis,
   Scenario,
   SidecarStatus,
 } from "@see/protocol";
 import { PROTOCOL_VERSION } from "@see/protocol";
 import { Badge, Button, InlineAlert } from "@see/ui";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  SandboxReviewPanel,
+  type SandboxProposal,
+} from "./components/SandboxReviewPanel";
 import { BriefScreen } from "./screens/BriefScreen";
 import { HypothesesScreen } from "./screens/HypothesesScreen";
 import { InterviewScreen } from "./screens/InterviewScreen";
@@ -80,6 +86,37 @@ function suggestedView(data: ProjectDataResult, session: AgentSession | null): V
   return "interview";
 }
 
+function sandboxProposalFromEvent(event: AgentToolEvent): SandboxProposal | null {
+  if (event.tool !== "run_custom_script" || !event.requiresReview) return null;
+  if (!event.result || typeof event.result !== "object") return null;
+  const result = event.result as Record<string, unknown>;
+  const analysis = result.analysis;
+  if (
+    typeof result.code !== "string" ||
+    typeof result.codeHash !== "string" ||
+    !analysis ||
+    typeof analysis !== "object"
+  ) {
+    return null;
+  }
+  const parsed = analysis as SandboxAnalysis;
+  if (
+    typeof parsed.ok !== "boolean" ||
+    !Array.isArray(parsed.issues) ||
+    !Array.isArray(parsed.allowedImports) ||
+    !parsed.limits
+  ) {
+    return null;
+  }
+  return {
+    callId: event.callId,
+    code: result.code,
+    codeHash: result.codeHash,
+    purpose: typeof result.purpose === "string" ? result.purpose : "",
+    analysis: parsed,
+  };
+}
+
 export function App() {
   const [status, setStatus] = useState<SidecarStatus | null>(null);
   const [health, setHealth] = useState<HealthResult | null>(null);
@@ -92,6 +129,7 @@ export function App() {
   const [view, setView] = useState<View>("projects");
   const [pending, setPending] = useState<AgentPendingPermission[]>([]);
   const [progress, setProgress] = useState<number | null>(null);
+  const [sandboxProposal, setSandboxProposal] = useState<SandboxProposal | null>(null);
   const [narration, setNarration] = useState("");
   const [narrationBusy, setNarrationBusy] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -107,6 +145,23 @@ export function App() {
       { id: nextLogId++, at: timestamp(), level, message },
     ]);
   }, []);
+
+  const sandboxInput = useMemo<Record<string, unknown>>(
+    () => ({
+      project: activeProject
+        ? {
+            id: activeProject.id,
+            name: activeProject.name,
+            currency: activeProject.currency,
+            description: activeProject.description,
+          }
+        : null,
+      brief: data?.brief?.content ?? null,
+      scenario: data?.scenario?.scenario ?? null,
+      results: data?.run?.result ?? null,
+    }),
+    [activeProject, data],
+  );
 
   const refreshStatus = useCallback(async () => {
     const nextStatus = await getSidecarStatus();
@@ -134,6 +189,7 @@ export function App() {
   const openProject = useCallback(
     async (project: Project) => {
       setActiveProject(project);
+      setSandboxProposal(null);
       localStorage.setItem("seefuture.project", project.id);
       setBusy(true);
       setError("");
@@ -225,6 +281,10 @@ export function App() {
   }, [activeProject?.id, data?.run?.id]);
 
   useEffect(() => {
+    setSandboxProposal(null);
+  }, [activeProject?.id]);
+
+  useEffect(() => {
     localStorage.setItem("seefuture.locale", locale);
     document.documentElement.lang = locale;
   }, [locale]);
@@ -279,6 +339,11 @@ export function App() {
         setSession(result.session);
         setPending(result.pendingPermissions);
         await refreshWorkspace(activeProject.id);
+        const review = result.toolEvents
+          .map(sandboxProposalFromEvent)
+          .filter((item): item is SandboxProposal => item !== null)
+          .at(-1);
+        setSandboxProposal(review ?? null);
         const failed = result.toolEvents.filter((event) => !event.ok);
         if (failed.length > 0) {
           pushLog(
@@ -289,7 +354,9 @@ export function App() {
         if (result.status === "permission_required") {
           pushLog("info", "Une permission est requise pour continuer.");
         } else if (result.status === "requires_review") {
-          setError("Une action attend une revue humaine avant exécution.");
+          if (!review) {
+            setError("Une action attend une revue humaine avant exécution.");
+          }
         } else if (result.status === "tool_error") {
           setError("Un outil a échoué. Consultez le détail dans le journal.");
         } else if (result.status === "permission_denied") {
@@ -311,6 +378,15 @@ export function App() {
 
   const handleSend = useCallback(
     async (message: string) => {
+      if (!activeProject) return;
+      await runAgentTurn({ projectId: activeProject.id, message });
+    },
+    [activeProject, runAgentTurn],
+  );
+
+  const handleSandboxContinue = useCallback(
+    async (message: string) => {
+      setSandboxProposal(null);
       if (!activeProject) return;
       await runAgentTurn({ projectId: activeProject.id, message });
     },
@@ -620,6 +696,16 @@ export function App() {
           onLocale={setLocale}
           onPing={handlePing}
           onRestart={handleRestart}
+        />
+      ) : null}
+
+      {sandboxProposal && activeProject ? (
+        <SandboxReviewPanel
+          projectId={activeProject.id}
+          proposal={sandboxProposal}
+          input={sandboxInput}
+          onClose={() => setSandboxProposal(null)}
+          onContinue={handleSandboxContinue}
         />
       ) : null}
 

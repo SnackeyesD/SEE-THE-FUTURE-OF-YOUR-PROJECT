@@ -12,9 +12,9 @@
   },
   "dependencies": {
     "@see/protocol": "*",
+    "@see/sandbox": "*",
     "@see/ui": "*",
     "@tauri-apps/api": "^2.1.1",
-    "pyodide": "^0.27.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

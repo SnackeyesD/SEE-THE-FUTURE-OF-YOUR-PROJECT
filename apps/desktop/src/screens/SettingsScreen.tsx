@@ -16,6 +16,7 @@ import {
 } from "@see/ui";
 import { useCallback, useEffect, useState } from "react";
 import { ProvidersPanel } from "../components/ProvidersPanel";
+import { SandboxAuditPanel } from "../components/SandboxReviewPanel";
 import {
   agentTools,
   deleteAgentPermission,
@@ -144,6 +145,8 @@ export function SettingsScreen({
       </div>
 
       <ProvidersPanel disabled={disabled} onLog={onLog} initialProjectId={project.id} />
+
+      <SandboxAuditPanel projectId={project.id} disabled={disabled} onLog={onLog} />
 
       <Card>
         <CardHeader

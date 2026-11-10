@@ -6,6 +6,7 @@
   "workspaces": [
     "apps/desktop",
     "packages/protocol",
+    "packages/sandbox",
     "packages/ui"
   ],
   "scripts": {
@@ -33,6 +34,9 @@
     "agent:sync": "uv sync --project packages/agent-core",
     "agent:lint": "uv run --project packages/agent-core ruff check packages/agent-core",
     "agent:test": "uv run --project packages/agent-core pytest packages/agent-core/tests",
+    "sandbox:sync": "node infra/scripts/sync-pyodide.mjs",
+    "sandbox:lint": "uv run --project packages/sandbox ruff check packages/sandbox",
+    "sandbox:test": "uv run --project packages/sandbox pytest packages/sandbox/tests",
     "icons": "powershell -ExecutionPolicy Bypass -File infra/scripts/generate-icons.ps1"
   },
   "engines": {
