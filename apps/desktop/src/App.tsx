@@ -19,6 +19,7 @@ import {
   type SandboxProposal,
 } from "./components/SandboxReviewPanel";
 import { BriefScreen } from "./screens/BriefScreen";
+import { TokenBoard } from "./components/TokenBoard";
 import { HypothesesScreen } from "./screens/HypothesesScreen";
 import { InterviewScreen } from "./screens/InterviewScreen";
 import { ProjectsScreen } from "./screens/ProjectsScreen";
@@ -566,6 +567,11 @@ export function App() {
     const item = NAV.find((entry) => entry.id === id);
     return item ? item[locale] : id;
   };
+
+  // Planche de contrôle des tokens (refont phase 02) — dev uniquement.
+  if (new URLSearchParams(window.location.search).has("tokens")) {
+    return <TokenBoard />;
+  }
 
   return (
     <div className="app-shell">

@@ -1,0 +1,257 @@
+/*
+ * See The Future — Design tokens « Ink & Signal »
+ * ============================================================
+ * SOURCE DE VÉRITÉ UNIQUE des valeurs visuelles (refont phase 02).
+ *
+ * Règles :
+ *   1. Un hex n'apparaît QUE dans ce fichier (et dans themes/).
+ *   2. Les composants consomment les tokens SÉMANTIQUES
+ *      (--bg-*, --text-*, --border, --accent, --ok…) jamais les
+ *      primitives --ink-*/--line-*/--text-* directement.
+ *   3. tokens.ts est GÉNÉRÉ depuis ce fichier
+ *      (npm run generate -w @see/ui). Ne pas l'éditer à la main.
+ *
+ * Couches (de bas en haut) :
+ *   primitives → sémantiques → dataviz → code → typo → espace → formes → motion
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ------------------------------------------------------------
+   * 1. PRIMITIVES — encre (ne s'utilisent pas directement)
+   * ------------------------------------------------------------ */
+  --ink-0: #0b0e14; /* fond racine : encre la plus profonde */
+  --ink-1: #10141c; /* surface standard (cartes) */
+  --ink-2: #161b26; /* surface élevée (panneaux, hover) */
+  --ink-3: #1e2431; /* surface la plus élevée (popover) */
+  --ink-inset: #0d1118; /* fonds en creux : inputs, code, logs */
+
+  /* lignes */
+  --line-0: #242b38; /* bordure standard */
+  --line-1: #2f3849; /* bordure forte */
+  --line-2: #3c465a; /* bordure la plus forte (focus discret, hover) */
+
+  /* textes */
+  --text-0: #e9edf5; /* texte principal */
+  --text-1: #9aa3b6; /* texte secondaire */
+  --text-2: #6e7789; /* texte tertiaire, labels de mesure discrets */
+
+  /* blanc pur réservé : texte sur accent plein uniquement */
+  --on-accent: #06121a;
+
+  /* ------------------------------------------------------------
+   * 2. SIGNAUX — la couleur est un signal, pas une décoration
+   * ------------------------------------------------------------ */
+  /* accent : INTERACTIF uniquement (focus, liens, sélection, CTA,
+     onglet actif, progression). JAMAIS couleur de série de données. */
+  --accent: #22d3ee;
+
+  /* états */
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --danger: #f87171;
+
+  /* Alphas de signal — niveaux tokenisés (remplace les 73 écritures
+     manuelles de rgb()/alpha de l'ancienne génération) */
+  --accent-a6: rgb(34 211 238 / 6%);
+  --accent-a10: rgb(34 211 238 / 10%);
+  --accent-a14: rgb(34 211 238 / 14%);
+  --accent-a35: rgb(34 211 238 / 35%);
+  --accent-a50: rgb(34 211 238 / 50%);
+
+  --ok-a7: rgb(52 211 153 / 7%);
+  --ok-a35: rgb(52 211 153 / 35%);
+  --ok-a45: rgb(52 211 153 / 45%);
+  --ok-a60: rgb(52 211 153 / 60%);
+
+  --warn-a7: rgb(251 191 36 / 7%);
+  --warn-a35: rgb(251 191 36 / 35%);
+  --warn-a45: rgb(251 191 36 / 45%);
+
+  --danger-a7: rgb(248 113 113 / 7%);
+  --danger-a12: rgb(248 113 113 / 12%);
+  --danger-a35: rgb(248 113 113 / 35%);
+  --danger-a45: rgb(248 113 113 / 45%);
+  --danger-a55: rgb(248 113 113 / 55%);
+
+  /* voiles de surface (fonds de listes, d'alerts, de rows) */
+  --veil-1: rgb(233 237 245 / 3%); /* huile la plus légère */
+  --veil-2: rgb(233 237 245 / 5%);
+  --veil-3: rgb(233 237 245 / 7%);
+  --veil-overlay: rgb(4 6 10 / 78%); /* fond d'overlay plein écran */
+
+  /* ------------------------------------------------------------
+   * 3. SÉMANTIQUES — ce que consomment les composants
+   * ------------------------------------------------------------ */
+  --bg-root: var(--ink-0);
+  --bg-surface: var(--ink-1);
+  --bg-raised: var(--ink-2);
+  --bg-pop: var(--ink-3);
+  --bg-inset: var(--ink-inset);
+  --bg-veil: var(--veil-2);
+  --bg-veil-soft: var(--veil-1);
+
+  --border: var(--line-0);
+  --border-strong: var(--line-1);
+  --border-hover: var(--line-2);
+
+  --text: var(--text-0);
+  --muted: var(--text-1);
+  --faint: var(--text-2);
+
+  /* focus visible, partagé par tout ce qui est focusable */
+  --focus: 2px solid var(--accent-a50);
+  --focus-offset: 2px;
+
+  /* sélection */
+  --selection: var(--accent-a14);
+
+  /* ------------------------------------------------------------
+   * 4. DATAVIZ — 10 séries catégorielles.
+   *    Validées par simulation (Viénot) deuteranopie / protanopie /
+   *    tritanopie : paire la plus proche = ΔE 13.6 (seuil 12).
+   *    Contraste sur fond encre : ≥ 3.2:1 (usage ligne 2px ≥ 3:1).
+   *    Détail + méthode : refont/02-fondations-tokens/charte-couleurs.md
+   *    Ordre d'attribution par défaut = 1, 2, 3…
+   *    Attribution STABLE par entité (scénario → même couleur).
+   * ------------------------------------------------------------ */
+  --series-1: #4f8ef7; /* bleu — scénario de référence */
+  --series-2: #2ec47f; /* émeraude profonde */
+  --series-3: #f6cd45; /* ambre clair */
+  --series-4: #ab8ff7; /* violet */
+  --series-5: #f07db8; /* rose */
+  --series-6: #ef5f45; /* vermillon */
+  --series-7: #c5ea55; /* lime */
+  --series-8: #0f6b80; /* teal profond */
+  --series-9: #b83a3a; /* brique */
+  --series-10: #7a9e4f; /* olive */
+
+  /* remplissages de distribution (aire sous courbe) */
+  --series-1-fill: rgb(79 142 247 / 14%);
+  --series-2-fill: rgb(46 196 127 / 14%);
+  --series-3-fill: rgb(246 205 69 / 14%);
+  --series-4-fill: rgb(171 143 247 / 14%);
+  --series-5-fill: rgb(240 125 184 / 14%);
+  --series-6-fill: rgb(239 95 69 / 14%);
+  --series-7-fill: rgb(197 234 85 / 14%);
+  --series-8-fill: rgb(15 107 128 / 18%);
+  --series-9-fill: rgb(184 58 58 / 18%);
+  --series-10-fill: rgb(122 158 79 / 14%);
+
+  /* grammaire des charts */
+  --chart-axis: rgb(154 163 182 / 30%); /* axes, hairlines */
+  --chart-grid: rgb(154 163 182 / 12%); /* grille horizontale */
+  --chart-zero: rgb(154 163 182 / 45%); /* ligne zéro (dashée) */
+  --chart-ring: var(--ink-0); /* halo des points */
+  --chart-label: var(--text-2); /* libellés de données */
+  --chart-bar: var(--accent-a62, rgb(34 211 238 / 62%)); /* barre neutre */
+  --chart-positive: rgb(52 211 153 / 60%);
+  --chart-negative: rgb(248 113 113 / 55%);
+
+  /* ------------------------------------------------------------
+   * 5. CODE (sandbox, logs) — coloration syntaxique
+   * ------------------------------------------------------------ */
+  --code-bg: var(--ink-inset);
+  --code-gutter: #55617c;
+  --code-comment: #7fa087;
+  --code-string: #d9a66a;
+  --code-keyword: #79a8ff;
+  --code-builtin: #50c8c8;
+  --code-number: #e6a7e8;
+
+  /* ------------------------------------------------------------
+   * 6. TRAME — l'ambiance « plan de données »
+   *    (utiliser sur les fonds de shell, jamais sur les zones de
+   *    lecture dense : narration, tables longues)
+   * ------------------------------------------------------------ */
+  --trame-color: rgb(233 237 245 / 4%);
+  --trame-size: 28px;
+  --trame: linear-gradient(to right, var(--trame-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--trame-color) 1px, transparent 1px);
+  --trame-background-size: var(--trame-size) var(--trame-size);
+
+  /* ------------------------------------------------------------
+   * 7. TYPOGRAPHIE
+   * ------------------------------------------------------------ */
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "JetBrains Mono", "Cascadia Code", "Consolas", ui-monospace, monospace;
+
+  /* échelle de tailles (remplace les 16 tailles px, dont 7 demi-pixels) */
+  --fs-10: 10px;
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-20: 20px;
+  --fs-24: 24px;
+  --fs-30: 30px;
+
+  /* graisses */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* interlignes */
+  --lh-tight: 1.2;
+  --lh-body: 1.55;
+  --lh-loose: 1.65;
+
+  /* chiffres : TOUTE valeur mesurée ou comparée est tabulaire + mono */
+  --numeric: var(--font-data);
+  --font-variant-numeric: tabular-nums;
+
+  /* ------------------------------------------------------------
+   * 8. ESPACEMENT (échelle 4px)
+   * ------------------------------------------------------------ */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+
+  /* ------------------------------------------------------------
+   * 9. FORMES
+   * ------------------------------------------------------------ */
+  --r-1: 4px;
+  --r-2: 6px;
+  --r-3: 9px;
+  --r-4: 12px;
+  --r-5: 16px;
+  --r-full: 999px;
+
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 30%);
+  --shadow-2: 0 8px 24px rgb(0 0 0 / 35%);
+  --shadow-3: 0 30px 80px rgb(0 0 0 / 45%); /* overlay (ancien l.1312) */
+
+  /* ------------------------------------------------------------
+   * 10. MOTION — utilitaire, jamais décoratif
+   * ------------------------------------------------------------ */
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 240ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ------------------------------------------------------------
+   * 11. Z-INDEX
+   * ------------------------------------------------------------ */
+  --z-nav: 10;
+  --z-panel: 50; /* ancien overlay sandbox (l.1293) */
+  --z-toast: 100;
+}
+
+/*
+ * NOTE migration (phase 03+) — correspondances des anciennes valeurs :
+ *   10.5px→--fs-10  11.5px→--fs-12  12.5px→--fs-13  13px→--fs-13
+ *   9px radius→--r-3  10/11px→--r-3  12px→--r-4  14px→--r-4  18px→--r-5
+ *   rgb(12 21 36 / a)→--veil-*  rgb(79 140 255 / a)→--accent-a-*
+ *   #0c1524/#0a101b/#080d17→--ink-inset
+ * Thème light : refont/06-qualite-accessibilite (redéfinit les tokens
+ * SÉMANTIQUES uniquement, jamais les primitives).
+ */
