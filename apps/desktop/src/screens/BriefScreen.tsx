@@ -152,7 +152,7 @@ export function BriefScreen({ project, brief, busy, error, onSave, onNext }: Pro
         </div>
       </div>
 
-      {error ? <InlineAlert tone="danger">{error}</InlineAlert> : null}
+      {error ? <InlineAlert tone="danger" title="Action impossible">{error}</InlineAlert> : null}
       {missing.length > 0 ? (
         <InlineAlert tone="warn" title="Champs requis manquants">
           {missing.join(", ")}

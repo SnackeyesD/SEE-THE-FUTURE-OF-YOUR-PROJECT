@@ -65,7 +65,7 @@ export function SimulationScreen({
         <Badge tone="ok">Moteur local</Badge>
       </div>
 
-      {error ? <InlineAlert tone="danger">{error}</InlineAlert> : null}
+      {error ? <InlineAlert tone="danger" title="Action impossible">{error}</InlineAlert> : null}
 
       {!scenario ? (
         <Card>

@@ -7,7 +7,7 @@
  *   1. Un hex n'apparaît QUE dans ce fichier (et dans themes/).
  *   2. Les composants consomment les tokens SÉMANTIQUES
  *      (--bg-*, --text-*, --border, --accent, --ok…) jamais les
- *      primitives --ink-*/--line-*/--text-* directement.
+ *      primitives --ink-* / --line-* / --text-* directement.
  *   3. tokens.ts est GÉNÉRÉ depuis ce fichier
  *      (npm run generate -w @see/ui). Ne pas l'éditer à la main.
  *

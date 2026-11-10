@@ -119,7 +119,7 @@ export function InterviewScreen({
         </InlineAlert>
       ) : null}
 
-      {error ? <InlineAlert tone="danger">{error}</InlineAlert> : null}
+      {error ? <InlineAlert tone="danger" title="Action impossible">{error}</InlineAlert> : null}
 
       <Card className="chat-card">
         <CardHeader

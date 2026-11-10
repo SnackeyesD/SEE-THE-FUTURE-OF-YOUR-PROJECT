@@ -20,6 +20,7 @@ import {
 } from "./components/SandboxReviewPanel";
 import { BriefScreen } from "./screens/BriefScreen";
 import { TokenBoard } from "./components/TokenBoard";
+import { ComponentsShowcase } from "./components/ComponentsShowcase";
 import { HypothesesScreen } from "./screens/HypothesesScreen";
 import { InterviewScreen } from "./screens/InterviewScreen";
 import { ProjectsScreen } from "./screens/ProjectsScreen";
@@ -573,6 +574,11 @@ export function App() {
     return <TokenBoard />;
   }
 
+  // Vitrine des primitives (refont phase 03) — dev uniquement.
+  if (new URLSearchParams(window.location.search).has("showcase")) {
+    return <ComponentsShowcase />;
+  }
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -613,7 +619,7 @@ export function App() {
         </InlineAlert>
       ) : null}
 
-      {error && view === "settings" ? <InlineAlert tone="danger">{error}</InlineAlert> : null}
+      {error && view === "settings" ? <InlineAlert tone="danger" title="Action impossible">{error}</InlineAlert> : null}
 
       {view === "projects" || !activeProject ? (
         <ProjectsScreen

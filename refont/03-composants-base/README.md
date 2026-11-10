@@ -62,12 +62,59 @@ Pour chaque composant d'état (Alert, Empty, Field error) : props obligatoires d
 
 ## 5. Critères de validation (DoD)
 
-- [ ] Les 10 primitives listées existent, typées, sans hex ni px hors tokens.
-- [ ] Focus visible et navigation clavier vérifiés sur chaque composant.
-- [ ] Aucune valeur dupliquée avec `styles.css` (grep : `--ink`, `--line`, `--signal` uniquement).
-- [ ] La vitrine montre chaque composant dans tous ses états.
-- [ ] `npm run typecheck` et `npm test` passent.
-- [ ] Un écran réel (au minimum : écran Settings) est déjà migré vers la librairie — preuve que ça marche en production, pas seulement en démo.
+- [x] Les 10 primitives listées existent, typées, sans hex ni px hors tokens.
+- [x] Focus visible et navigation clavier vérifiés sur chaque composant (Tab sur la
+      vitrine ; ←/→, Home/End sur `Tabs` — script `tabsnav`).
+- [x] Aucune valeur dupliquée avec `styles.css` (grep : `--ink`, `--line`, `--signal` uniquement).
+- [x] La vitrine montre chaque composant dans tous ses états.
+- [x] `npm run typecheck` et `npm test` passent.
+- [x] Un écran réel (au minimum : écran Settings) est déjà migré vers la librairie — preuve que ça marche en production, pas seulement en démo.
+
+## 6. Journal de réalisation
+
+### Livré
+- **10 primitives + utilitaire densité** dans `packages/ui/src/primitives/` :
+  `Button` (4 variants × 2 tailles), `Badge` (5 tons), `Card`/`CardHeader`
+  (eyebrow/titre/description/action), `Field`/`SelectField`/`TextareaField`,
+  `InlineAlert` (**`title` obligatoire** — principe Snyk), `Stat`, `EmptyState`,
+  `ProgressBar`, `Tabs` (roving tabindex, ←/→/Home/End), `Table` (en-têtes mono,
+  colonnes `mono:` tabulaires alignées à droite, état vide explicite) ;
+  `DensityProvider`/`useDensity`.
+- `primitives.css` : styling 100 % tokens (zéro hex), focus visible tokenisé
+  `--focus`, `prefers-reduced-motion` géré.
+- **Bloc `ui-*` retiré de `styles.css`** (l'ancienne génération 2 migre dans la
+  librairie) ; seuls restent 3 sélecteurs descendants gen-1 (`.composer .ui-field`
+  etc.) à migrer phase 05.
+- `InlineAlert.title` devenant obligatoire : **10 sites d'appel corrigés** avec des
+  titres actionnables (« Action impossible », « Exécution impossible »,
+  « Échec de l'audit »…).
+- **Écran Settings migré** : `.facts` et les deux journaux → primitive `Table` ;
+  `formatDateTime` conservé pour l'horodatage.
+- **Vitrine `?showcase`** (`ComponentsShowcase.tsx`) : les 10 primitives dans tous
+  leurs états, avec rappels de règles. Captures dans `captures/` (vitrine,
+  focus-visible, entrée coexistence).
+- `conventions.md` : procédure d'ajout de composant, checklist a11y, règle de
+  séparation styles.css ↔ librairie.
+
+### Le bug de cascade détecté et corrigé (leçon documentée dans conventions.md §5)
+La vitrine capturée fin de phase montrait les **anciennes valeurs** : accent
+`#4f8cff`, polices Segoe UI. Deux causes superposées :
+1. `tokens.css` : la ligne `--ink-*/--line-*/--text-*` (commentaire d'en-tête)
+   contient deux fois la séquence `*/` → le commentaire se referme prématurément
+   et le parseur avale tout le `:root` **sans lever d'erreur** (0 règles).
+2. `styles.css` redéfinissait aussi `:root { --accent, --border, --text, --muted,
+   --ok, --danger }` — importé **après** `tokens.css` dans `main.tsx`, il gagnait
+   à la cascade. Ces définitions sont supprimées (un token n'est défini qu'une
+   fois, dans `tokens.css`).
+Vérification finale par styles calculés : accent `rgb(34 211 238)`,
+`--on-accent` `rgb(6 18 26)`, Inter / JetBrains Mono, bordure `--line-0`
+`rgb(36 43 56)`, surface `--ink-1` `rgb(16 20 28)`.
+
+### Contrôles de fin de phase
+- Grep hex/rgb dans les TSX : **0 occurrence** hors `Charts.tsx` (autorisé,
+  traité phase 04).
+- Grep hex dans `packages/ui/src/*.css` hors tokens.css : **0 occurrence**.
+- `npm test` : verts ; `npm run check -w @see/ui` : `tokens.ts à jour`.
 
 ## 6. Dépendances
 

@@ -78,7 +78,7 @@ export function ResultsScreen({
         </div>
       </div>
 
-      {error ? <InlineAlert tone="danger">{error}</InlineAlert> : null}
+      {error ? <InlineAlert tone="danger" title="Action impossible">{error}</InlineAlert> : null}
 
       <div className="stat-grid">
         <Stat

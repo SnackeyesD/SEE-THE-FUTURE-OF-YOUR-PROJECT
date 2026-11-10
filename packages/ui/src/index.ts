@@ -1,6 +1,7 @@
 // Tokens « Ink & Signal » + polices embarquées : chaque consommateur de
 // @see/ui charge automatiquement la source de vérité visuelle (refont phase 02).
 import "./tokens.css";
+import "./primitives.css";
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
 import "@fontsource/inter/600.css";
@@ -12,17 +13,20 @@ import "@fontsource/jetbrains-mono/600.css";
 export { UI_VERSION, cx } from "./cx";
 export { ink, line, text, signals, code, SERIES, seriesColor, seriesFill } from "./tokens";
 export {
-  Badge,
+  DensityProvider,
+  useDensity,
   Button,
+  Badge,
   Card,
   CardHeader,
-  DensityProvider,
-  EmptyState,
   Field,
-  InlineAlert,
-  ProgressBar,
   SelectField,
-  Stat,
   TextareaField,
-  useDensity,
+  InlineAlert,
+  Stat,
+  EmptyState,
+  ProgressBar,
+  Tabs,
+  Table,
 } from "./components";
+export type { ButtonVariant, BadgeTone, AlertTone, AlertAction, StatTone, TabItem, TableColumn } from "./components";

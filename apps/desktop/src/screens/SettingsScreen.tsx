@@ -13,6 +13,7 @@ import {
   CardHeader,
   InlineAlert,
   SelectField,
+  Table,
 } from "@see/ui";
 import { useCallback, useEffect, useState } from "react";
 import { ProvidersPanel } from "../components/ProvidersPanel";
@@ -204,16 +205,20 @@ export function SettingsScreen({
         {permissions && permissions.events.length > 0 ? (
           <details className="details">
             <summary>Journal des décisions ({permissions.events.length})</summary>
-            <ul className="mini-list">
-              {permissions.events.slice(-12).reverse().map((event) => (
-                <li key={event.id}>
-                  <span>{formatDateTime(event.createdAt)}</span>
-                  <strong>{event.tool}</strong>
-                  <span>{event.decision}</span>
-                  <span className="ui-muted">{event.actor}</span>
-                </li>
-              ))}
-            </ul>
+            <Table
+              columns={[
+                { key: "createdAt", header: "Date", mono: true, render: (event) => formatDateTime(event.createdAt) },
+                { key: "tool", header: "Outil" },
+                { key: "decision", header: "Décision" },
+                {
+                  key: "actor",
+                  header: "Source",
+                  render: (event) => <span className="ui-muted">{event.actor}</span>,
+                },
+              ]}
+              rows={permissions.events.slice(-12).reverse()}
+              rowKey={(event) => event.id}
+            />
           </details>
         ) : null}
       </Card>
@@ -226,24 +231,19 @@ export function SettingsScreen({
         />
         <div className="split">
           <div className="ui-stack">
-            <div className="facts">
-              <div>
-                <dt>État sidecar</dt>
-                <dd>{status?.running ? "en marche" : "arrêté"}</dd>
-              </div>
-              <div>
-                <dt>PID</dt>
-                <dd>{status?.pid ?? "—"}</dd>
-              </div>
-              <div>
-                <dt>Python</dt>
-                <dd>{health?.python ?? "—"}</dd>
-              </div>
-              <div>
-                <dt>Protocole</dt>
-                <dd>{health?.protocolVersion ?? "—"}</dd>
-              </div>
-            </div>
+            <Table
+              columns={[
+                { key: "measure", header: "Mesure" },
+                { key: "value", header: "Valeur", mono: true },
+              ]}
+              rows={[
+                { measure: "État sidecar", value: status?.running ? "en marche" : "arrêté" },
+                { measure: "PID", value: status?.pid ?? "—" },
+                { measure: "Python", value: health?.python ?? "—" },
+                { measure: "Protocole", value: health?.protocolVersion ?? "—" },
+              ]}
+              rowKey={(row) => row.measure}
+            />
             <div className="ui-actions">
               <Button variant="secondary" onClick={() => void onPing()} disabled={disabled}>
                 Ping
@@ -255,22 +255,28 @@ export function SettingsScreen({
           </div>
           <div>
             <h3>Journal récent</h3>
-            <ol className="log__list log__list--compact">
-              {logs.length === 0 ? (
-                <li className="log__empty">Aucun événement.</li>
-              ) : (
-                logs.slice(-12).map((entry) => (
-                  <li key={entry.id} className={`log__line log__line--${entry.level}`}>
-                    <span className="log__time">{entry.at}</span>
-                    <span>{entry.message}</span>
-                  </li>
-                ))
-              )}
-            </ol>
+            <Table
+              columns={[
+                { key: "at", header: "Heure", mono: true },
+                {
+                  key: "level",
+                  header: "Niveau",
+                  render: (entry) => (
+                    <Badge tone={entry.level === "success" ? "ok" : entry.level === "error" ? "danger" : "neutral"}>
+                      {entry.level}
+                    </Badge>
+                  ),
+                },
+                { key: "message", header: "Événement" },
+              ]}
+              rows={logs.slice(-12)}
+              rowKey={(entry) => entry.id}
+              empty="Aucun événement."
+            />
           </div>
         </div>
-        <InlineAlert tone="neutral">
-          L'application reste utilisable hors ligne avec Ollama. Aucun cloud n'est requis pour
+        <InlineAlert tone="neutral" title="Fonctionne hors ligne">
+          L'application reste utilisable avec Ollama. Aucun cloud n'est requis pour
           créer un brief, simuler ou lire les résultats.
         </InlineAlert>
       </Card>

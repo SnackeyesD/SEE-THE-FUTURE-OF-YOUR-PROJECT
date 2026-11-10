@@ -48,7 +48,7 @@ export function ProjectsScreen({
         </Button>
       </div>
 
-      {error ? <InlineAlert tone="danger">{error}</InlineAlert> : null}
+      {error ? <InlineAlert tone="danger" title="Action impossible">{error}</InlineAlert> : null}
 
       {projects.length === 0 ? (
         <Card>

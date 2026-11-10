@@ -253,7 +253,7 @@ export function HypothesesScreen({
         </div>
       </div>
 
-      {message ? <InlineAlert tone="danger">{message}</InlineAlert> : null}
+      {message ? <InlineAlert tone="danger" title="Action impossible">{message}</InlineAlert> : null}
 
       <Card>
         <CardHeader

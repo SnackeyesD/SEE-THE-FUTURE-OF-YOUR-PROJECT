@@ -515,7 +515,7 @@ export function SandboxReviewPanel({
           </aside>
         </div>
 
-        {error ? <InlineAlert tone="danger">{error}</InlineAlert> : null}
+        {error ? <InlineAlert tone="danger" title="Exécution impossible">{error}</InlineAlert> : null}
 
         {result ? (
           <div className="sandbox-panel__result">
@@ -650,7 +650,7 @@ export function SandboxAuditPanel({
                 </span>
               </summary>
               <p>{record.purpose || "Sans objet déclaré."}</p>
-              {record.error ? <InlineAlert tone="danger">{record.error}</InlineAlert> : null}
+              {record.error ? <InlineAlert tone="danger" title="Échec de l'audit">{record.error}</InlineAlert> : null}
               <details className="details">
                 <summary>Code audité</summary>
                 <CodeBlock code={record.code} />
