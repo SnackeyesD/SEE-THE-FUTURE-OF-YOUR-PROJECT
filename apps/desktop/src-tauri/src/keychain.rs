@@ -49,6 +49,15 @@ pub fn delete_secret(reference: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::validate_reference;
+    use keyring::credential::CredentialPersistence;
+
+    #[test]
+    fn uses_a_persistent_platform_store() {
+        assert!(matches!(
+            keyring::default::default_credential_builder().persistence(),
+            CredentialPersistence::UntilDelete
+        ));
+    }
 
     #[test]
     fn rejects_references_outside_the_application_namespace() {

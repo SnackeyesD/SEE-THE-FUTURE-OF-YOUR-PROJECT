@@ -17,6 +17,9 @@ arguments de processus. Les coûts doivent rester sous contrôle par projet.
 
 - Les clés vivent uniquement dans le trousseau du système via `keyring`
   (Windows Credential Manager, macOS Keychain, Secret Service).
+- Les backends natifs sont activés explicitement (`windows-native`,
+  `apple-native`, `sync-secret-service` + `crypto-rust`). Sans ces features,
+  `keyring` sélectionne le backend `mock`, non persistant.
 - La base ne stocke qu'une référence `keychainRef` de la forme
   `seefuture:<uuid>`. La référence n'est pas un secret.
 - Le shell Rust lit la clé juste avant un appel fournisseur et l'injecte dans

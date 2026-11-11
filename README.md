@@ -16,6 +16,16 @@ Application desktop **local-first** « bring your own AI » : l'utilisateur bran
 | Visual Studio Build Tools | C++ + Windows SDK |
 | WebView2 | installé (Windows 10/11) |
 
+### Linux (Pop!_OS / Ubuntu)
+
+Le trousseau utilise Secret Service (GNOME Keyring sur Pop!_OS). Le build de `keyring` nécessite les en-têtes D-Bus :
+
+```bash
+sudo apt install libdbus-1-dev pkg-config
+```
+
+Le trousseau doit être déverrouillé pour que les clés API soient accessibles.
+
 ## Démarrage rapide
 
 ```powershell
@@ -92,4 +102,5 @@ Voir [`docs/adr/0002-transport-ipc.md`](docs/adr/0002-transport-ipc.md), [`docs/
 
 - **Le statut sidecar est « arrêté »** : vérifier `npm run sidecar:sync`, puis que `apps/desktop/src-tauri/sidecar/.venv/Scripts/python.exe` existe. Sinon définir `SIDECAR_PYTHON`.
 - **Rust ne compile pas** : vérifier l'installation de Visual Studio Build Tools (C++ + Windows SDK).
+- **La clé API disparaît après redémarrage** : vérifier que le trousseau système est déverrouillé et que `keyring` est compilé avec ses backends natifs via `cargo tree --manifest-path apps/desktop/src-tauri/Cargo.toml -e features -i keyring`.
 - **`npm run protocol:check` échoue** : lancer `npm run protocol:generate` et committer les fichiers générés.
