@@ -38,11 +38,6 @@
   --muted: #4a5468;
   --faint: #5d6880;
 
-  /* alias legacy de styles.css (:root gen-1) */
-  --bg: #eef1f6;
-  --surface: #f7f9fc;
-  --surface-soft: #ffffff;
-
   /* ------------------------------------------------------------
    * SIGNAUX — assombris pour AA sur papier
    * ------------------------------------------------------------ */

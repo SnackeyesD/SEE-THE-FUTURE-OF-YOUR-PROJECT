@@ -51,11 +51,19 @@ Créer `refont/07-adoption-nettoyage/DESIGN.md` + version courte dans `packages/
 
 ## 4. Critères de validation (DoD)
 
-- [ ] Aucune valeur de l'ancien design n'existe dans le code (grep vérifié).
-- [ ] `ui:check` est en place et bloque les régressions.
-- [ ] La doc DESIGN est lisible par un contributeur externe : il sait quoi utiliser et pourquoi.
-- [ ] Le parcours complet passe en dark et light, sur web et desktop.
-- [ ] Le bilan est écrit et honnête (écarts documentés).
+- [x] Aucune valeur de l'ancien design n'existe dans le code (grep vérifié : `#0b1220`, `#4f8cff`, `#121c2e`, `rgb(79 140 255)`… ne restent que dans `tokens.css` — la source de vérité — et sa note de migration).
+- [x] `ui:check` est en place et bloque les régressions (couleurs brutes, polices littérales, classes gen-1 bannies, styles morts) — intégré au `lint` et au job `web` de la CI ; testé négativement.
+- [x] La doc DESIGN est lisible par un contributeur externe : `refont/07-adoption-nettoyage/DESIGN.md` (principes, primitives, séries, parcours de contribution) + version courte `packages/ui/README.md`.
+- [ ] Le parcours complet passe en dark et light, sur web et desktop — **web dark/light vérifié (captures + probe) ; parcours complet et mode desktop bloqués sans sidecar (P1-00), à faire au premier lancement Tauri** (dette n°1 du bilan).
+- [x] Le bilan est écrit et honnête (`bilan.md` — écarts, hors-périmètre, dettes).
+
+## 5bis. Journal de réalisation (fait)
+
+1. **Purge** : `:root` gen-1 supprimé (alias `--bg/--surface/--surface-soft` remplacés par les tokens sémantiques dans `.sandbox-*`), alias retirés de `light.css`, `font-family: var(--font-ui)` rapatriée sur `body` (elle vivait dans le bloc supprimé). Grep final : plus aucune valeur de l'ancien design dans le code.
+2. **Doc** : `DESIGN.md` (principes, couches, primitives, séries, contribution, références) + `packages/ui/README.md`.
+3. **Garde-fous** : `scripts/ui-check.mjs` (4 règles) → `npm run ui:check`, intégré au `lint` racine et au job `web` de `.github/workflows/ci.yml`. Test négatif vérifié (hex + classe morte → exit 1).
+4. **Vérification web dark/light** : captures `final-dark-entree.png` / `final-light-entree.png`, probe Inter + bascule `data-theme` OK après la purge.
+5. **Bilan** : `bilan.md` — 1528→856 lignes de CSS écran, 82→0 valeurs brutes, 17 composants réutilisables, dettes listées (n°1 : le parcours complet sous Tauri).
 
 ## 5. Dépendances
 

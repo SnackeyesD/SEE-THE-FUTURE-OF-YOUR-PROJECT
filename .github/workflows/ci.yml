@@ -17,6 +17,7 @@ jobs:
       - run: npm ci
       - run: npm run protocol:check
       - run: npm run typecheck
+      - run: npm run ui:check
       - run: npm test
       - run: npm run build:web
 
