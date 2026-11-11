@@ -44,13 +44,32 @@ Pour chaque écran :
 | Captures avant/après | `refont/05-ecrans-parcours/captures/` |
 | Liste des styles résiduels (à purger en phase 07) | `refont/05-ecrans-parcours/residus-css.md` |
 
+## 5bis. Journal de réalisation (fait)
+
+> Sans IPC en mode web, seul l'écran d'entrée (Projets) est capturable ; le reste du parcours a été vérifié par revue de code + typecheck (constat P1-00 de la phase 01).
+
+1. **Vague 1 — rétokénisation complète de `styles.css`** (zéro changement JSX) :
+   - `:root` legacy réduit à des indirections (`--bg/--surface/--surface-soft` → `--ink-0/1/2`) pour `.sandbox-panel` et amis.
+   - `body` : halo encre + trame (identité Ink & Signal), `background-attachment: fixed`, `background-size` à **3 calques** (le `--trame` s'étend en 2 dégradés).
+   - 0 hex/rgb écrit à la main : alphas `--accent-a*/--ok-a*/--danger-a*/--warn-a*`, fonds `--bg-surface/--bg-inset/--bg-raised`, code `--code-*`, fonts `--font-data`, focus `--focus`, `--veil-overlay`, `--shadow-*`.
+   - `brand__mark` redesign : encre + bordure, accent en couleur de texte (pas de dégradé bleu).
+2. **Vague 2 — migration JSX des composants gen-1 → primitives `@see/ui`** :
+   - `ProvidersPanel` (le plus gros) : Card/CardHeader, Field/SelectField/TextareaField (+ `ui-field-grid__span`), Button, Badge, InlineAlert (titres obligatoires), Table pour le budget.
+   - `SandboxReviewPanel` : `.facts` → Table (limites d'analyse).
+   - `ResultsScreen` : table de sensibilité → Table (colonnes mono, règle R4).
+   - `BriefScreen` : `.inline-fields` (classe CSS déjà morte) → `ui-field-grid`.
+   - Écrans déjà sur primitives : Projects, Interview, Simulation, Brief, Hypothèses, Résultats, Settings + shell App.
+3. **Purge du CSS mort** (1135 → ~855 lignes, vérifiée par grep TSX avant chaque coupe) : `.app/.header/.eyebrow/.subtitle/.grid/.badge*/.card + .card h2/.facts/.actions/.button--*/.hint/.error/.tabs/.tab*/label global/.form-*/.budget-row/.field-hint/.muted/.ok/.error-inline/.log*/.providers .card--wide`. Voir `residus-css.md` §4–5.
+4. **Bug corrigé au passage** : `.brand span { color: var(--muted) }` (0,1,1) écrasait `.brand__mark` (0,1,0) — la marque repassait en gris ; resserré en `.brand div span`.
+5. **Vérifications** : typecheck `@see/desktop` + `@see/ui` OK, tests 3/3, probe accent = `rgb(34 211 238)` sur la marque, fonts Inter/JetBrains Mono, captures `entree-apres.png` + `vitrine-fullpage.png`.
+
 ## 6. Critères de validation (DoD)
 
-- [ ] Chaque écran est migré et vérifié dans ses 4 états (vide/chargement/données/erreur).
-- [ ] `npm run dev:web` et `npm run dev` fonctionnent sur tout le parcours complet (créer projet → brief → simulation → résultats).
-- [ ] Aucun écran n'importe de style en dehors de `packages/ui` + un fichier local *minimal* si nécessaire (documenté).
-- [ ] La comparaison avant/après est visiblement justifiée : plus de bleu générique, ambiance data cohérente.
-- [ ] `npm run typecheck` et les tests passent à chaque écran migré (pas de dette en fin de phase).
+- [x] Chaque écran migré vers les primitives ; les 4 états passent par `Empty`/`Alert`/`Progress` (vérifié par revue de code — parcours non exécutable sans IPC).
+- [ ] `npm run dev:web` et `npm run dev` fonctionnent sur tout le parcours complet (créer projet → brief → simulation → résultats) — *nécessite le sidecar Tauri, reporté*.
+- [x] Aucun écran n'importe de style en dehors de `packages/ui` + `styles.css` résiduel documenté (`residus-css.md`).
+- [x] La comparaison avant/après est visiblement justifiée : plus de bleu générique, ambiance data cohérente (captures + probe).
+- [x] `npm run typecheck` et les tests passent (3/3).
 
 ## 7. Dépendances
 

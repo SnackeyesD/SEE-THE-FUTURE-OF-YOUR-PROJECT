@@ -221,7 +221,7 @@ export function BriefScreen({ project, brief, busy, error, onSave, onNext }: Pro
               hint="Une hypothèse par ligne."
               placeholder="Ex. Demande stable toute l'année"
             />
-            <div className="inline-fields">
+            <div className="ui-field-grid">
               <Field
                 label="Devise"
                 value={form.currency}

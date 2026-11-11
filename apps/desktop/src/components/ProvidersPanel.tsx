@@ -13,6 +13,17 @@ import type {
 } from "@see/protocol";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  Field,
+  InlineAlert,
+  SelectField,
+  Table,
+  TextareaField,
+} from "@see/ui";
+import {
   createProject,
   deleteProfile,
   deleteProviderBudget,
@@ -405,94 +416,90 @@ export function ProvidersPanel({ disabled, onLog, initialProjectId }: Props) {
 
   if (disabled) {
     return (
-      <section className="card card--wide">
-        <h2>Fournisseurs IA</h2>
-        <p className="hint">Disponible uniquement dans l'application Tauri.</p>
-      </section>
+      <Card className="card--wide">
+        <CardHeader
+          eyebrow="Fournisseurs IA"
+          title="Configuration indisponible"
+        />
+        <p className="ui-muted">Disponible uniquement dans l'application Tauri.</p>
+      </Card>
     );
   }
 
   return (
     <div className="providers">
-      <section className="card card--wide">
-        <h2>Projet</h2>
-        <div className="form-row">
-          <label>
-            Projet actif
-            <select
-              value={projectId}
-              onChange={(event) => {
-                setProjectId(event.target.value);
-                void loadProjectData(event.target.value);
-              }}
-            >
-              {projects.length === 0 ? <option value="">Aucun projet</option> : null}
-              {projects.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Nouveau projet
-            <input
-              value={newProjectName}
-              onChange={(event) => setNewProjectName(event.target.value)}
-              placeholder="Nom du projet"
-            />
-          </label>
-          <button type="button" onClick={handleCreateProject} disabled={busy}>
-            Créer
-          </button>
+      <Card className="card--wide">
+        <CardHeader eyebrow="Projet" title="Contexte de travail" />
+        <div className="ui-field-grid">
+          <SelectField
+            label="Projet actif"
+            value={projectId}
+            onChange={(event) => {
+              setProjectId(event.target.value);
+              void loadProjectData(event.target.value);
+            }}
+          >
+            {projects.length === 0 ? <option value="">Aucun projet</option> : null}
+            {projects.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </SelectField>
+          <Field
+            label="Nouveau projet"
+            value={newProjectName}
+            onChange={(event) => setNewProjectName(event.target.value)}
+            placeholder="Nom du projet"
+          />
         </div>
-      </section>
+        <div className="ui-actions">
+          <Button onClick={handleCreateProject} disabled={busy}>
+            Créer
+          </Button>
+        </div>
+      </Card>
 
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <InlineAlert tone="danger" title="Action impossible">{error}</InlineAlert> : null}
 
       {projectId ? (
         <>
-          <section className="card card--wide">
-            <h2>Profil fournisseur</h2>
-            <div className="form-grid">
-              <label>
-                Fournisseur
-                <select value={form.provider} onChange={(event) => selectProvider(event.target.value)}>
-                  {(catalog?.providers ?? []).map((item: ProviderCatalogEntry) => (
-                    <option key={item.id} value={item.id}>
-                      {item.label}
-                      {item.requiresKey ? "" : " (sans clé)"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Nom
-                <input
-                  value={form.name}
-                  onChange={(event) => setForm({ ...form, name: event.target.value })}
-                  placeholder="Ex. OpenAI rapide"
-                />
-              </label>
-              <label>
-                Modèle
-                <input
-                  value={form.model}
-                  onChange={(event) => setForm({ ...form, model: event.target.value })}
-                  placeholder={provider?.defaultModel ?? "gpt-4o-mini"}
-                />
-              </label>
-              <label>
-                URL de base
-                <input
-                  value={form.baseUrl}
-                  onChange={(event) => setForm({ ...form, baseUrl: event.target.value })}
-                  placeholder="https://..."
-                />
-              </label>
-              <label className="form-span">
-                Clé API
-                <input
+          <Card className="card--wide">
+            <CardHeader eyebrow="Profil" title="Profil fournisseur" />
+            <div className="ui-field-grid">
+              <SelectField
+                label="Fournisseur"
+                value={form.provider}
+                onChange={(event) => selectProvider(event.target.value)}
+              >
+                {(catalog?.providers ?? []).map((item: ProviderCatalogEntry) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                    {item.requiresKey ? "" : " (sans clé)"}
+                  </option>
+                ))}
+              </SelectField>
+              <Field
+                label="Nom"
+                value={form.name}
+                onChange={(event) => setForm({ ...form, name: event.target.value })}
+                placeholder="Ex. OpenAI rapide"
+              />
+              <Field
+                label="Modèle"
+                value={form.model}
+                onChange={(event) => setForm({ ...form, model: event.target.value })}
+                placeholder={provider?.defaultModel ?? "gpt-4o-mini"}
+              />
+              <Field
+                label="URL de base"
+                value={form.baseUrl}
+                onChange={(event) => setForm({ ...form, baseUrl: event.target.value })}
+                placeholder="https://..."
+              />
+              <div className="ui-field-grid__span">
+                <Field
+                  label="Clé API"
                   type="password"
                   autoComplete="off"
                   value={form.apiKey}
@@ -500,53 +507,44 @@ export function ProvidersPanel({ disabled, onLog, initialProjectId }: Props) {
                   placeholder={
                     form.keychainRef ? "Laisser vide pour conserver la clé" : "Stockée dans le trousseau"
                   }
+                  hint={`Jamais en base ni dans les logs. Référence : ${form.keychainRef || "nouvelle"}`}
                 />
-                <span className="field-hint">
-                  Jamais en base ni dans les logs. Référence : {form.keychainRef || "nouvelle"}
-                </span>
-              </label>
+              </div>
             </div>
-            <div className="actions">
-              <button type="button" onClick={handleSaveProfile} disabled={busy}>
+            <div className="ui-actions">
+              <Button onClick={handleSaveProfile} disabled={busy}>
                 {form.keychainRef ? "Mettre à jour" : "Enregistrer"}
-              </button>
+              </Button>
               {form.keychainRef ? (
-                <button
-                  type="button"
-                  className="button--secondary"
-                  onClick={() => setForm(EMPTY_FORM)}
-                  disabled={busy}
-                >
+                <Button variant="secondary" onClick={() => setForm(EMPTY_FORM)} disabled={busy}>
                   Annuler
-                </button>
+                </Button>
               ) : null}
             </div>
-            <p className="hint">
+            <p className="ui-muted">
               Les capacités et prix sont lus dans la matrice versionnée{" "}
               {catalog?.capabilitiesVersion ?? "locale"}.
             </p>
-          </section>
+          </Card>
 
-          <section className="card card--wide">
-            <h2>Profils enregistrés</h2>
+          <Card className="card--wide">
+            <CardHeader eyebrow="Profils" title="Profils enregistrés" />
             {profiles.length === 0 ? (
-              <p className="hint">Aucun profil.</p>
+              <p className="ui-muted">Aucun profil. Créez-en un ci-dessus pour assigner les rôles.</p>
             ) : (
               <ul className="list">
                 {profiles.map((item) => (
                   <li key={item.id}>
                     <div>
                       <strong>{item.name}</strong>
-                      <span className="muted">
+                      <span className="ui-muted">
                         {item.provider} · {item.model ?? "modèle par défaut"}
                       </span>
                       {tests[item.id] ? (
-                        <span className={tests[item.id].ok ? "ok" : "error-inline"}>
-                          {tests[item.id].message}
-                        </span>
+                        <Badge tone={tests[item.id].ok ? "ok" : "danger"}>{tests[item.id].message}</Badge>
                       ) : null}
                       {models[item.id] ? (
-                        <span className="muted">
+                        <span className="ui-muted">
                           {models[item.id]
                             .slice(0, 8)
                             .map((model) => model.id)
@@ -555,48 +553,28 @@ export function ProvidersPanel({ disabled, onLog, initialProjectId }: Props) {
                         </span>
                       ) : null}
                     </div>
-                    <div className="actions">
-                      <button
-                        type="button"
-                        className="button--secondary"
-                        onClick={() => handleTest(item)}
-                        disabled={busy}
-                      >
+                    <div className="ui-actions">
+                      <Button variant="secondary" size="small" onClick={() => handleTest(item)} disabled={busy}>
                         Tester
-                      </button>
-                      <button
-                        type="button"
-                        className="button--ghost"
-                        onClick={() => handleModels(item)}
-                        disabled={busy}
-                      >
+                      </Button>
+                      <Button variant="ghost" size="small" onClick={() => handleModels(item)} disabled={busy}>
                         Modèles
-                      </button>
-                      <button
-                        type="button"
-                        className="button--ghost"
-                        onClick={() => handleEdit(item)}
-                        disabled={busy}
-                      >
+                      </Button>
+                      <Button variant="ghost" size="small" onClick={() => handleEdit(item)} disabled={busy}>
                         Modifier
-                      </button>
-                      <button
-                        type="button"
-                        className="button--danger"
-                        onClick={() => handleDeleteProfile(item)}
-                        disabled={busy}
-                      >
+                      </Button>
+                      <Button variant="danger" size="small" onClick={() => handleDeleteProfile(item)} disabled={busy}>
                         Supprimer
-                      </button>
+                      </Button>
                     </div>
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </Card>
 
-          <section className="card card--wide">
-            <h2>Rôles</h2>
+          <Card className="card--wide">
+            <CardHeader eyebrow="Rôles" title="Assignation des agents" />
             <div className="role-list">
               {ROLES.map((role) => {
                 const assignment = roles.find((item) => item.role === role.id);
@@ -604,7 +582,7 @@ export function ProvidersPanel({ disabled, onLog, initialProjectId }: Props) {
                   <div className="role-row" key={role.id}>
                     <div className="role-name">
                       <strong>{role.label}</strong>
-                      <span className="muted">{role.id}</span>
+                      <span className="ui-muted">{role.id}</span>
                     </div>
                     <select
                       value={roleProfiles[role.id] ?? ""}
@@ -632,90 +610,63 @@ export function ProvidersPanel({ disabled, onLog, initialProjectId }: Props) {
                       }
                       placeholder={profiles.find((item) => item.id === roleProfiles[role.id])?.model ?? "modèle"}
                     />
-                    <button
-                      type="button"
-                      className="button--secondary"
-                      onClick={() => handleAssignRole(role.id)}
-                      disabled={busy}
-                    >
+                    <Button variant="secondary" size="small" onClick={() => handleAssignRole(role.id)} disabled={busy}>
                       Assigner
-                    </button>
+                    </Button>
                     {assignment ? (
-                      <button
-                        type="button"
-                        className="button--ghost"
-                        onClick={() => handleDeleteRole(role.id)}
-                        disabled={busy}
-                      >
+                      <Button variant="ghost" size="small" onClick={() => handleDeleteRole(role.id)} disabled={busy}>
                         Retirer
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 );
               })}
             </div>
-          </section>
+          </Card>
 
-          <section className="card">
-            <h2>Budget</h2>
-            <dl className="facts">
-              <div>
-                <dt>Plafond</dt>
-                <dd>{budget ? formatMicros(budget.limitMicros) : "illimité"}</dd>
-              </div>
-              <div>
-                <dt>Dépensé</dt>
-                <dd>{formatMicros(budget?.spentMicros ?? 0)}</dd>
-              </div>
-              <div>
-                <dt>Entrées</dt>
-                <dd>{usage?.entries.length ?? 0}</dd>
-              </div>
-              <div>
-                <dt>Tokens</dt>
-                <dd>
-                  {usage?.inputTokens ?? 0} / {usage?.outputTokens ?? 0}
-                </dd>
-              </div>
-            </dl>
+          <Card>
+            <CardHeader eyebrow="Budget" title="Plafond de dépense" />
+            <Table
+              columns={[
+                { key: "measure", header: "Mesure" },
+                { key: "value", header: "Valeur", mono: true },
+              ]}
+              rows={[
+                { measure: "Plafond", value: budget ? `${formatMicros(budget.limitMicros)} USD` : "illimité" },
+                { measure: "Dépensé", value: `${formatMicros(budget?.spentMicros ?? 0)} USD` },
+                { measure: "Entrées", value: String(usage?.entries.length ?? 0) },
+                { measure: "Tokens", value: `${usage?.inputTokens ?? 0} / ${usage?.outputTokens ?? 0}` },
+              ]}
+              rowKey={(row) => row.measure}
+            />
             {budget && budget.limitMicros > 0 && budget.spentMicros / budget.limitMicros >= 0.8 ? (
-              <p className="error-inline">
-                Alerte : {Math.round((budget.spentMicros / budget.limitMicros) * 100)} % du plafond
-                consommé.
-              </p>
+              <InlineAlert tone="warn" title="Plafond presque atteint">
+                {Math.round((budget.spentMicros / budget.limitMicros) * 100)} % du plafond consommé. Le
+                blocage survient avant l'appel si le coût estimé dépasse le plafond.
+              </InlineAlert>
             ) : null}
-            <div className="form-row budget-row">
-              <label>
-                Plafond (USD)
-                <input
-                  value={budgetInput}
-                  onChange={(event) => setBudgetInput(event.target.value)}
-                  inputMode="decimal"
-                  placeholder="0 = illimité"
-                />
-              </label>
-              <button type="button" onClick={handleBudget} disabled={busy}>
+            <div className="ui-actions">
+              <Field
+                label="Plafond (USD)"
+                value={budgetInput}
+                onChange={(event) => setBudgetInput(event.target.value)}
+                inputMode="decimal"
+                placeholder="0 = illimité"
+              />
+              <Button onClick={handleBudget} disabled={busy}>
                 Appliquer
-              </button>
-              <button
-                type="button"
-                className="button--ghost"
-                onClick={handleDeleteBudget}
-                disabled={busy}
-              >
+              </Button>
+              <Button variant="ghost" onClick={handleDeleteBudget} disabled={busy}>
                 Retirer
-              </button>
+              </Button>
             </div>
-            <p className="hint">
-              Alerte et blocage avant l'appel si le coût estimé dépasse le plafond.
-            </p>
-          </section>
+          </Card>
 
-          <section className="card">
-            <h2>Conversation de test</h2>
-            <label>
-              Profil
-              <select
+          <Card>
+            <CardHeader eyebrow="Diagnostic" title="Conversation de test" />
+            <div className="ui-field-grid">
+              <SelectField
+                label="Profil"
                 value={chatProfileId}
                 onChange={(event) => setChatProfileId(event.target.value)}
               >
@@ -724,38 +675,39 @@ export function ProvidersPanel({ disabled, onLog, initialProjectId }: Props) {
                     {item.name}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label>
-              Message
-              <textarea
-                value={chatInput}
-                onChange={(event) => setChatInput(event.target.value)}
-                rows={4}
-                placeholder="Décrivez le projet…"
-              />
-            </label>
-            <button type="button" onClick={handleChat} disabled={busy || profiles.length === 0}>
-              Envoyer
-            </button>
+              </SelectField>
+              <div className="ui-field-grid__span">
+                <TextareaField
+                  label="Message"
+                  value={chatInput}
+                  onChange={setChatInput}
+                  rows={4}
+                  placeholder="Décrivez le projet…"
+                />
+              </div>
+            </div>
+            <div className="ui-actions">
+              <Button onClick={handleChat} disabled={busy || profiles.length === 0}>
+                Envoyer
+              </Button>
+            </div>
             {chatResult ? (
               <div className="chat-result">
                 <p>{chatResult.text}</p>
-                <span className="muted">
+                <span className="ui-muted">
                   {chatResult.provider} · {chatResult.model} · {chatResult.usage.totalTokens} tokens ·{" "}
                   {formatMicros(chatResult.usage.costMicros)} USD
                 </span>
                 {chatResult.fallbacks && chatResult.fallbacks.length > 0 ? (
-                  <p className="error-inline">
-                    Repli :{" "}
+                  <InlineAlert tone="warn" title="Repli utilisé">
                     {chatResult.fallbacks
                       .map((item) => `${item.provider} (${item.reason})`)
                       .join(", ")}
-                  </p>
+                  </InlineAlert>
                 ) : null}
               </div>
             ) : null}
-          </section>
+          </Card>
         </>
       ) : null}
     </div>

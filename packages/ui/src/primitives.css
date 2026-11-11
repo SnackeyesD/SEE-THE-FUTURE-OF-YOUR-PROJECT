@@ -84,6 +84,11 @@
   gap: var(--sp-4);
 }
 
+/* item pleine largeur de la grille de champs */
+.ui-field-grid__span {
+  grid-column: 1 / -1;
+}
+
 .ui-field-grid .ui-field,
 .ui-field-grid .inline-fields {
   align-self: start;

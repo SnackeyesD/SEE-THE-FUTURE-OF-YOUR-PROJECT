@@ -7,6 +7,7 @@ import {
   EmptyState,
   InlineAlert,
   Stat,
+  Table,
 } from "@see/ui";
 import { useMemo } from "react";
 import { MonthlyProfitChart, ProfitHistogram, SensitivityTornado } from "../components/Charts";
@@ -146,23 +147,22 @@ export function ResultsScreen({
           title="Contribution des hypothèses"
           description="Valeurs calculées par le moteur, triées par impact absolu sur le profit."
         />
-        <div className="permission-table">
-          <div className="permission-row">
-            <strong>Hypothèse</strong>
-            <strong>Contribution</strong>
-            <strong>Corrélation</strong>
-          </div>
-          {[...result.sensitivity]
+        <Table
+          columns={[
+            { key: "hypothesis", header: "Hypothèse" },
+            { key: "contribution", header: "Contribution", mono: true },
+            { key: "correlation", header: "Corrélation", mono: true },
+          ]}
+          rows={[...result.sensitivity]
             .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
             .slice(0, 8)
-            .map((entry) => (
-              <div className="permission-row" key={entry.hypothesis}>
-                <span>{entry.hypothesis}</span>
-                <span>{formatCurrency(entry.contribution, result.currency, { compact: true })}</span>
-                <span>{entry.correlation.toFixed(2)}</span>
-              </div>
-            ))}
-        </div>
+            .map((entry) => ({
+              hypothesis: entry.hypothesis,
+              contribution: formatCurrency(entry.contribution, result.currency, { compact: true }),
+              correlation: entry.correlation.toFixed(2),
+            }))}
+          rowKey={(row) => row.hypothesis}
+        />
       </Card>
 
       <Card>

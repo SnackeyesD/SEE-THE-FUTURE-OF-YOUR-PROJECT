@@ -11,6 +11,7 @@ import {
   Card,
   CardHeader,
   InlineAlert,
+  Table,
   TextareaField,
 } from "@see/ui";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -491,20 +492,18 @@ export function SandboxReviewPanel({
                 </ul>
               </InlineAlert>
             ) : null}
-            <dl className="facts">
-              <div>
-                <dt>Timeout</dt>
-                <dd>{analysis.limits.timeoutMs} ms</dd>
-              </div>
-              <div>
-                <dt>Mémoire</dt>
-                <dd>{Math.round(analysis.limits.memoryBytes / 1_048_576)} Mo (best effort)</dd>
-              </div>
-              <div>
-                <dt>Sortie max</dt>
-                <dd>{analysis.limits.maxOutputBytes.toLocaleString("fr-FR")} octets</dd>
-              </div>
-            </dl>
+            <Table
+              columns={[
+                { key: "limit", header: "Limite" },
+                { key: "value", header: "Valeur", mono: true },
+              ]}
+              rows={[
+                { limit: "Timeout", value: `${analysis.limits.timeoutMs} ms` },
+                { limit: "Mémoire", value: `${Math.round(analysis.limits.memoryBytes / 1_048_576)} Mo (best effort)` },
+                { limit: "Sortie max", value: `${analysis.limits.maxOutputBytes.toLocaleString("fr-FR")} octets` },
+              ]}
+              rowKey={(row) => row.limit}
+            />
             <p className="ui-muted">
               Imports autorisés : {analysis.allowedImports.join(", ")}.
             </p>
