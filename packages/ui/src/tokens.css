@@ -35,7 +35,7 @@
   /* textes */
   --text-0: #e9edf5; /* texte principal */
   --text-1: #9aa3b6; /* texte secondaire */
-  --text-2: #6e7789; /* texte tertiaire, labels de mesure discrets */
+  --text-2: #828ba0; /* texte tertiaire, labels de mesure discrets — AA 4.5 sur tout --ink-* (phase 06) */
 
   /* blanc pur réservé : texte sur accent plein uniquement */
   --on-accent: #06121a;
@@ -85,6 +85,7 @@
    * 3. SÉMANTIQUES — ce que consomment les composants
    * ------------------------------------------------------------ */
   --bg-root: var(--ink-0);
+  --bg-halo: var(--ink-3); /* halo du fond du shell (radial-gradient) */
   --bg-surface: var(--ink-1);
   --bg-raised: var(--ink-2);
   --bg-pop: var(--ink-3);
@@ -153,7 +154,7 @@
    * 5. CODE (sandbox, logs) — coloration syntaxique
    * ------------------------------------------------------------ */
   --code-bg: var(--ink-inset);
-  --code-gutter: #55617c;
+  --code-gutter: #6f7c99;
   --code-comment: #7fa087;
   --code-string: #d9a66a;
   --code-keyword: #79a8ff;

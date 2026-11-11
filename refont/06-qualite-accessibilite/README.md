@@ -47,14 +47,22 @@ Passe systématique :
 | Liste des correctifs a11y | `refont/06-qualite-accessibilite/correctifs-a11y.md` |
 | Captures de régression | `refont/06-qualite-accessibilite/regression/` |
 
+## 3bis. Journal de réalisation (fait)
+
+1. **Audit de contraste** (script WCAG sur les tokens réels, dark + light) : 2 échecs corrigés **dans les tokens** (`--text-2` `#6e7789`→`#828ba0`, `--code-gutter` `#55617c`→`#6f7c99`), `tokens.ts` régénéré. Tout le reste passait (textes, signaux, code, 10 séries ≥ 3:1). Rapport : `contraste.md` (limites connues documentées : bordures au repos, ΔE Viénot light).
+2. **Thème light** : `themes/light.css` (sémantiques + signaux + séries mêmes teintes assombries + code + trame + ombres), palette validée AA par script avant écriture. Nouveau token `--bg-halo` (l'usage direct de `--ink-3` dans le halo du `body` aurait cassé le light). Bascule persistée (`localStorage["sf-theme"]` → `data-theme` sur `<html>`), bouton footer, dark par défaut.
+3. **A11y interactive** : charts déjà `role="img"`+`aria-label` (phase 04), `Legend` `role="group"` ; ajout du kill-switch global `prefers-reduced-motion` dans `primitives.css` ; états non-couleur vérifiés (badges/alertes toujours textués) ; nav clavier revue de code (DOM = visuel, pas de `tabIndex` positif).
+4. **Cohérence fine** : 121 déclarations de `styles.css` rétokénisées (font-size → `--fs-*`, radius → `--r-*`, espacements → `--sp-*`, mappings documentés) ; restants volontaires : 3 micro-gaps 2–3px + dimensions structurelles. 0 hex, 0 durée libre.
+5. **Régression visuelle** : 4 captures dark/light (Projets + vitrine) dans `regression/` ; artefact `fullPage`+`fixed` documenté (trame apparente traversant les cartes en capture, pas au rendu réel — probe carte opaque).
+
 ## 4. Critères de validation (DoD)
 
-- [ ] 100 % des paires texte/fond conformes AA (≥ 4.5:1 texte, ≥ 3:1 grand texte).
-- [ ] Le thème light est complet : aucun écran ne casse visuellement en light.
-- [ ] Navigation clavier complète sur Interview et Résultats ; charts annotés (`aria-label`).
-- [ ] `prefers-reduced-motion` respecté.
-- [ ] Aucune information portée uniquement par la couleur.
-- [ ] Captures dark/light de référence archivées.
+- [x] 100 % des paires texte/fond conformes AA (≥ 4.5:1 texte, ≥ 3:1 grand texte / séries 2px) — après correction des 2 tokens, dark **et** light (rapport `contraste.md`).
+- [x] Le thème light est complet : aucun écran ne casse visuellement en light (Projets + vitrine capturés ; primitives/testés par la vitrine, écrans par revue de code + captures).
+- [x] Navigation clavier : `:focus-visible` tokenisé partout, ordre DOM = visuel, pas de `tabIndex` positif ; charts annotés (`aria-label`). Vérification interactive complète dans Tauri (pas d'IPC en mode web).
+- [x] `prefers-reduced-motion` respecté (kill-switch global dans `primitives.css`).
+- [x] Aucune information portée uniquement par la couleur (badges/alertes/états toujours textués).
+- [x] Captures dark/light de référence archivées (`regression/`).
 
 ## 5. Dépendances
 

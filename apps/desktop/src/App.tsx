@@ -14,6 +14,29 @@ import type {
 import { PROTOCOL_VERSION } from "@see/protocol";
 import { Badge, Button, InlineAlert } from "@see/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+/* Thème : dark par défaut, bascule persistée (refont phase 06). */
+type Theme = "dark" | "light";
+const THEME_KEY = "sf-theme";
+function useTheme() {
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      const saved = window.localStorage.getItem(THEME_KEY);
+      return saved === "light" ? "light" : "dark";
+    } catch {
+      return "dark";
+    }
+  });
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      window.localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      /* stockage indisponible : la bascule reste effective pour la session */
+    }
+  }, [theme]);
+  return [theme, setTheme] as const;
+}
 import {
   SandboxReviewPanel,
   type SandboxProposal,
@@ -120,6 +143,7 @@ function sandboxProposalFromEvent(event: AgentToolEvent): SandboxProposal | null
 }
 
 export function App() {
+  const [theme, setTheme] = useTheme();
   const [status, setStatus] = useState<SidecarStatus | null>(null);
   const [health, setHealth] = useState<HealthResult | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -723,9 +747,18 @@ export function App() {
 
       <footer className="app-footer">
         <span>Local-first · BYOK · les chiffres viennent du moteur</span>
-        <Button variant="ghost" size="small" onClick={() => void bootstrap()} disabled={busy}>
-          Recharger l'application
-        </Button>
+        <div className="ui-actions">
+          <Button
+            variant="ghost"
+            size="small"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? "Thème clair" : "Thème sombre"}
+          </Button>
+          <Button variant="ghost" size="small" onClick={() => void bootstrap()} disabled={busy}>
+            Recharger l'application
+          </Button>
+        </div>
       </footer>
     </div>
   );

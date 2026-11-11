@@ -1,0 +1,139 @@
+/*
+ * See The Future — thème LIGHT « Ink & Signal »
+ * ============================================================
+ * Phase 06. Redéfinit UNIQUEMENT les tokens sémantiques / signaux /
+ * séries / code / trame — jamais la structure du système.
+ * Toutes les paires texte/fond sont validées AA (≥ 4.5:1) :
+ * voir refont/06-qualite-accessibilite/contraste.md §light.
+ *
+ * Principes :
+ *   - papier froid (pas de blanc pur partout) : le blanc est réservé
+ *     à --bg-raised et --on-accent ;
+ *   - l'accent reste INTERACTIF uniquement, assombri pour AA ;
+ *   - --warn devient un ambre-brun (le jaune pur est illisible sur papier) ;
+ *   - séries assombries, TEINTES IDENTIQUES à dark (l'attribution par
+ *     entité ne change pas, seule la luminosité s'adapte).
+ *
+ * Activé par [data-theme="light"] sur <html> (bascule persistée, dark par défaut).
+ */
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* ------------------------------------------------------------
+   * SÉMANTIQUES — papier
+   * ------------------------------------------------------------ */
+  --bg-root: #eef1f6;    /* fond racine : papier froid */
+  --bg-halo: #d8dee9;    /* halo du shell (assombri, discret) */
+  --bg-surface: #f7f9fc; /* cartes */
+  --bg-raised: #ffffff;  /* panneaux élevés, brand mark */
+  --bg-pop: #ffffff;     /* popovers */
+  --bg-inset: #e3e7ee;   /* inputs, code, logs (en creux sur papier) */
+
+  --border: #c9d1de;
+  --border-strong: #aeb9ca;
+  --border-hover: #93a0b5;
+
+  --text: #1a2230;
+  --muted: #4a5468;
+  --faint: #5d6880;
+
+  /* alias legacy de styles.css (:root gen-1) */
+  --bg: #eef1f6;
+  --surface: #f7f9fc;
+  --surface-soft: #ffffff;
+
+  /* ------------------------------------------------------------
+   * SIGNAUX — assombris pour AA sur papier
+   * ------------------------------------------------------------ */
+  --accent: #0d6e89;
+  --ok: #047051;
+  --warn: #a54c08;
+  --danger: #b91c1c;
+  --on-accent: #ffffff;
+
+  --accent-a6: rgb(13 110 137 / 7%);
+  --accent-a10: rgb(13 110 137 / 10%);
+  --accent-a14: rgb(13 110 137 / 14%);
+  --accent-a35: rgb(13 110 137 / 35%);
+  --accent-a50: rgb(13 110 137 / 50%);
+
+  --ok-a7: rgb(4 112 81 / 8%);
+  --ok-a35: rgb(4 112 81 / 35%);
+  --ok-a45: rgb(4 112 81 / 45%);
+  --ok-a60: rgb(4 112 81 / 60%);
+
+  --warn-a7: rgb(165 76 8 / 9%);
+  --warn-a35: rgb(165 76 8 / 35%);
+  --warn-a45: rgb(165 76 8 / 45%);
+
+  --danger-a7: rgb(185 28 28 / 8%);
+  --danger-a12: rgb(185 28 28 / 12%);
+  --danger-a35: rgb(185 28 28 / 35%);
+  --danger-a45: rgb(185 28 28 / 45%);
+  --danger-a55: rgb(185 28 28 / 55%);
+
+  /* voiles : ombre de encre sur papier (inversé vs dark) */
+  --veil-1: rgb(26 34 48 / 4%);
+  --veil-2: rgb(26 34 48 / 6%);
+  --veil-3: rgb(26 34 48 / 9%);
+  --veil-overlay: rgb(26 34 48 / 45%);
+
+  --selection: rgb(13 110 137 / 14%);
+
+  /* ------------------------------------------------------------
+   * SÉRIES — mêmes teintes que dark, assombries pour papier.
+   * Ligne 2px ≥ 3:1 validé sur --bg-surface ET --bg-inset.
+   * ------------------------------------------------------------ */
+  --series-1: #2f6fe0;
+  --series-2: #158a5c;
+  --series-3: #a07908;
+  --series-4: #6d4fd1;
+  --series-5: #c2447f;
+  --series-6: #c43d24;
+  --series-7: #5c7a11;
+  --series-8: #0f6b80;
+  --series-9: #a83232;
+  --series-10: #5c7427;
+
+  --series-1-fill: rgb(47 111 224 / 16%);
+  --series-2-fill: rgb(21 138 92 / 16%);
+  --series-3-fill: rgb(160 121 8 / 18%);
+  --series-4-fill: rgb(109 79 209 / 16%);
+  --series-5-fill: rgb(194 68 127 / 16%);
+  --series-6-fill: rgb(196 61 36 / 16%);
+  --series-7-fill: rgb(92 122 17 / 18%);
+  --series-8-fill: rgb(15 107 128 / 20%);
+  --series-9-fill: rgb(168 50 50 / 20%);
+  --series-10-fill: rgb(92 116 39 / 18%);
+
+  --chart-axis: rgb(74 84 104 / 35%);
+  --chart-grid: rgb(74 84 104 / 14%);
+  --chart-zero: rgb(74 84 104 / 45%);
+  --chart-ring: var(--bg-surface); /* halo des points = papier */
+  --chart-bar: rgb(13 110 137 / 55%);
+  --chart-positive: rgb(4 112 81 / 55%);
+  --chart-negative: rgb(185 28 28 / 50%);
+
+  /* ------------------------------------------------------------
+   * CODE — coloration assombrie (AA sur --bg-inset)
+   * ------------------------------------------------------------ */
+  --code-gutter: #56627e;
+  --code-comment: #456f50;
+  --code-string: #8d5b15;
+  --code-keyword: #3b5fb8;
+  --code-builtin: #0d6c88;
+  --code-number: #96438e;
+
+  /* ------------------------------------------------------------
+   * TRAME — encre sur papier
+   * ------------------------------------------------------------ */
+  --trame-color: rgb(26 34 48 / 5%);
+
+  /* ------------------------------------------------------------
+   * OMBRES — plus douces, plus tièdes que sur encre
+   * ------------------------------------------------------------ */
+  --shadow-1: 0 1px 2px rgb(26 34 48 / 12%);
+  --shadow-2: 0 8px 24px rgb(26 34 48 / 14%);
+  --shadow-3: 0 30px 80px rgb(26 34 48 / 22%);
+}

@@ -22,7 +22,7 @@ export const line = {
 export const text = {
   "text-0": "#e9edf5",
   "text-1": "#9aa3b6",
-  "text-2": "#6e7789",
+  "text-2": "#828ba0",
 } as const;
 
 export const signals = {
@@ -34,7 +34,7 @@ export const signals = {
 
 /** Coloration syntaxique du sandbox et des logs. */
 export const code = {
-  "code-gutter": "#55617c",
+  "code-gutter": "#6f7c99",
   "code-comment": "#7fa087",
   "code-string": "#d9a66a",
   "code-keyword": "#79a8ff",

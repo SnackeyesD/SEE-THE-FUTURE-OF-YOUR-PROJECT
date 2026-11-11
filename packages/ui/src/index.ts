@@ -1,6 +1,7 @@
 // Tokens « Ink & Signal » + polices embarquées : chaque consommateur de
 // @see/ui charge automatiquement la source de vérité visuelle (refont phase 02).
 import "./tokens.css";
+import "./themes/light.css";
 import "./primitives.css";
 import "./viz/chart.css";
 import "@fontsource/inter/400.css";
