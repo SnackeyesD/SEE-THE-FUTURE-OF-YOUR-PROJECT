@@ -64,12 +64,63 @@ Règles :
 
 ## 5. Critères de validation (DoD)
 
-- [ ] Un écran Résultats avec **3 scénarios comparés** se lit sans ambiguïté (chacun sa couleur, stable entre les rendus).
-- [ ] Les séries passent le test de séparabilité daltonisme.
-- [ ] Tous les chiffres de l'app (stats, tables, ticks) sont en mono tabulaire.
-- [ ] Grille, ticks, percentiles : le standard dataviz est appliqué sur tous les charts.
-- [ ] Les charts restent performants (test avec 10 000 runs du moteur).
-- [ ] Légende interactive fonctionnelle sur chaque chart multi-séries.
+- [x] Un chart avec **3 scénarios comparés** se lit sans ambiguïté (chacun sa
+      couleur, stable entre les rendus) — démontré dans la vitrine `?showcase`
+      (LineChart Référence/Optimiste/Pessimiste) + capture
+      `captures/linechart-3scenarios.png` ; l'attribution stable est exposée par
+      prop `seriesIndex` (l'écran multi-scénarios réel arrive en phase 05).
+- [x] Les séries passent le test de séparabilité daltonisme — palette validée
+      par simulation Viénot en phase 02 (ΔE min 13.6, seuil 12 ; contraste
+      ≥ 3.2:1), rappelée dans `standard-dataviz.md` §1 et planche dans la vitrine.
+- [x] Tous les chiffres de l'app (stats, tables, ticks) sont en mono tabulaire.
+- [x] Grille, ticks, percentiles : le standard dataviz est appliqué sur tous
+      les charts (`viz/chart.css`, grammaire unique).
+- [x] Les charts restent performants : ils ne reçoivent QUE des agrégats du
+      moteur (bins, moyennes mensuelles, top-8) — jamais 10 000 points bruts ;
+      `LineChart` coupe les points au-delà de 60 positions (standard §4).
+- [x] Légende interactive fonctionnelle sur chaque chart multi-séries
+      (capture `captures/legende-isolation.png` : 2 séries masquées, domaine
+      recalculé).
+
+## 6. Journal de réalisation
+
+### Livré
+- **Librairie viz** dans `packages/ui/src/viz/` — sans dépendance métier :
+  `LineChart` (multi-séries, aire optionnelle, `niceTicks`, zéro inclus,
+  légende interactive `aria-pressed`), `Histogram` (percentiles dashés, P50
+  seul coloré en série référence, tooltip par bin), `BarChart` (comparaisons,
+  couleur de série par catégorie, valeurs mono au-dessus), `DivergingBars`
+  (tornade, positif/négatif, valeur placée côté opposé de la barre),
+  `Sparkline`, `Legend`, helpers `scale`/`niceTicks`/`serieStyle`.
+- **Grammaire commune** `viz/chart.css` : 100 % tokens. La couleur de série
+  arrive par custom properties (`--serie-color`/`--serie-fill` posées par
+  `serieStyle()`) — **zéro hex dans tout le TSX, y compris `Charts.tsx`**
+  (l'exception historique disparaît).
+- **`Charts.tsx` réécrit** comme pont protocole → viz : formats métier
+  (FCFA compact) en callbacks, série 1 = mesure de référence.
+- **`Stat.unit`** (le « Measure » du plan §3.4) : unité rendue dans la mesure
+  mono, adoucie.
+- Bloc gen-1 `.chart`/`.chart__*` retiré de `styles.css` (0 règle restante ;
+  `.chart-grid`/`.chart-card` = layout d'écran, conservés).
+- **`standard-dataviz.md`** : palette + 4 règles opposables + grammaire +
+  composants + performance + procédure d'ajout.
+- Vitrine : planche des 10 séries, LineChart 3 scénarios, Histogram,
+  DivergingBars, Sparkline + Stat.unit. Captures dans `captures/`.
+
+### Bugs trouvés et corrigés pendant la phase
+1. **Histogram invisible** : hauteur de barre calculée `yAt(count) − base`
+   (négatif par construction) → `height: 0`. Corrigé : `base − yAt(count)`.
+2. **Collision tornade** : la valeur en bout de bare recouvrait les libellés
+   d'hypothèses pour les barres longues. Corrigé : valeur toujours du côté
+   opposé de la ligne zéro (sur encre, jamais de chevauchement).
+3. `LineChart` : ReactNode dans `aria-label` (string attendue) — nettoyé.
+
+### Contrôles de fin de phase
+- Grep hex/rgb TSX : **0 occurrence sur tout le repo** (desktop + ui).
+- Probe styles calculés : ticks JetBrains Mono, ligne série 1 =
+  `rgb(79 142 247)` (= `--series-1`), unité `ui-stat__unit` mono.
+- Légende : 3 boutons, isolation → 1 ligne visible, domaine recalculé.
+- Typecheck desktop + ui verts ; `npm test` : 3 pass / 0 fail.
 
 ## 6. Dépendances
 

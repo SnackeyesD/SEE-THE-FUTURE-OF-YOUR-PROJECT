@@ -8,11 +8,16 @@ import {
   Button,
   Card,
   CardHeader,
+  DivergingBars,
   EmptyState,
   Field,
+  Histogram,
   InlineAlert,
+  LineChart,
   ProgressBar,
   SelectField,
+  SERIES,
+  Sparkline,
   Stat,
   Table,
   Tabs,
@@ -45,6 +50,50 @@ const scenarioRows: ScenarioRow[] = [
   { name: "Optimiste", p50: "480 000", p10: "95 000", risk: "faible" },
   { name: "Pessimiste", p50: "60 000", p10: "-210 000", risk: "élevé" },
 ];
+
+/* Données de démonstration dataviz (phase 04) — agrégées comme le moteur. */
+const fmtFcfa = (value: number) =>
+  new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XOF", maximumFractionDigits: 0, notation: "compact" }).format(value);
+
+const scenarioLines = [0, 1, 2].map((seriesIndex) => {
+  const names = ["Référence", "Optimiste", "Pessimiste"];
+  const slopes = [24_500, 40_000, 5_000];
+  const starts = [-80_000, 95_000, -210_000];
+  return {
+    id: names[seriesIndex],
+    label: names[seriesIndex],
+    seriesIndex,
+    points: Array.from({ length: 12 }, (_, index) => ({
+      x: index + 1,
+      y: starts[seriesIndex] + slopes[seriesIndex] * index,
+    })),
+  };
+});
+
+const demoBins = Array.from({ length: 34 }, (_, index) => {
+  const lower = -300_000 + index * 20_000;
+  const center = 240_000;
+  const spread = Math.abs((lower + 10_000 - center) / 320_000);
+  const count = Math.round(240 * Math.exp(-spread * spread * 3.2));
+  return { lower, upper: lower + 20_000, count: count + 2, probability: (count + 2) / 8_000 };
+});
+
+const demoPercentiles = [
+  { label: "P10", value: -80_000 },
+  { label: "P50", value: 245_000 },
+  { label: "P90", value: 690_000 },
+];
+
+const demoTornado = [
+  { label: "Prix moyen", value: 380_000 },
+  { label: "Volume mensuel", value: -265_000 },
+  { label: "Coût d'achat unitaire", value: -190_000 },
+  { label: "Charges fixes", value: -95_000 },
+  { label: "Taux de marge", value: 64_000 },
+  { label: "Stock initial", value: 38_000 },
+];
+
+const sparkValues = [120, 180, 160, 240, 210, 320, 290, 410];
 
 const scenarioColumns: Array<TableColumn<ScenarioRow>> = [
   { key: "name", header: "Scénario" },
@@ -89,13 +138,13 @@ export function ComponentsShowcase() {
     >
       <header>
         <p style={{ margin: 0, color: "var(--accent)", fontSize: "var(--fs-12)", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-          Refont · phase 03
+          Refont · phases 03–04
         </p>
         <h1 style={{ margin: "4px 0 0", fontSize: "var(--fs-30)", letterSpacing: "-0.02em" }}>
-          Vitrine des primitives
+          Vitrine des primitives & dataviz
         </h1>
         <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "var(--fs-14)" }}>
-          Chaque composant, tous ses états. Style : <code>packages/ui/src/primitives.css</code> — tokens uniquement.
+          Chaque composant, tous ses états. Styles : <code>packages/ui/src/primitives.css</code> + <code>packages/ui/src/viz/chart.css</code> — tokens uniquement.
         </p>
       </header>
 
@@ -206,6 +255,81 @@ export function ComponentsShowcase() {
           description="Lancez une simulation pour obtenir les graphiques et la narration."
           action={<Button size="small">Lancer la simulation</Button>}
         />
+      </section>
+
+      <section style={sectionStyle}>
+        <h2 style={h2Style}>Dataviz — planche des 10 séries (Viénot : ΔE min 13.6, contraste ≥ 3.2:1)</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "var(--sp-2)" }}>
+          {SERIES.map((serie, index) => (
+            <div
+              key={serie.name}
+              style={{
+                display: "grid",
+                justifyItems: "start",
+                gap: "var(--sp-1)",
+                padding: "var(--sp-2) var(--sp-3)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--r-2)",
+                background: "var(--bg-inset)",
+              }}
+            >
+              <span
+                style={{ display: "inline-block", width: 24, height: 6, borderRadius: 3, background: `var(--series-${index + 1})` }}
+                aria-hidden="true"
+              />
+              <span style={{ color: "var(--text)", fontSize: "var(--fs-12)", fontFamily: "var(--font-data)" }}>
+                S{index + 1}
+              </span>
+              <span style={{ color: "var(--muted)", fontSize: "var(--fs-11)" }}>{serie.name}</span>
+            </div>
+          ))}
+        </div>
+        <p style={{ margin: 0, color: "var(--faint)", fontSize: "var(--fs-12)" }}>
+          Attribution STABLE : le scénario 1 est toujours S1, quel que soit l'écran. L'accent cyan reste réservé à l'interactif.
+        </p>
+      </section>
+
+      <section style={sectionStyle}>
+        <h2 style={h2Style}>LineChart — 3 scénarios comparés, légende interactive</h2>
+        <LineChart
+          title="Profit cumulé par scénario"
+          description="Chaque scénario garde sa couleur entre les écrans et les re-rendus."
+          series={scenarioLines}
+          formatY={(value) => fmtFcfa(value)}
+          formatX={(index) => `M${index}`}
+          legend
+          ariaLabel="Comparaison du profit cumulé de trois scénarios sur douze mois"
+        />
+      </section>
+
+      <section style={sectionStyle}>
+        <h2 style={h2Style}>Histogram — distribution + percentiles (P50 = référence)</h2>
+        <Histogram
+          title="Distribution du profit"
+          description="8 000 simulations — bande P10/P50/P90."
+          bins={demoBins}
+          percentiles={demoPercentiles}
+          formatX={(value) => fmtFcfa(value)}
+        />
+      </section>
+
+      <section style={sectionStyle}>
+        <h2 style={h2Style}>DivergingBars — tornade de sensibilité</h2>
+        <DivergingBars
+          title="Contribution à la variance du profit"
+          description="Positif : la hausse de l'hypothèse augmente le profit."
+          rows={demoTornado}
+          formatValue={(value) => fmtFcfa(value)}
+        />
+      </section>
+
+      <section style={sectionStyle}>
+        <h2 style={h2Style}>Sparkline — micro-ligne inline + Stat avec unité</h2>
+        <div style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", alignItems: "center" }}>
+          <Stat label="Demande (6 derniers mois)" value="410" unit="unités" hint="Tendance en hausse" />
+          <Sparkline values={sparkValues} seriesIndex={0} ariaLabel="Tendance de la demande sur six mois" />
+          <Sparkline values={[30, 44, 41, 62, 55, 70]} seriesIndex={1} ariaLabel="Tendance du panier moyen" />
+        </div>
       </section>
     </div>
   );

@@ -315,6 +315,14 @@
   color: var(--text);
 }
 
+.ui-stat__unit {
+  margin-left: var(--sp-1);
+  color: var(--muted);
+  font-size: var(--fs-14);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+}
+
 .ui-stat__hint {
   color: var(--faint);
   font-size: var(--fs-12);

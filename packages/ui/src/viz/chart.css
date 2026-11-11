@@ -1,0 +1,229 @@
+/*
+ * See The Future — grammaire dataviz « Ink & Signal » (refont phase 04)
+ * =====================================================================
+ * Style commun de tous les graphiques. Règles (standard-dataviz.md) :
+ *   - ZÉRO hex, zéro rgb() : uniquement var(--token).
+ *   - La couleur d'une série arrive par custom property (--serie-color /
+ *     --serie-fill), posée par `serieStyle()` (viz/scale.ts) — un composant
+ *     ne code JAMAIS une couleur en dur.
+ *   - Ticks/labels numériques : mono tabulaire (--font-data), jamais la
+ *     police UI pour une valeur mesurée.
+ *   - La grille est une hairline discrète ; les axes n'ont pas de cadre.
+ */
+
+.viz {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  color: var(--text);
+}
+
+.viz svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* ------------------------------------------------------------
+ * Figure — titre + sous-titre + état vide
+ * ------------------------------------------------------------ */
+.viz__caption {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.viz__caption strong {
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+.viz__desc {
+  color: var(--muted);
+  font-size: var(--fs-12);
+  line-height: var(--lh-tight);
+}
+
+.viz__empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-13);
+  font-style: italic;
+}
+
+/* ------------------------------------------------------------
+ * Légende interactive — cliquer isole/montre une série
+ * ------------------------------------------------------------ */
+.viz__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.viz__legend button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--fs-12);
+  cursor: pointer;
+}
+
+.viz__legend button:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+.viz__legend button:focus-visible {
+  outline: var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
+.viz__legend__chip {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-1);
+  background: var(--serie-color);
+  flex: 0 0 auto;
+}
+
+.viz__legend button[aria-pressed="false"] {
+  opacity: 0.45;
+}
+
+/* ------------------------------------------------------------
+ * Strokes — axes, grille, zéro, seuils
+ * ------------------------------------------------------------ */
+.viz__axis {
+  stroke: var(--chart-axis);
+  stroke-width: 1;
+}
+
+.viz__gridline {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.viz__zero {
+  stroke: var(--chart-zero);
+  stroke-width: 1;
+  stroke-dasharray: 5 4;
+}
+
+.viz__pmark {
+  stroke: var(--chart-label);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+/* P50 = ligne de référence : la seule dashée colorée */
+.viz__pmark--ref {
+  stroke: var(--series-1);
+}
+
+/* ------------------------------------------------------------
+ * Séries — lignes 2px, aires, points à halo
+ * ------------------------------------------------------------ */
+.viz__line {
+  fill: none;
+  stroke: var(--serie-color);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.viz__area {
+  fill: var(--serie-fill);
+  stroke: none;
+}
+
+.viz__point {
+  fill: var(--serie-color);
+  stroke: var(--chart-ring);
+  stroke-width: 1.5;
+}
+
+/* ------------------------------------------------------------
+ * Barres — distribution, comparaisons, divergentes
+ * ------------------------------------------------------------ */
+.viz__bar {
+  fill: var(--chart-bar);
+  transition: filter var(--dur-fast) var(--ease-out);
+}
+
+.viz__bar:hover {
+  filter: brightness(1.2);
+}
+
+/* barre catégorielle : couleur de série pleine, adoucie */
+.viz__bar--serie {
+  fill: var(--serie-color);
+  fill-opacity: 0.78;
+}
+
+.viz__bar--pos {
+  fill: var(--chart-positive);
+}
+
+.viz__bar--neg {
+  fill: var(--chart-negative);
+}
+
+/* ------------------------------------------------------------
+ * Textes SVG — ticks mono tabulaires, labels UI
+ * ------------------------------------------------------------ */
+.viz__tick {
+  fill: var(--text-2);
+  font-family: var(--font-data);
+  font-size: var(--fs-10);
+  font-variant-numeric: tabular-nums;
+}
+
+.viz__label {
+  fill: var(--text-1);
+  font-family: var(--font-ui);
+  font-size: var(--fs-11);
+}
+
+/* libellés de percentile (P10, P50, P90) — mono comme des mesures */
+.viz__pmarklabel {
+  fill: var(--text-2);
+  font-family: var(--font-data);
+  font-size: var(--fs-10);
+  font-variant-numeric: tabular-nums;
+}
+
+.viz__pmarklabel--ref {
+  fill: var(--series-1);
+}
+
+/* valeur de barre (divergentes, comparaisons) */
+.viz__barvalue {
+  fill: var(--text-1);
+  font-family: var(--font-data);
+  font-size: var(--fs-10);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------
+ * Sparkline — micro-viz inline
+ * ------------------------------------------------------------ */
+.viz__spark {
+  fill: none;
+  stroke: var(--serie-color);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.viz__spark-dot {
+  fill: var(--serie-color);
+  stroke: var(--chart-ring);
+  stroke-width: 1;
+}
