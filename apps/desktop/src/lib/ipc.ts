@@ -13,6 +13,10 @@ import type {
   AgentTraceResult,
   AgentTurnParams,
   AgentTurnResult,
+  BenchmarkLookupParams,
+  BenchmarkLookupResult,
+  BenchmarkPackImportResult,
+  BenchmarkPackListResult,
   BudgetResult,
   HealthResult,
   PingResult,
@@ -277,6 +281,24 @@ export function exportSandboxAudit(
   params: SandboxAuditExportParams,
 ): Promise<SandboxAuditExportResult> {
   return sandboxCall("sandbox.audit.export", params);
+}
+
+function benchmarkCall<T>(method: string, params: object): Promise<T> {
+  return invoke<T>("benchmark_call", { method, params: params as Record<string, unknown> });
+}
+
+export function benchmarkLookup(
+  params: BenchmarkLookupParams,
+): Promise<BenchmarkLookupResult> {
+  return benchmarkCall("benchmark.lookup", params);
+}
+
+export function listBenchmarkPacks(): Promise<BenchmarkPackListResult> {
+  return benchmarkCall("benchmark.pack.list", {});
+}
+
+export function importBenchmarkPack(path: string): Promise<BenchmarkPackImportResult> {
+  return benchmarkCall("benchmark.pack.import", { path });
 }
 
 export type { RoleAssignment, SandboxAnalysis };

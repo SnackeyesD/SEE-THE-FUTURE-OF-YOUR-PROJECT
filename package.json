@@ -38,6 +38,9 @@
     "sandbox:sync": "node infra/scripts/sync-pyodide.mjs",
     "sandbox:lint": "uv run --project packages/sandbox ruff check packages/sandbox",
     "sandbox:test": "uv run --project packages/sandbox pytest packages/sandbox/tests",
+    "benchmarks:sync": "uv sync --project packages/benchmarks",
+    "benchmarks:lint": "uv run --project packages/benchmarks ruff check packages/benchmarks data/benchmark-packs/tools",
+    "benchmarks:test": "uv run --project packages/benchmarks pytest packages/benchmarks/tests",
     "icons": "powershell -ExecutionPolicy Bypass -File infra/scripts/generate-icons.ps1"
   },
   "engines": {

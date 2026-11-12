@@ -29,6 +29,9 @@
     "active": true,
     "targets": "all",
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"],
+    "resources": {
+      "../../../data/benchmark-packs": "benchmark-packs"
+    },
     "shortDescription": "Simulez votre idée de business avec l'IA de votre choix.",
     "longDescription": "Application desktop local-first : vos projets restent sur votre machine, vos clés restent dans le trousseau du système."
   }

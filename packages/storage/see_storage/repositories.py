@@ -11,6 +11,7 @@ from .models import (
     AgentSession,
     AgentTraceEntry,
     BenchmarkPack,
+    BenchmarkPackEvent,
     Brief,
     Message,
     PermissionEvent,
@@ -45,6 +46,8 @@ JOURNEY_STATES = (
 PERMISSION_ACTORS = ("agent", "user", "system")
 SANDBOX_DECISIONS = ("approved", "rejected")
 SANDBOX_STATUSES = ("succeeded", "failed", "timeout", "cancelled", "rejected")
+BENCHMARK_STATUSES = ("active", "invalid", "removed")
+BENCHMARK_EVENT_ACTIONS = ("installed", "replaced", "rejected", "removed")
 CODE_HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -875,31 +878,72 @@ class BenchmarkPackRepository:
         *,
         source: str | None = None,
         pack_id: str | None = None,
+        published_at: str | None = None,
+        installed_at: str | None = None,
+        signature: str | None = None,
+        key_id: str | None = None,
+        status: str = "active",
+        country: str | None = None,
+        region: str | None = None,
+        sector: str | None = None,
+        subsector: str | None = None,
+        value_count: int = 0,
+        error: str | None = None,
         created_at: str | None = None,
     ) -> BenchmarkPack:
         clean_name = ensure_text(name, "name")
         clean_version = ensure_text(version, "version")
         clean_path = ensure_text(path, "path", max_length=1000)
         clean_checksum = ensure_text(checksum, "checksum", max_length=128)
+        if status not in BENCHMARK_STATUSES:
+            raise StorageValidationError(f"statut de pack invalide: {status}")
+        if not isinstance(value_count, int) or isinstance(value_count, bool) or value_count < 0:
+            raise StorageValidationError("valueCount doit être un entier positif ou nul")
         now = created_at or utc_now()
         with _write(self.conn):
             self.conn.execute(
                 """
                 INSERT INTO benchmark_packs (
-                    id, name, version, path, checksum, source, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    id, name, version, path, checksum, source, pack_id,
+                    published_at, installed_at, signature, key_id, status,
+                    country, region, sector, subsector, value_count, error, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(name, version) DO UPDATE SET
                     path = excluded.path,
                     checksum = excluded.checksum,
-                    source = excluded.source
+                    source = excluded.source,
+                    pack_id = excluded.pack_id,
+                    published_at = excluded.published_at,
+                    installed_at = excluded.installed_at,
+                    signature = excluded.signature,
+                    key_id = excluded.key_id,
+                    status = excluded.status,
+                    country = excluded.country,
+                    region = excluded.region,
+                    sector = excluded.sector,
+                    subsector = excluded.subsector,
+                    value_count = excluded.value_count,
+                    error = excluded.error
                 """,
                 (
-                    pack_id or new_id(),
+                    new_id(),
                     clean_name,
                     clean_version,
                     clean_path,
                     clean_checksum,
                     source,
+                    pack_id,
+                    published_at,
+                    installed_at,
+                    signature,
+                    key_id,
+                    status,
+                    country,
+                    region,
+                    sector,
+                    subsector,
+                    value_count,
+                    error,
                     now,
                 ),
             )
@@ -913,9 +957,80 @@ class BenchmarkPackRepository:
 
     def list(self) -> list[BenchmarkPack]:
         rows = self.conn.execute(
-            "SELECT * FROM benchmark_packs ORDER BY name COLLATE NOCASE, version"
+            """
+            SELECT * FROM benchmark_packs
+            ORDER BY COALESCE(published_at, '') DESC, name COLLATE NOCASE, version
+            """
         ).fetchall()
         return [BenchmarkPack.from_row(row) for row in rows]
+
+    def delete(self, name: str, version: str) -> bool:
+        with _write(self.conn):
+            cursor = self.conn.execute(
+                "DELETE FROM benchmark_packs WHERE name = ? AND version = ?",
+                (name, version),
+            )
+        return cursor.rowcount > 0
+
+
+class BenchmarkPackEventRepository:
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def add(
+        self,
+        name: str,
+        version: str,
+        action: str,
+        *,
+        pack_id: str | None = None,
+        checksum: str | None = None,
+        key_id: str | None = None,
+        reason: str | None = None,
+        event_id: str | None = None,
+        created_at: str | None = None,
+    ) -> BenchmarkPackEvent:
+        clean_name = ensure_text(name, "name")
+        clean_version = ensure_text(version, "version")
+        if action not in BENCHMARK_EVENT_ACTIONS:
+            raise StorageValidationError(f"action de pack invalide: {action}")
+        identifier = event_id or new_id()
+        with _write(self.conn):
+            self.conn.execute(
+                """
+                INSERT INTO benchmark_pack_events (
+                    id, pack_id, name, version, action, checksum, key_id, reason, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    identifier,
+                    pack_id,
+                    clean_name,
+                    clean_version,
+                    action,
+                    checksum,
+                    key_id,
+                    reason,
+                    created_at or utc_now(),
+                ),
+            )
+        return self.get(identifier)  # type: ignore[return-value]
+
+    def get(self, event_id: str) -> BenchmarkPackEvent | None:
+        row = self.conn.execute(
+            "SELECT * FROM benchmark_pack_events WHERE id = ?", (event_id,)
+        ).fetchone()
+        return BenchmarkPackEvent.from_row(row) if row is not None else None
+
+    def list(self, *, limit: int = 100, offset: int = 0) -> list[BenchmarkPackEvent]:
+        rows = self.conn.execute(
+            """
+            SELECT * FROM benchmark_pack_events
+            ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?
+            """,
+            (max(1, limit), max(0, offset)),
+        ).fetchall()
+        return [BenchmarkPackEvent.from_row(row) for row in rows]
 
 
 class AgentSessionRepository:

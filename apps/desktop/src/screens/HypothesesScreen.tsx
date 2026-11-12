@@ -1,4 +1,6 @@
 import type {
+  BenchmarkProvenance,
+  BenchmarkRecord,
   BriefRecord,
   DistributionSpec,
   Hypothesis,
@@ -17,6 +19,7 @@ import {
 } from "@see/ui";
 import { useEffect, useMemo, useState } from "react";
 import { formatDateTime } from "../lib/format";
+import { benchmarkLookup, ipcAvailable } from "../lib/ipc";
 
 interface Props {
   project: Project;
@@ -109,6 +112,66 @@ function parseNumber(raw: string): number {
   return Number(raw.replace(",", "."));
 }
 
+const RELIABILITY_CONFIDENCE: Record<BenchmarkRecord["reliability"], number> = {
+  official: 0.9,
+  study: 0.8,
+  field: 0.7,
+  estimate: 0.45,
+};
+
+function provenanceFromScenario(
+  scenario: Scenario | null,
+): Record<string, BenchmarkProvenance> {
+  const result: Record<string, BenchmarkProvenance> = {};
+  for (const [key, hypothesis] of Object.entries(scenario?.assumptions ?? {})) {
+    if (hypothesis.provenance?.kind === "benchmark") {
+      result[key] = hypothesis.provenance;
+    }
+  }
+  return result;
+}
+
+function provenanceFromRecord(record: BenchmarkRecord): BenchmarkProvenance {
+  return {
+    kind: "benchmark",
+    label: record.source,
+    indicator: record.indicator,
+    source: record.source,
+    sourceUrl: record.sourceUrl,
+    sourceDate: record.sourceDate,
+    reliability: record.reliability,
+    freshness: record.freshness,
+    packId: record.packId,
+    packVersion: record.packVersion,
+    packPublishedAt: record.packPublishedAt,
+    keyId: record.keyId,
+    checksum: record.checksum,
+    fallback: record.fallback,
+    conflicts: record.conflicts,
+  };
+}
+
+function geographyFromBrief(content: Record<string, unknown>): {
+  country?: string;
+  region?: string;
+} {
+  const geography = typeof content.geography === "string" ? content.geography : "";
+  const normalized = geography.toLowerCase();
+  if (normalized.includes("brazzaville")) {
+    return { country: "CG", region: "Brazzaville" };
+  }
+  if (normalized.includes("bangui")) {
+    return { country: "CF", region: "Bangui" };
+  }
+  if (normalized.includes("centrafrique") || normalized.includes("rca")) {
+    return { country: "CF" };
+  }
+  if (normalized.includes("congo")) {
+    return { country: "CG" };
+  }
+  return {};
+}
+
 function distributionFrom(row: Row, value: number): DistributionSpec | undefined {
   switch (row.kind) {
     case "normal":
@@ -145,11 +208,58 @@ export function HypothesesScreen({
   const [rows, setRows] = useState<Rows>(() => rowsFromScenario(scenario?.scenario ?? null));
   const [showOptional, setShowOptional] = useState(false);
   const [localError, setLocalError] = useState("");
+  const [benchmarks, setBenchmarks] = useState<Record<string, BenchmarkRecord>>({});
+  const [savedProvenance, setSavedProvenance] = useState<Record<string, BenchmarkProvenance>>(
+    () => provenanceFromScenario(scenario?.scenario ?? null),
+  );
+  const [applied, setApplied] = useState<Set<string>>(
+    () => new Set(Object.keys(provenanceFromScenario(scenario?.scenario ?? null))),
+  );
 
   useEffect(() => {
-    setName(scenario?.name ?? `${project.name} — base`);
+    setName(scenario?.name ?? `${project.name} - base`);
     setRows(rowsFromScenario(scenario?.scenario ?? null));
+    const provenance = provenanceFromScenario(scenario?.scenario ?? null);
+    setSavedProvenance(provenance);
+    setApplied(new Set(Object.keys(provenance)));
   }, [scenario, project.name]);
+
+  const geography = useMemo(
+    () => geographyFromBrief(brief?.content ?? {}),
+    [brief?.content],
+  );
+
+  useEffect(() => {
+    if (!ipcAvailable || !geography.country) {
+      setBenchmarks({});
+      return;
+    }
+    let cancelled = false;
+    void Promise.all(
+      SPECS.map(async (spec): Promise<[string, BenchmarkRecord] | null> => {
+        try {
+          const result = await benchmarkLookup({
+            indicator: spec.key,
+            country: geography.country,
+            region: geography.region,
+            sector: "retail",
+            subsector: "alimentation_generale",
+          });
+          return result.found && result.record ? [spec.key, result.record] : null;
+        } catch {
+          return null;
+        }
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setBenchmarks(
+        Object.fromEntries(entries.filter((entry): entry is [string, BenchmarkRecord] => entry !== null)),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [geography.country, geography.region]);
 
   const scope = useMemo(() => {
     const content = brief?.content ?? {};
@@ -169,6 +279,39 @@ export function HypothesesScreen({
 
   const update = (key: string, patch: Partial<Row>) => {
     setRows((current) => ({ ...current, [key]: { ...current[key], ...patch } }));
+    setApplied((current) => {
+      if (!current.has(key)) return current;
+      const next = new Set(current);
+      next.delete(key);
+      return next;
+    });
+    setSavedProvenance((current) => {
+      if (!(key in current)) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const applyBenchmark = (key: string) => {
+    const record = benchmarks[key];
+    if (!record) return;
+    setRows((current) => ({
+      ...current,
+      [key]: { ...current[key], value: String(record.value) },
+    }));
+    setApplied((current) => new Set(current).add(key));
+  };
+
+  const applyAllBenchmarks = () => {
+    setRows((current) => {
+      const next = { ...current };
+      for (const [key, record] of Object.entries(benchmarks)) {
+        next[key] = { ...next[key], value: String(record.value) };
+      }
+      return next;
+    });
+    setApplied(new Set(Object.keys(benchmarks)));
   };
 
   const assumptions = useMemo(() => {
@@ -178,15 +321,26 @@ export function HypothesesScreen({
       const value = parseNumber(row.value);
       if (!Number.isFinite(value)) continue;
       const distribution = distributionFrom(row, value);
+      const record = applied.has(spec.key) ? benchmarks[spec.key] : undefined;
+      const provenance = record
+        ? provenanceFromRecord(record)
+        : applied.has(spec.key)
+          ? savedProvenance[spec.key]
+          : undefined;
       result[spec.key] = {
         value,
-        source: "utilisateur",
-        confidence: spec.required ? 0.7 : 0.5,
+        source: provenance?.source ?? "utilisateur",
+        confidence: provenance?.reliability
+          ? RELIABILITY_CONFIDENCE[provenance.reliability]
+          : spec.required
+            ? 0.7
+            : 0.5,
+        ...(provenance ? { provenance } : {}),
         ...(distribution ? { distribution } : {}),
       };
     }
     return result;
-  }, [rows]);
+  }, [applied, benchmarks, rows, savedProvenance]);
 
   const validate = (): string => {
     for (const spec of SPECS) {
@@ -235,6 +389,7 @@ export function HypothesesScreen({
 
   const visible = showOptional ? SPECS : SPECS.filter((spec) => spec.required);
   const message = localError || error;
+  const hasBenchmarks = Object.keys(benchmarks).length > 0;
 
   return (
     <div className="screen">
@@ -272,19 +427,51 @@ export function HypothesesScreen({
           eyebrow="Variables"
           title="Hypothèses du moteur"
           action={
-            <Button variant="ghost" size="small" onClick={() => setShowOptional((value) => !value)}>
-              {showOptional ? "Masquer les options" : "Afficher les options"}
-            </Button>
+            <div className="ui-actions">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={applyAllBenchmarks}
+                disabled={!hasBenchmarks}
+              >
+                Appliquer les références
+              </Button>
+              <Button variant="ghost" size="small" onClick={() => setShowOptional((value) => !value)}>
+                {showOptional ? "Masquer les options" : "Afficher les options"}
+              </Button>
+            </div>
           }
         />
         <div className="assumption-list">
           {visible.map((spec) => {
             const row = rows[spec.key];
+            const record = benchmarks[spec.key];
+            const isApplied = applied.has(spec.key);
             return (
               <div className="assumption-row" key={spec.key}>
                 <div className="assumption-row__label">
                   <strong>{spec.label}</strong>
-                  <span className="ui-muted">{spec.unit}{spec.required ? " · requis" : ""}</span>
+                  <span className="ui-muted">{spec.unit}{spec.required ? " � requis" : ""}</span>
+                  {record ? (
+                    <div className="ui-actions">
+                      <Badge tone="accent">référence signée</Badge>
+                      <span className="ui-muted">
+                        {record.reliability} · {record.freshness} · {record.sourceDate}
+                      </span>
+                      {record.fallback !== "none" ? (
+                        <Badge tone="warn">fallback {record.fallback}</Badge>
+                      ) : null}
+                      <Button
+                        variant="ghost"
+                        size="small"
+                        onClick={() => applyBenchmark(spec.key)}
+                      >
+                        {isApplied ? "Appliquée" : "Utiliser"}
+                      </Button>
+                    </div>
+                  ) : isApplied && savedProvenance[spec.key] ? (
+                    <Badge tone="accent">référence enregistrée</Badge>
+                  ) : null}
                 </div>
                 <Field
                   label="Valeur"

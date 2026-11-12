@@ -1,0 +1,2 @@
+data/benchmark-packs/packs/*.json -text
+data/benchmark-packs/packs/*.sig -text

@@ -31,7 +31,7 @@ from providers import (
 )
 from see_storage import AgentSession, ProjectStore, StorageValidationError
 
-from . import provider_service
+from . import benchmark_service, provider_service
 
 DEFAULT_MAX_ITERATIONS = 6
 DEFAULT_CONTEXT_TOKENS = 24_000
@@ -285,6 +285,30 @@ def _latest_result(
     return payload, run.id
 
 
+def _benchmark_hint(brief: dict[str, Any] | None, sector: str | None) -> dict[str, Any]:
+    geography = str((brief or {}).get("geography") or "").lower()
+    country = None
+    region = None
+    if "brazzaville" in geography:
+        country, region = "CG", "Brazzaville"
+    elif "bangui" in geography:
+        country, region = "CF", "Bangui"
+    elif "centrafrique" in geography or "rca" in geography:
+        country = "CF"
+    elif "congo" in geography:
+        country = "CG"
+    hint: dict[str, Any] = {
+        "sector": sector if sector in {"retail"} else "retail",
+        "subsector": "alimentation_generale",
+        "allowFallback": True,
+    }
+    if country is not None:
+        hint["country"] = country
+    if region is not None:
+        hint["region"] = region
+    return hint
+
+
 def _chat_messages(
     thread: list[dict[str, Any]],
     *,
@@ -463,9 +487,16 @@ async def _run_turn(
         )
         context.latest_result = result.to_dict()
 
+    hint = _benchmark_hint(brief, project.sector)
+
+    def query_benchmark(payload: dict[str, Any]) -> dict[str, Any]:
+        query = {**hint, **payload}
+        return benchmark_service.get_service().lookup(query)
+
     context.save_brief = save_brief
     context.save_scenario = save_scenario
     context.save_run = save_run
+    context.benchmark = query_benchmark
     export_path = _optional_text(params, "exportPath")
     context.export_path = export_path
     if export_path is not None:

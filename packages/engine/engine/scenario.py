@@ -83,6 +83,24 @@ class DistributionSpec(CamelModel):
         return self
 
 
+class BenchmarkProvenance(CamelModel):
+    kind: Literal["benchmark", "user"] = "user"
+    label: str = Field(min_length=1, max_length=300)
+    indicator: str | None = None
+    source: str | None = None
+    source_url: str | None = None
+    source_date: str | None = None
+    reliability: Literal["official", "study", "field", "estimate"] | None = None
+    freshness: Literal["fresh", "aging", "stale"] | None = None
+    pack_id: str | None = None
+    pack_version: str | None = None
+    pack_published_at: str | None = None
+    key_id: str | None = None
+    checksum: str | None = None
+    fallback: Literal["none", "country", "regional", "global"] | None = None
+    conflicts: int | None = Field(default=None, ge=0)
+
+
 class Hypothesis(CamelModel):
     value: FiniteFloat
     distribution: DistributionSpec | None = None
@@ -91,6 +109,7 @@ class Hypothesis(CamelModel):
     min: FiniteFloat | None = None
     max: FiniteFloat | None = None
     description: str | None = None
+    provenance: BenchmarkProvenance | None = None
 
     @model_validator(mode="after")
     def _check_bounds(self) -> Hypothesis:

@@ -34,7 +34,7 @@ class ToolContext:
     save_scenario: Callable[[dict[str, Any]], None] | None = None
     save_run: Callable[[Any, str | None], None] | None = None
     search: Callable[[str, int], list[dict[str, Any]]] | None = None
-    benchmark: Callable[[str], dict[str, Any] | None] | None = None
+    benchmark: Callable[[dict[str, Any]], dict[str, Any]] | None = None
     export: Callable[[str, str], None] | None = None
     export_path: str | None = None
 

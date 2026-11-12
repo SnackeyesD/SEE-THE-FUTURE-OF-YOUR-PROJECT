@@ -1,6 +1,6 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 # Source: packages/protocol/schema/messages.schema.json
-# Protocol version: 1.6.0
+# Protocol version: 1.7.0
 # Regenerate with: npm run protocol:generate
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-PROTOCOL_VERSION = "1.6.0"
+PROTOCOL_VERSION = "1.7.0"
 
 RequestId = int | str
 
@@ -90,6 +90,9 @@ MethodName = Literal[
     "agent.trace",
     "agent.trace.export",
     "agent.tools",
+    "benchmark.lookup",
+    "benchmark.pack.list",
+    "benchmark.pack.import",
 ]
 
 
@@ -168,6 +171,7 @@ class Hypothesis(BaseModel):
     min: float | None = None
     max: float | None = None
     description: str | None = None
+    provenance: BenchmarkProvenance | None = None
 
 
 class Scenario(BaseModel):
@@ -1201,3 +1205,141 @@ class SandboxAuditExportResult(BaseModel):
 
     path: str
     count: int
+
+
+BenchmarkReliability = Literal[
+    "official",
+    "study",
+    "field",
+    "estimate",
+]
+
+
+BenchmarkFreshness = Literal[
+    "fresh",
+    "aging",
+    "stale",
+]
+
+
+BenchmarkFallback = Literal[
+    "none",
+    "country",
+    "regional",
+    "global",
+]
+
+
+class BenchmarkProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["benchmark", "user"]
+    label: str
+    indicator: str | None = None
+    source: str | None = None
+    sourceUrl: str | None = None
+    sourceDate: str | None = None
+    reliability: BenchmarkReliability | None = None
+    freshness: BenchmarkFreshness | None = None
+    packId: str | None = None
+    packVersion: str | None = None
+    packPublishedAt: str | None = None
+    keyId: str | None = None
+    checksum: str | None = None
+    fallback: BenchmarkFallback | None = None
+    conflicts: int | None = None
+
+
+class BenchmarkRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    indicator: str
+    value: float
+    unit: str
+    currency: str
+    country: str
+    region: str | None = None
+    regionGroup: str | None = None
+    sector: str
+    subsector: str | None = None
+    source: str
+    sourceUrl: str
+    sourceDate: str
+    reliability: BenchmarkReliability
+    freshness: BenchmarkFreshness
+    min: float | None = None
+    max: float | None = None
+    notes: str | None = None
+    packId: str
+    packVersion: str
+    packPublishedAt: str
+    keyId: str
+    checksum: str
+    fallback: BenchmarkFallback
+    conflicts: int
+
+
+class BenchmarkLookupParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    indicator: str
+    country: str | None = None
+    region: str | None = None
+    sector: str | None = None
+    subsector: str | None = None
+    asOf: str | None = None
+    fromDate: str | None = None
+    toDate: str | None = None
+    allowFallback: bool | None = None
+
+
+class BenchmarkLookupResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    found: bool
+    record: BenchmarkRecord | None = None
+    reason: str | None = None
+
+
+class BenchmarkPackInfo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    packId: str
+    name: str
+    version: str
+    publishedAt: str
+    country: str
+    region: str | None = None
+    currency: str
+    sector: str
+    subsector: str | None = None
+    valueCount: int
+    checksum: str
+    keyId: str
+    status: Literal["verified", "invalid", "unverified"]
+    source: Literal["bundled", "user", "imported"]
+    path: str | None = None
+    error: str | None = None
+
+
+BenchmarkPackListParams = dict[str, Any]
+
+
+class BenchmarkPackListResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    packs: list[BenchmarkPackInfo]
+    errors: list[str]
+
+
+class BenchmarkPackImportParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+
+
+class BenchmarkPackImportResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pack: BenchmarkPackInfo
+    replaced: bool | None = None

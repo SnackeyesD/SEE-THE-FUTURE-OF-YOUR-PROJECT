@@ -14,10 +14,18 @@ from typing import Any
 from agent_core import AgentError
 from providers import BudgetExceeded, ProviderError
 from pydantic import ValidationError
+from see_benchmarks.errors import BenchmarkError
 from see_sandbox import ContractError
 from see_storage import ProjectNotFound, StorageError, StorageValidationError
 
-from . import __version__, agent_service, project_service, provider_service, sandbox_service
+from . import (
+    __version__,
+    agent_service,
+    benchmark_service,
+    project_service,
+    provider_service,
+    sandbox_service,
+)
 from .protocol_models import PROTOCOL_VERSION, JSONRPCRequest
 from .storage_service import close_store, get_store
 
@@ -183,6 +191,25 @@ def _sandbox_handler(handler: Handler) -> Handler:
         except RpcError:
             raise
         except ContractError as exc:
+            raise RpcError(INVALID_PARAMS, str(exc)) from exc
+        except ProjectNotFound as exc:
+            raise RpcError(NOT_FOUND, str(exc)) from exc
+        except StorageValidationError as exc:
+            raise RpcError(INVALID_PARAMS, str(exc)) from exc
+        except StorageError as exc:
+            raise RpcError(STORAGE_ERROR, str(exc)) from exc
+
+    return wrapped
+
+
+def _benchmark_handler(handler: Handler) -> Handler:
+    @wraps(handler)
+    def wrapped(params: dict[str, Any], context: RequestContext) -> dict[str, Any]:
+        try:
+            return handler(params, context)
+        except RpcError:
+            raise
+        except BenchmarkError as exc:
             raise RpcError(INVALID_PARAMS, str(exc)) from exc
         except ProjectNotFound as exc:
             raise RpcError(NOT_FOUND, str(exc)) from exc
@@ -488,6 +515,23 @@ def sandbox_audit_export(params: dict[str, Any], _context: RequestContext) -> di
     return sandbox_service.export_audit(get_store(), params)
 
 
+@_benchmark_handler
+def benchmark_lookup(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return benchmark_service.get_service().lookup(params)
+
+
+@_benchmark_handler
+def benchmark_pack_list(_params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return benchmark_service.get_service().list_packs(get_store())
+
+
+@_benchmark_handler
+def benchmark_pack_import(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return benchmark_service.get_service().import_pack(
+        get_store(), _require_text(params, "path")
+    )
+
+
 def default_handlers() -> dict[str, Handler]:
     return {
         "ping": ping,
@@ -541,6 +585,9 @@ def default_handlers() -> dict[str, Handler]:
         "sandbox.audit.record": sandbox_audit_record,
         "sandbox.audit.list": sandbox_audit_list,
         "sandbox.audit.export": sandbox_audit_export,
+        "benchmark.lookup": benchmark_lookup,
+        "benchmark.pack.list": benchmark_pack_list,
+        "benchmark.pack.import": benchmark_pack_import,
     }
 
 

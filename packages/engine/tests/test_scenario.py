@@ -54,6 +54,30 @@ def test_hypothesis_rejects_incoherent_bounds() -> None:
         Hypothesis.model_validate({"value": 5, "min": 10, "max": 1})
 
 
+def test_hypothesis_keeps_benchmark_provenance() -> None:
+    scenario = Scenario.model_validate(
+        {
+            "name": "Test",
+            "assumptions": {
+                "unit_price": {
+                    "value": 10,
+                    "provenance": {
+                        "kind": "benchmark",
+                        "label": "Pack signé",
+                        "packId": "cg-brazzaville-retail-2026.1",
+                        "reliability": "study",
+                        "freshness": "fresh",
+                    },
+                }
+            },
+        }
+    )
+    payload = scenario.model_dump(by_alias=True, mode="json")
+    provenance = payload["assumptions"]["unit_price"]["provenance"]
+    assert provenance["packId"] == "cg-brazzaville-retail-2026.1"
+    assert provenance["freshness"] == "fresh"
+
+
 def test_config_defaults_and_bounds() -> None:
     config = SimulationConfig()
     assert config.runs == 10_000

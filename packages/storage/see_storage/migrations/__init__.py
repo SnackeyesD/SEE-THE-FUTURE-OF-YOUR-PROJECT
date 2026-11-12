@@ -215,11 +215,44 @@ CREATE INDEX IF NOT EXISTS idx_sandbox_audit_project_created
     ON sandbox_audit(project_id, created_at DESC, id);
 """
 
+MIGRATION_0005 = """
+ALTER TABLE benchmark_packs ADD COLUMN pack_id TEXT;
+ALTER TABLE benchmark_packs ADD COLUMN published_at TEXT;
+ALTER TABLE benchmark_packs ADD COLUMN installed_at TEXT;
+ALTER TABLE benchmark_packs ADD COLUMN signature TEXT;
+ALTER TABLE benchmark_packs ADD COLUMN key_id TEXT;
+ALTER TABLE benchmark_packs ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE benchmark_packs ADD COLUMN country TEXT;
+ALTER TABLE benchmark_packs ADD COLUMN region TEXT;
+ALTER TABLE benchmark_packs ADD COLUMN sector TEXT;
+ALTER TABLE benchmark_packs ADD COLUMN subsector TEXT;
+ALTER TABLE benchmark_packs ADD COLUMN value_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE benchmark_packs ADD COLUMN error TEXT;
+
+CREATE TABLE IF NOT EXISTS benchmark_pack_events (
+    id TEXT PRIMARY KEY,
+    pack_id TEXT,
+    name TEXT NOT NULL,
+    version TEXT NOT NULL,
+    action TEXT NOT NULL CHECK (action IN ('installed', 'replaced', 'rejected', 'removed')),
+    checksum TEXT,
+    key_id TEXT,
+    reason TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_benchmark_packs_pack_id
+    ON benchmark_packs(pack_id);
+CREATE INDEX IF NOT EXISTS idx_benchmark_pack_events_created
+    ON benchmark_pack_events(created_at DESC, id DESC);
+"""
+
 MIGRATIONS: tuple[tuple[int, str], ...] = (
     (1, MIGRATION_0001),
     (2, MIGRATION_0002),
     (3, MIGRATION_0003),
     (4, MIGRATION_0004),
+    (5, MIGRATION_0005),
 )
 
 LATEST_SCHEMA_VERSION = max(version for version, _ in MIGRATIONS)

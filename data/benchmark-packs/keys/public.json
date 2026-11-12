@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0.0",
+  "keys": [
+    {
+      "keyId": "seefuture-benchmark-2026",
+      "algorithm": "ed25519",
+      "publicKey": "BrAu45WBMI3lrmWLtDV5qGWgSvZx9VBKUkEVlAjoGTc=",
+      "status": "active",
+      "createdAt": "2026-11-12"
+    }
+  ]
+}

@@ -3,13 +3,14 @@ name = "see-sidecar"
 version = "0.1.0"
 description = "Sidecar Python de See The Future (JSON-RPC sur stdio)."
 requires-python = ">=3.11"
-dependencies = ["pydantic>=2.7,<3", "see-agent-core", "see-engine", "see-providers", "see-sandbox", "see-storage"]
+dependencies = ["pydantic>=2.7,<3", "see-agent-core", "see-benchmarks", "see-engine", "see-providers", "see-sandbox", "see-storage"]
 
 [dependency-groups]
 dev = ["pytest>=8.2", "ruff>=0.7"]
 
 [tool.uv.sources]
 see-agent-core = { path = "../../../../packages/agent-core", editable = true }
+see-benchmarks = { path = "../../../../packages/benchmarks", editable = true }
 see-engine = { path = "../../../../packages/engine", editable = true }
 see-providers = { path = "../../../../packages/providers", editable = true }
 see-sandbox = { path = "../../../../packages/sandbox", editable = true }

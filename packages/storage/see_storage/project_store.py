@@ -17,6 +17,7 @@ from .portable import ExportInfo, export_project, import_project
 from .repositories import (
     AgentSessionRepository,
     AgentTraceRepository,
+    BenchmarkPackEventRepository,
     BenchmarkPackRepository,
     BriefRepository,
     MessageRepository,
@@ -74,6 +75,7 @@ class ProjectStore:
             self.agent_sessions = AgentSessionRepository(database.conn)
             self.agent_trace = AgentTraceRepository(database.conn)
             self.benchmark_packs = BenchmarkPackRepository(database.conn)
+            self.benchmark_pack_events = BenchmarkPackEventRepository(database.conn)
             self.sandbox_audit = SandboxAuditRepository(database.conn)
             self._state_path.write_text(utc_now(), encoding="utf-8")
         except Exception:

@@ -1,0 +1,370 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seethefuture.local/benchmarks/benchmark-pack.schema.json",
+  "title": "BenchmarkPack",
+  "description": "Pack local de valeurs de référence sourcées et signées.",
+  "$defs": {
+    "BenchmarkValue": {
+      "additionalProperties": false,
+      "properties": {
+        "indicator": {
+          "title": "Indicator",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "country": {
+          "title": "Country",
+          "type": "string"
+        },
+        "region": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Region"
+        },
+        "regionGroup": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Regiongroup"
+        },
+        "sector": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Sector",
+          "type": "string"
+        },
+        "subsector": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subsector"
+        },
+        "source": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "sourceUrl": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Sourceurl",
+          "type": "string"
+        },
+        "sourceDate": {
+          "format": "date",
+          "title": "Sourcedate",
+          "type": "string"
+        },
+        "reliability": {
+          "enum": [
+            "official",
+            "study",
+            "field",
+            "estimate"
+          ],
+          "title": "Reliability",
+          "type": "string"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "indicator",
+        "value",
+        "unit",
+        "currency",
+        "country",
+        "sector",
+        "source",
+        "sourceUrl",
+        "sourceDate",
+        "reliability"
+      ],
+      "title": "BenchmarkValue",
+      "type": "object"
+    },
+    "ReferenceBasket": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "unit": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "components": {
+          "items": {
+            "$ref": "#/$defs/ReferenceBasketComponent"
+          },
+          "minItems": 1,
+          "title": "Components",
+          "type": "array"
+        }
+      },
+      "required": [
+        "label",
+        "unit",
+        "components"
+      ],
+      "title": "ReferenceBasket",
+      "type": "object"
+    },
+    "ReferenceBasketComponent": {
+      "additionalProperties": false,
+      "properties": {
+        "item": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Item",
+          "type": "string"
+        },
+        "quantity": {
+          "exclusiveMinimum": 0,
+          "title": "Quantity",
+          "type": "number"
+        },
+        "unit": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "item",
+        "quantity",
+        "unit"
+      ],
+      "title": "ReferenceBasketComponent",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "publishedAt": {
+      "format": "date",
+      "title": "Publishedat",
+      "type": "string"
+    },
+    "country": {
+      "title": "Country",
+      "type": "string"
+    },
+    "region": {
+      "anyOf": [
+        {
+          "maxLength": 120,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Region"
+    },
+    "regionGroup": {
+      "anyOf": [
+        {
+          "maxLength": 120,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Regiongroup"
+    },
+    "currency": {
+      "title": "Currency",
+      "type": "string"
+    },
+    "sector": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Sector",
+      "type": "string"
+    },
+    "subsector": {
+      "anyOf": [
+        {
+          "maxLength": 80,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Subsector"
+    },
+    "publisher": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Publisher",
+      "type": "string"
+    },
+    "license": {
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "License",
+      "type": "string"
+    },
+    "referenceBasket": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReferenceBasket"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "maxLength": 4000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    },
+    "values": {
+      "items": {
+        "$ref": "#/$defs/BenchmarkValue"
+      },
+      "minItems": 1,
+      "title": "Values",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "version",
+    "publishedAt",
+    "country",
+    "currency",
+    "sector",
+    "publisher",
+    "license",
+    "values"
+  ],
+  "type": "object"
+}

@@ -1,9 +1,9 @@
 // AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 // Source: packages/protocol/schema/messages.schema.json
-// Protocol version: 1.6.0
+// Protocol version: 1.7.0
 // Regenerate with: npm run protocol:generate
 
-export const PROTOCOL_VERSION = "1.6.0";
+export const PROTOCOL_VERSION = "1.7.0";
 
 export type RequestId = number | string;
 
@@ -27,7 +27,7 @@ export interface JSONRPCResponse {
   error?: JSONRPCErrorObject;
 }
 
-export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "simulate.progress" | "project.list" | "project.create" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.simulate" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools";
+export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "simulate.progress" | "project.list" | "project.create" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.simulate" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools" | "benchmark.lookup" | "benchmark.pack.list" | "benchmark.pack.import";
 
 export interface PingParams {
   echo?: string;
@@ -86,6 +86,7 @@ export interface Hypothesis {
   min?: number;
   max?: number;
   description?: string;
+  provenance?: BenchmarkProvenance;
 }
 
 export interface Scenario {
@@ -858,4 +859,108 @@ export interface SandboxAuditExportParams {
 export interface SandboxAuditExportResult {
   path: string;
   count: number;
+}
+
+export type BenchmarkReliability = "official" | "study" | "field" | "estimate";
+
+export type BenchmarkFreshness = "fresh" | "aging" | "stale";
+
+export type BenchmarkFallback = "none" | "country" | "regional" | "global";
+
+export interface BenchmarkProvenance {
+  kind: "benchmark" | "user";
+  label: string;
+  indicator?: string;
+  source?: string;
+  sourceUrl?: string;
+  sourceDate?: string;
+  reliability?: BenchmarkReliability;
+  freshness?: BenchmarkFreshness;
+  packId?: string;
+  packVersion?: string;
+  packPublishedAt?: string;
+  keyId?: string;
+  checksum?: string;
+  fallback?: BenchmarkFallback;
+  conflicts?: number;
+}
+
+export interface BenchmarkRecord {
+  indicator: string;
+  value: number;
+  unit: string;
+  currency: string;
+  country: string;
+  region?: string | null;
+  regionGroup?: string | null;
+  sector: string;
+  subsector?: string | null;
+  source: string;
+  sourceUrl: string;
+  sourceDate: string;
+  reliability: BenchmarkReliability;
+  freshness: BenchmarkFreshness;
+  min?: number | null;
+  max?: number | null;
+  notes?: string | null;
+  packId: string;
+  packVersion: string;
+  packPublishedAt: string;
+  keyId: string;
+  checksum: string;
+  fallback: BenchmarkFallback;
+  conflicts: number;
+}
+
+export interface BenchmarkLookupParams {
+  indicator: string;
+  country?: string | null;
+  region?: string | null;
+  sector?: string | null;
+  subsector?: string | null;
+  asOf?: string | null;
+  fromDate?: string | null;
+  toDate?: string | null;
+  allowFallback?: boolean;
+}
+
+export interface BenchmarkLookupResult {
+  found: boolean;
+  record?: BenchmarkRecord | null;
+  reason?: string | null;
+}
+
+export interface BenchmarkPackInfo {
+  packId: string;
+  name: string;
+  version: string;
+  publishedAt: string;
+  country: string;
+  region?: string | null;
+  currency: string;
+  sector: string;
+  subsector?: string | null;
+  valueCount: number;
+  checksum: string;
+  keyId: string;
+  status: "verified" | "invalid" | "unverified";
+  source: "bundled" | "user" | "imported";
+  path?: string | null;
+  error?: string | null;
+}
+
+export type BenchmarkPackListParams = Record<string, unknown>;
+
+export interface BenchmarkPackListResult {
+  packs: BenchmarkPackInfo[];
+  errors: string[];
+}
+
+export interface BenchmarkPackImportParams {
+  path: string;
+}
+
+export interface BenchmarkPackImportResult {
+  pack: BenchmarkPackInfo;
+  replaced?: boolean;
 }

@@ -3,7 +3,7 @@
   "$id": "https://seethefuture.local/protocol/messages.schema.json",
   "title": "See The Future IPC protocol",
   "description": "Source unique des messages JSON-RPC 2.0 échangés entre le shell Tauri et le sidecar Python.",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "$defs": {
     "RequestId": {
       "description": "Identifiant de requête JSON-RPC (entier ou chaîne).",
@@ -95,7 +95,10 @@
         "agent.permission.delete",
         "agent.trace",
         "agent.trace.export",
-        "agent.tools"
+        "agent.tools",
+        "benchmark.lookup",
+        "benchmark.pack.list",
+        "benchmark.pack.import"
       ]
     },
     "PingParams": {
@@ -200,7 +203,8 @@
         "confidence": { "type": "number" },
         "min": { "type": "number" },
         "max": { "type": "number" },
-        "description": { "type": "string" }
+        "description": { "type": "string" },
+        "provenance": { "$ref": "#/$defs/BenchmarkProvenance" }
       }
     },
     "Scenario": {
@@ -1687,6 +1691,189 @@
       "properties": {
         "path": { "type": "string" },
         "count": { "type": "integer" }
+      }
+    },
+    "BenchmarkReliability": {
+      "enum": ["official", "study", "field", "estimate"]
+    },
+    "BenchmarkFreshness": {
+      "enum": ["fresh", "aging", "stale"]
+    },
+    "BenchmarkFallback": {
+      "enum": ["none", "country", "regional", "global"]
+    },
+    "BenchmarkProvenance": {
+      "description": "Provenance d'une hypothèse, benchmark signé ou saisie utilisateur.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "label"],
+      "properties": {
+        "kind": { "enum": ["benchmark", "user"] },
+        "label": { "type": "string" },
+        "indicator": { "type": "string" },
+        "source": { "type": "string" },
+        "sourceUrl": { "type": "string" },
+        "sourceDate": { "type": "string" },
+        "reliability": { "$ref": "#/$defs/BenchmarkReliability" },
+        "freshness": { "$ref": "#/$defs/BenchmarkFreshness" },
+        "packId": { "type": "string" },
+        "packVersion": { "type": "string" },
+        "packPublishedAt": { "type": "string" },
+        "keyId": { "type": "string" },
+        "checksum": { "type": "string" },
+        "fallback": { "$ref": "#/$defs/BenchmarkFallback" },
+        "conflicts": { "type": "integer" }
+      }
+    },
+    "BenchmarkRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "indicator",
+        "value",
+        "unit",
+        "currency",
+        "country",
+        "sector",
+        "source",
+        "sourceUrl",
+        "sourceDate",
+        "reliability",
+        "freshness",
+        "packId",
+        "packVersion",
+        "packPublishedAt",
+        "keyId",
+        "checksum",
+        "fallback",
+        "conflicts"
+      ],
+      "properties": {
+        "indicator": { "type": "string" },
+        "value": { "type": "number" },
+        "unit": { "type": "string" },
+        "currency": { "type": "string" },
+        "country": { "type": "string" },
+        "region": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "regionGroup": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "sector": { "type": "string" },
+        "subsector": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "source": { "type": "string" },
+        "sourceUrl": { "type": "string" },
+        "sourceDate": { "type": "string" },
+        "reliability": { "$ref": "#/$defs/BenchmarkReliability" },
+        "freshness": { "$ref": "#/$defs/BenchmarkFreshness" },
+        "min": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "max": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "notes": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "packId": { "type": "string" },
+        "packVersion": { "type": "string" },
+        "packPublishedAt": { "type": "string" },
+        "keyId": { "type": "string" },
+        "checksum": { "type": "string" },
+        "fallback": { "$ref": "#/$defs/BenchmarkFallback" },
+        "conflicts": { "type": "integer" }
+      }
+    },
+    "BenchmarkLookupParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["indicator"],
+      "properties": {
+        "indicator": { "type": "string" },
+        "country": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "region": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "sector": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "subsector": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "asOf": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "fromDate": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "toDate": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "allowFallback": { "type": "boolean" }
+      }
+    },
+    "BenchmarkLookupResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["found"],
+      "properties": {
+        "found": { "type": "boolean" },
+        "record": {
+          "anyOf": [{ "$ref": "#/$defs/BenchmarkRecord" }, { "type": "null" }]
+        },
+        "reason": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "BenchmarkPackInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "packId",
+        "name",
+        "version",
+        "publishedAt",
+        "country",
+        "currency",
+        "sector",
+        "valueCount",
+        "checksum",
+        "keyId",
+        "status",
+        "source"
+      ],
+      "properties": {
+        "packId": { "type": "string" },
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "publishedAt": { "type": "string" },
+        "country": { "type": "string" },
+        "region": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "currency": { "type": "string" },
+        "sector": { "type": "string" },
+        "subsector": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "valueCount": { "type": "integer" },
+        "checksum": { "type": "string" },
+        "keyId": { "type": "string" },
+        "status": { "enum": ["verified", "invalid", "unverified"] },
+        "source": { "enum": ["bundled", "user", "imported"] },
+        "path": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "error": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "BenchmarkPackListParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "BenchmarkPackListResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packs", "errors"],
+      "properties": {
+        "packs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BenchmarkPackInfo" }
+        },
+        "errors": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "BenchmarkPackImportParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string" }
+      }
+    },
+    "BenchmarkPackImportResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pack"],
+      "properties": {
+        "pack": { "$ref": "#/$defs/BenchmarkPackInfo" },
+        "replaced": { "type": "boolean" }
       }
     }
   }

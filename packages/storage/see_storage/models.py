@@ -273,6 +273,18 @@ class BenchmarkPack(Model):
     path: str
     checksum: str
     source: str | None
+    pack_id: str | None
+    published_at: str | None
+    installed_at: str | None
+    signature: str | None
+    key_id: str | None
+    status: str
+    country: str | None
+    region: str | None
+    sector: str | None
+    subsector: str | None
+    value_count: int
+    error: str | None
     created_at: str
 
     @classmethod
@@ -284,6 +296,45 @@ class BenchmarkPack(Model):
             path=row["path"],
             checksum=row["checksum"],
             source=row["source"],
+            pack_id=row["pack_id"],
+            published_at=row["published_at"],
+            installed_at=row["installed_at"],
+            signature=row["signature"],
+            key_id=row["key_id"],
+            status=row["status"],
+            country=row["country"],
+            region=row["region"],
+            sector=row["sector"],
+            subsector=row["subsector"],
+            value_count=int(row["value_count"]),
+            error=row["error"],
+            created_at=row["created_at"],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class BenchmarkPackEvent(Model):
+    id: str
+    pack_id: str | None
+    name: str
+    version: str
+    action: str
+    checksum: str | None
+    key_id: str | None
+    reason: str | None
+    created_at: str
+
+    @classmethod
+    def from_row(cls, row: Any) -> BenchmarkPackEvent:
+        return cls(
+            id=row["id"],
+            pack_id=row["pack_id"],
+            name=row["name"],
+            version=row["version"],
+            action=row["action"],
+            checksum=row["checksum"],
+            key_id=row["key_id"],
+            reason=row["reason"],
             created_at=row["created_at"],
         )
 

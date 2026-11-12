@@ -35,6 +35,9 @@ npm run storage:lint
 npm run agent:sync
 npm run agent:test
 npm run agent:lint
+npm run benchmarks:sync
+npm run benchmarks:test
+npm run benchmarks:lint
 ```
 
 ## Structure
@@ -46,6 +49,8 @@ npm run agent:lint
 - `packages/engine` : moteur de simulation (aucune dépendance UI/réseau).
 - `packages/storage` : persistance SQLite, repositories et archives `.simproj`.
 - `packages/agent-core` : orchestration LLM, outils validés, permissions et traces (aucun accès réseau direct).
+- `packages/benchmarks` : chargement, vérification et lookup des référentiels signés.
+- `data/benchmark-packs` : packs sourcés, schéma, clés publiques et outils de signature.
 - `docs/adr` : décisions d'architecture.
 
 ## Conventions

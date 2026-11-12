@@ -7,7 +7,7 @@ from sidecar.protocol_models import PROTOCOL_VERSION, JSONRPCRequest
 
 
 def test_protocol_version_matches_schema() -> None:
-    assert PROTOCOL_VERSION == "1.6.0"
+    assert PROTOCOL_VERSION == "1.7.0"
 
 
 def test_request_accepts_valid_payload() -> None:

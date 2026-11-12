@@ -137,9 +137,37 @@ def test_health_exposes_versions(sidecar: SidecarProcess) -> None:
     response = sidecar.call("health")
     result = response["result"]
     assert result["status"] == "ok"
-    assert result["protocolVersion"] == "1.6.0"
+    assert result["protocolVersion"] == "1.7.0"
     assert isinstance(result["pid"], int)
     assert result["sidecarVersion"]
+
+
+def test_benchmark_lookup_returns_signed_record(sidecar: SidecarProcess) -> None:
+    response = sidecar.call(
+        "benchmark.lookup",
+        {
+            "indicator": "unit_price",
+            "country": "CG",
+            "region": "Brazzaville",
+            "sector": "retail",
+            "subsector": "alimentation_generale",
+        },
+        request_id=21,
+    )
+    record = response["result"]["record"]
+    assert response["result"]["found"] is True
+    assert record["packId"] == "cg-brazzaville-retail-2026.1"
+    assert record["keyId"] == "seefuture-benchmark-2026"
+
+
+def test_benchmark_pack_list_exposes_bundled_packs(sidecar: SidecarProcess) -> None:
+    response = sidecar.call("benchmark.pack.list", request_id=22)
+    packs = response["result"]["packs"]
+    assert response["result"]["errors"] == []
+    assert {pack["packId"] for pack in packs} == {
+        "cg-brazzaville-retail-2026.1",
+        "cf-bangui-retail-2026.1",
+    }
 
 
 def test_unknown_method_returns_method_not_found(sidecar: SidecarProcess) -> None:

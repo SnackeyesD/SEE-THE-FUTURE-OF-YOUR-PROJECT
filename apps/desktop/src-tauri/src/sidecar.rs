@@ -32,6 +32,7 @@ pub struct SidecarManager {
     last_error: Option<String>,
     supervised: bool,
     data_dir: Option<PathBuf>,
+    benchmark_dir: Option<PathBuf>,
 }
 
 impl Default for SidecarManager {
@@ -50,11 +51,16 @@ impl SidecarManager {
             last_error: None,
             supervised: true,
             data_dir: None,
+            benchmark_dir: None,
         }
     }
 
     pub fn set_data_dir(&mut self, data_dir: PathBuf) {
         self.data_dir = Some(data_dir);
+    }
+
+    pub fn set_benchmark_dir(&mut self, benchmark_dir: PathBuf) {
+        self.benchmark_dir = Some(benchmark_dir);
     }
 
     pub fn supervision_enabled(&self) -> bool {
@@ -90,6 +96,10 @@ impl SidecarManager {
 
         if let Some(dir) = &self.data_dir {
             command.env("SEE_DATA_DIR", dir);
+        }
+
+        if let Some(dir) = &self.benchmark_dir {
+            command.env("SEE_BENCHMARK_DIR", dir);
         }
 
         let mut child = command.spawn().map_err(|error| {
@@ -389,7 +399,7 @@ mod tests {
             .expect("le sidecar doit répondre au health");
 
         assert_eq!(result["status"], json!("ok"));
-        assert_eq!(result["protocolVersion"], json!("1.6.0"));
+        assert_eq!(result["protocolVersion"], json!("1.7.0"));
         manager.shutdown();
     }
 

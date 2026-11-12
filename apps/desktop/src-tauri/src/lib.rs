@@ -105,6 +105,12 @@ const SANDBOX_METHODS: &[&str] = &[
     "sandbox.audit.export",
 ];
 
+const BENCHMARK_METHODS: &[&str] = &[
+    "benchmark.lookup",
+    "benchmark.pack.list",
+    "benchmark.pack.import",
+];
+
 #[tauri::command]
 fn project_list(
     state: tauri::State<'_, Mutex<SidecarManager>>,
@@ -251,6 +257,19 @@ fn sandbox_call(
 }
 
 #[tauri::command]
+fn benchmark_call(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    method: String,
+    params: Value,
+) -> Result<Value, String> {
+    if !BENCHMARK_METHODS.contains(&method.as_str()) {
+        return Err(format!("méthode benchmark non autorisée: {method}"));
+    }
+    let mut manager = state.lock().map_err(|error| error.to_string())?;
+    manager.request(&method, params)
+}
+
+#[tauri::command]
 fn provider_key_set(keychain_ref: String, secret: String) -> Result<(), String> {
     keychain::set_secret(&keychain_ref, &secret)
 }
@@ -355,7 +374,13 @@ pub fn run() {
                 match app.path().app_data_dir() {
                     Ok(data_dir) => manager.set_data_dir(data_dir),
                     Err(error) => {
-                        eprintln!("[sidecar] répertoire de données indisponible: {error}")
+                        eprintln!("[sidecar] rǸpertoire de donnǸes indisponible: {error}")
+                    }
+                }
+                if let Ok(resource_dir) = app.path().resource_dir() {
+                    let benchmark_dir = resource_dir.join("benchmark-packs");
+                    if benchmark_dir.is_dir() {
+                        manager.set_benchmark_dir(benchmark_dir);
                     }
                 }
                 if let Err(error) = manager.ensure_running() {
@@ -380,6 +405,7 @@ pub fn run() {
             agent_call,
             agent_turn,
             sandbox_call,
+            benchmark_call,
             provider_call,
             provider_key_set,
             provider_key_status,

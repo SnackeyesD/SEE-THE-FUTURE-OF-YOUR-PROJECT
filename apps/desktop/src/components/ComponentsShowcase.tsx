@@ -185,7 +185,7 @@ export function ComponentsShowcase() {
           <Badge tone="ok">Sidecar actif</Badge>
           <Badge tone="warn">Révision requise</Badge>
           <Badge tone="danger">Clé invalide</Badge>
-          <Badge tone="accent">protocol 1.6.0</Badge>
+          <Badge tone="accent">protocol 1.7.0</Badge>
         </div>
       </section>
 

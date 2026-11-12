@@ -158,10 +158,29 @@ def test_web_search_marks_untrusted_data() -> None:
 
 def test_benchmark_is_explicitly_unavailable() -> None:
     outcome = default_registry().execute(
-        "get_benchmark", {"key": "margin"}, _context(), call_id="call"
+        "get_benchmark", {"indicator": "gross_margin"}, _context(), call_id="call"
     )
     assert outcome.ok
     assert outcome.result["found"] is False
+
+
+def test_benchmark_returns_signed_record() -> None:
+    record = {
+        "indicator": "gross_margin",
+        "value": 0.24,
+        "keyId": "test-key",
+    }
+    context = _context(benchmark=lambda payload: {"found": True, "record": record})
+    outcome = default_registry().execute(
+        "get_benchmark",
+        {"indicator": "gross_margin", "country": "CG"},
+        context,
+        call_id="call",
+    )
+    assert outcome.ok
+    assert outcome.result["found"] is True
+    assert outcome.result["untrusted"] is False
+    assert outcome.result["record"]["keyId"] == "test-key"
 
 
 def test_export_report_uses_latest_result(

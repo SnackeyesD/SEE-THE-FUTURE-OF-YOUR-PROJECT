@@ -16,6 +16,7 @@ import {
   Table,
 } from "@see/ui";
 import { useCallback, useEffect, useState } from "react";
+import { BenchmarkPacksPanel } from "../components/BenchmarkPacksPanel";
 import { ProvidersPanel } from "../components/ProvidersPanel";
 import { SandboxAuditPanel } from "../components/SandboxReviewPanel";
 import {
@@ -146,6 +147,8 @@ export function SettingsScreen({
       </div>
 
       <ProvidersPanel disabled={disabled} onLog={onLog} initialProjectId={project.id} />
+
+      <BenchmarkPacksPanel disabled={disabled} onLog={onLog} />
 
       <SandboxAuditPanel projectId={project.id} disabled={disabled} onLog={onLog} />
 
