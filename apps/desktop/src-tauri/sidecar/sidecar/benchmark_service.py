@@ -75,6 +75,15 @@ class BenchmarkService:
             key_set_path=self._key_set_path(),
         ).load()
 
+    def indicator_names(self) -> list[str]:
+        return sorted(
+            {
+                value.indicator
+                for loaded in self.catalog().packs
+                for value in loaded.pack.values
+            }
+        )
+
     def lookup(self, params: dict[str, Any]) -> dict[str, Any]:
         try:
             query = BenchmarkQuery.model_validate(params)

@@ -164,6 +164,13 @@ def test_benchmark_is_explicitly_unavailable() -> None:
     assert outcome.result["found"] is False
 
 
+def test_benchmark_tool_schema_documents_canonical_fields() -> None:
+    definitions = {tool.name: tool for tool in default_registry().definitions()}
+    properties = definitions["get_benchmark"].parameters["properties"]
+    assert "snake_case" in properties["indicator"]["description"]
+    assert "ISO 3166-1" in properties["country"]["description"]
+
+
 def test_benchmark_returns_signed_record() -> None:
     record = {
         "indicator": "gross_margin",

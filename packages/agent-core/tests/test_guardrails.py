@@ -8,6 +8,7 @@ from agent_core import (
     detect_injection,
     normalize_thread,
     scrub_secrets,
+    system_prompt,
     trim_messages,
     wrap_untrusted,
 )
@@ -67,3 +68,38 @@ def test_normalize_thread_scrubs_secrets() -> None:
         [{"role": "user", "content": "api_key=abcdefghijkl"}]
     )
     assert "abcdefghijkl" not in normalized[0].content
+
+
+def test_normalize_thread_keeps_persisted_tool_exchange() -> None:
+    normalized = normalize_thread(
+        [
+            {
+                "role": "assistant",
+                "content": "",
+                "toolCalls": [
+                    {"id": "call_1", "name": "update_brief", "arguments": {}}
+                ],
+            },
+            {
+                "role": "tool",
+                "content": '{"ok": true}',
+                "name": "update_brief",
+                "toolCallId": "call_1",
+            },
+        ]
+    )
+    assert normalized[0].tool_calls[0].id == "call_1"
+    assert normalized[1].tool_call_id == "call_1"
+
+
+def test_system_prompt_lists_canonical_benchmark_indicators() -> None:
+    prompt = system_prompt(
+        "modeler",
+        state="brief_validated",
+        benchmark_indicators=["fixed_costs_monthly", "unit_price"],
+    )
+    assert (
+        "Indicateurs de référence disponibles pour get_benchmark "
+        "(clés canoniques à utiliser telles quelles) : "
+        "fixed_costs_monthly, unit_price."
+    ) in prompt

@@ -10,6 +10,10 @@ from .base import ChatMessage, ToolCall
 from .errors import InvalidRequest
 
 _ALLOWED_MESSAGE_FIELDS = {"role", "content", "name", "tool_call_id", "tool_calls"}
+_MESSAGE_FIELD_ALIASES = {
+    "toolCallId": "tool_call_id",
+    "toolCalls": "tool_calls",
+}
 _ALLOWED_TOOL_CALL_FIELDS = {"id", "name", "arguments"}
 
 
@@ -34,6 +38,9 @@ def normalize_messages(messages: Iterable[ChatMessage | dict[str, Any]]) -> list
         if not isinstance(item, dict):
             raise InvalidRequest("message d'historique invalide")
         payload = {key: item[key] for key in _ALLOWED_MESSAGE_FIELDS if key in item}
+        for alias, field in _MESSAGE_FIELD_ALIASES.items():
+            if field not in payload and alias in item:
+                payload[field] = item[alias]
         calls = payload.get("tool_calls")
         if calls is None:
             payload.pop("tool_calls", None)

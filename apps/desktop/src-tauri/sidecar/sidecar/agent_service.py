@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -309,6 +311,44 @@ def _benchmark_hint(brief: dict[str, Any] | None, sector: str | None) -> dict[st
     return hint
 
 
+def _benchmark_indicator_names() -> list[str]:
+    try:
+        return benchmark_service.get_service().indicator_names()
+    except Exception:  # noqa: BLE001 - les benchmarks restent optionnels
+        return []
+
+
+def _normalize_benchmark_indicator(value: str) -> str:
+    normalized = (
+        unicodedata.normalize("NFKD", value)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
+    return re.sub(r"[^a-z0-9]+", "_", normalized.lower()).strip("_")
+
+
+def _benchmark_query(
+    payload: dict[str, Any],
+    *,
+    brief: dict[str, Any] | None,
+    sector: str | None,
+) -> dict[str, Any]:
+    query = dict(payload)
+    indicator = query.get("indicator")
+    if isinstance(indicator, str):
+        query["indicator"] = _normalize_benchmark_indicator(indicator)
+    return {**query, **_benchmark_hint(brief, sector)}
+
+
+def _benchmark_unavailable(
+    reason: str, indicators: list[str]
+) -> dict[str, Any]:
+    message = f"{reason.rstrip('.')}."
+    if indicators:
+        message = f"{message} Indicateurs disponibles: {', '.join(indicators)}."
+    return {"found": False, "record": None, "reason": message}
+
+
 def _chat_messages(
     thread: list[dict[str, Any]],
     *,
@@ -317,6 +357,7 @@ def _chat_messages(
     brief: dict[str, Any] | None,
     scenario: dict[str, Any] | None,
     latest_result: dict[str, Any] | None,
+    benchmark_indicators: list[str] | None = None,
 ) -> list[ChatMessage]:
     system = system_message(
         role,
@@ -324,6 +365,7 @@ def _chat_messages(
         brief=brief,
         scenario=scenario,
         latest_result=latest_result,
+        benchmark_indicators=benchmark_indicators,
     )
     return [system, *trim_messages(normalize_thread(thread), max_tokens=DEFAULT_CONTEXT_TOKENS)]
 
@@ -487,11 +529,24 @@ async def _run_turn(
         )
         context.latest_result = result.to_dict()
 
-    hint = _benchmark_hint(brief, project.sector)
+    benchmark_indicators = _benchmark_indicator_names()
 
     def query_benchmark(payload: dict[str, Any]) -> dict[str, Any]:
-        query = {**hint, **payload}
-        return benchmark_service.get_service().lookup(query)
+        query = _benchmark_query(
+            payload,
+            brief=context.brief,
+            sector=project.sector,
+        )
+        try:
+            result = benchmark_service.get_service().lookup(query)
+        except StorageValidationError as error:
+            return _benchmark_unavailable(str(error), benchmark_indicators)
+        if not result.get("found"):
+            return _benchmark_unavailable(
+                str(result.get("reason") or "aucune valeur de référence trouvée"),
+                benchmark_indicators,
+            )
+        return result
 
     context.save_brief = save_brief
     context.save_scenario = save_scenario
@@ -529,6 +584,7 @@ async def _run_turn(
         brief=context.brief,
         scenario=context.scenario,
         latest_result=context.latest_result,
+        benchmark_indicators=benchmark_indicators,
     )
 
     async def chat(current: list[ChatMessage], tools: list[Any]) -> Any:

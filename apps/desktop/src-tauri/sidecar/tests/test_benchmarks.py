@@ -6,6 +6,11 @@ from pathlib import Path
 import pytest
 from see_storage import ProjectStore, StorageValidationError
 
+from sidecar.agent_service import (
+    _benchmark_query,
+    _benchmark_unavailable,
+    _normalize_benchmark_indicator,
+)
 from sidecar.benchmark_service import BenchmarkService, bundled_benchmark_dir
 
 
@@ -40,6 +45,46 @@ def test_list_packs_reports_verified_bundled_packs(tmp_path: Path) -> None:
     statuses = {(pack["packId"], pack["status"]) for pack in result["packs"]}
     assert ("cg-brazzaville-retail-2026.1", "verified") in statuses
     assert ("cf-bangui-retail-2026.1", "verified") in statuses
+
+
+def test_indicator_names_are_sorted_and_come_from_signed_packs(tmp_path: Path) -> None:
+    service = BenchmarkService(user_dir=tmp_path / "user")
+    names = service.indicator_names()
+    assert names == sorted(names)
+    assert {"fixed_costs_monthly", "unit_price"} <= set(names)
+
+
+def test_benchmark_query_normalizes_indicator_and_prefers_brief_geography() -> None:
+    query = _benchmark_query(
+        {
+            "indicator": "Loyer commercial mensuel",
+            "country": "Congo",
+            "sector": "autre",
+        },
+        brief={"geography": "Brazzaville, Congo"},
+        sector="retail",
+    )
+    assert query["indicator"] == "loyer_commercial_mensuel"
+    assert query["country"] == "CG"
+    assert query["region"] == "Brazzaville"
+    assert query["sector"] == "retail"
+    assert query["subsector"] == "alimentation_generale"
+
+
+def test_normalize_benchmark_indicator_handles_accents_and_separators() -> None:
+    assert _normalize_benchmark_indicator("  Coût d'achat — mensuel  ") == (
+        "cout_d_achat_mensuel"
+    )
+
+
+def test_benchmark_unavailable_lists_canonical_indicators() -> None:
+    result = _benchmark_unavailable(
+        "indicateur absent des packs signés: inconnu.",
+        ["fixed_costs_monthly", "unit_price"],
+    )
+    assert result["found"] is False
+    assert result["record"] is None
+    assert "Indicateurs disponibles: fixed_costs_monthly, unit_price." in result["reason"]
 
 
 def test_import_verifies_signature_and_records_metadata(tmp_path: Path) -> None:

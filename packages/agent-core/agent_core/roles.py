@@ -7,7 +7,7 @@ from providers import ChatMessage
 
 from .models import AgentRoleName, JourneyStateName
 
-PROMPT_VERSION = "2026.11.1"
+PROMPT_VERSION = "2026.11.2"
 
 _COMMON = """Tu participes à See The Future, un outil qui aide à évaluer une idée de business.
 Règles absolues :
@@ -54,6 +54,7 @@ def system_prompt(
     brief: dict[str, Any] | None = None,
     scenario: dict[str, Any] | None = None,
     latest_result: dict[str, Any] | None = None,
+    benchmark_indicators: list[str] | None = None,
 ) -> str:
     sections = [
         _COMMON,
@@ -61,6 +62,13 @@ def system_prompt(
         f"État du parcours : {state}.",
         f"Version des prompts : {PROMPT_VERSION}.",
     ]
+    if benchmark_indicators:
+        sections.append(
+            "Indicateurs de référence disponibles pour get_benchmark "
+            "(clés canoniques à utiliser telles quelles) : "
+            + ", ".join(benchmark_indicators)
+            + "."
+        )
     if brief:
         sections.append("Brief courant (données du projet) :\n" + _json(brief))
     if scenario:
@@ -80,6 +88,7 @@ def system_message(
     brief: dict[str, Any] | None = None,
     scenario: dict[str, Any] | None = None,
     latest_result: dict[str, Any] | None = None,
+    benchmark_indicators: list[str] | None = None,
 ) -> ChatMessage:
     return ChatMessage(
         role="system",
@@ -89,6 +98,7 @@ def system_message(
             brief=brief,
             scenario=scenario,
             latest_result=latest_result,
+            benchmark_indicators=benchmark_indicators,
         ),
         name=f"{role}.v{PROMPT_VERSION}",
     )

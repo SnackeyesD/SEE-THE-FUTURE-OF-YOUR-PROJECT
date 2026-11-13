@@ -690,6 +690,155 @@ def test_agent_turn_streams_text_and_records_trace(sidecar: SidecarProcess) -> N
         server.server_close()
 
 
+def test_agent_benchmark_query_uses_brief_and_recovers_from_free_text(
+    sidecar: SidecarProcess,
+) -> None:
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    requests: list[dict[str, Any]] = []
+
+    def sse(*chunks: dict[str, Any]) -> bytes:
+        lines = [f"data: {json.dumps(chunk)}\n\n" for chunk in chunks]
+        lines.append("data: [DONE]\n\n")
+        return "".join(lines).encode()
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            length = int(self.headers.get("Content-Length", "0"))
+            requests.append(json.loads(self.rfile.read(length)))
+            if len(requests) == 1:
+                calls = [
+                    {
+                        "index": 0,
+                        "id": "brief_1",
+                        "type": "function",
+                        "function": {
+                            "name": "update_brief",
+                            "arguments": json.dumps(
+                                {
+                                    "problem": "Livrer des repas",
+                                    "customer": "Bureaux du centre-ville",
+                                    "valueProposition": "Livraison rapide",
+                                    "revenueModel": "Marge sur les repas",
+                                    "costStructure": "Achats et loyer",
+                                    "geography": "Congo",
+                                }
+                            ),
+                        },
+                    },
+                    {
+                        "index": 1,
+                        "id": "benchmark_1",
+                        "type": "function",
+                        "function": {
+                            "name": "get_benchmark",
+                            "arguments": json.dumps(
+                                {
+                                    "indicator": "fixed_costs_monthly",
+                                    "country": "Congo",
+                                }
+                            ),
+                        },
+                    },
+                    {
+                        "index": 2,
+                        "id": "benchmark_2",
+                        "type": "function",
+                        "function": {
+                            "name": "get_benchmark",
+                            "arguments": json.dumps(
+                                {
+                                    "indicator": "loyer commercial mensuel",
+                                    "country": "Congo",
+                                }
+                            ),
+                        },
+                    },
+                ]
+                payload = sse(
+                    {"choices": [{"delta": {"tool_calls": calls}}]},
+                    {"choices": [{"delta": {}, "finish_reason": "tool_calls"}]},
+                )
+            else:
+                payload = sse(
+                    {"choices": [{"delta": {"content": "Benchmark vérifié."}}]},
+                    {"choices": [{"delta": {}, "finish_reason": "stop"}]},
+                )
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(payload)
+            self.wfile.flush()
+
+        def log_message(self, *args: Any) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        project = sidecar.call("project.create", {"name": "Agent benchmark"}, request_id=110)[
+            "result"
+        ]["project"]
+        profile = sidecar.call(
+            "provider.profile.save",
+            {
+                "projectId": project["id"],
+                "name": "Faux benchmark",
+                "provider": "openai-compatible",
+                "baseUrl": f"http://127.0.0.1:{server.server_port}/v1",
+                "model": "gpt-4o-mini",
+            },
+            request_id=111,
+        )["result"]["profile"]
+        sidecar.call(
+            "provider.role.set",
+            {
+                "projectId": project["id"],
+                "role": "interviewer",
+                "providerProfileId": profile["id"],
+                "model": "gpt-4o-mini",
+            },
+            request_id=112,
+        )
+        prepared = sidecar.call("agent.prepare", {"projectId": project["id"]}, request_id=113)[
+            "result"
+        ]
+        response = sidecar.call(
+            "agent.turn",
+            {
+                "projectId": project["id"],
+                "profile": prepared["profile"],
+                "role": prepared["role"],
+                "apiKey": "test-key",
+                "message": "Je valide le brief.",
+            },
+            request_id=114,
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "error" not in response
+    result = response["result"]
+    assert result["status"] == "text"
+    assert result["text"] == "Benchmark vérifié."
+    assert "fixed_costs_monthly" in requests[0]["messages"][0]["content"]
+    events = [
+        event for event in result["toolEvents"] if event["tool"] == "get_benchmark"
+    ]
+    assert len(events) == 2
+    canonical, free_text = events
+    assert canonical["ok"] is True
+    assert canonical["result"]["found"] is True
+    assert canonical["result"]["record"]["country"] == "CG"
+    assert free_text["ok"] is True
+    assert free_text["result"]["found"] is False
+    assert "loyer_commercial_mensuel" in free_text["result"]["reason"]
+    assert "fixed_costs_monthly" in free_text["result"]["reason"]
+
+
 def test_sandbox_analysis_audit_and_export(sidecar: SidecarProcess, tmp_path: Path) -> None:
     project = sidecar.call("project.create", {"name": "Sandbox"}, request_id=120)["result"][
         "project"

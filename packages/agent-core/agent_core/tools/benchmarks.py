@@ -3,16 +3,41 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+from pydantic import Field
+
 from ..models import AgentModel
 from .base import ToolContext, ToolExecution, ToolSpec
 
 
 class BenchmarkInput(AgentModel):
-    indicator: str
-    country: str | None = None
-    region: str | None = None
-    sector: str | None = None
-    subsector: str | None = None
+    indicator: str = Field(
+        min_length=1,
+        max_length=80,
+        description=(
+            "Clé canonique en snake_case issue du référentiel, par exemple "
+            "fixed_costs_monthly ou unit_price. Utilise la liste fournie dans "
+            "le prompt système."
+        ),
+    )
+    country: str | None = Field(
+        default=None,
+        description=(
+            "Code ISO 3166-1 alpha-2 en majuscules (CG, CF) ou GLOBAL. "
+            "Omets ce champ pour utiliser la géographie du brief."
+        ),
+    )
+    region: str | None = Field(
+        default=None,
+        description="Ville ou région exacte du pack; omise, la valeur du brief s'applique.",
+    )
+    sector: str | None = Field(
+        default=None,
+        description="Secteur canonique du pack; omis, la valeur du projet s'applique.",
+    )
+    subsector: str | None = Field(
+        default=None,
+        description="Sous-secteur canonique du pack; omis, la valeur du projet s'applique.",
+    )
     as_of: date | None = None
     allow_fallback: bool = True
 
