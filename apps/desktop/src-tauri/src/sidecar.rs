@@ -399,7 +399,7 @@ mod tests {
             .expect("le sidecar doit répondre au health");
 
         assert_eq!(result["status"], json!("ok"));
-        assert_eq!(result["protocolVersion"], json!("1.7.0"));
+        assert_eq!(result["protocolVersion"], json!("1.8.0"));
         manager.shutdown();
     }
 

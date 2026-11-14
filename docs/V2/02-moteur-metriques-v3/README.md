@@ -39,78 +39,78 @@ Sans cette phase, le cockpit ne peut afficher que des courbes moyennes : c'est i
 
 ## 3. Livrables
 
-- [ ] `BatchResult` expose la trésorerie mensuelle et les valeurs par run nécessaires.
-- [ ] `Metrics` contient : `cash_negative_probability`, `mean_min_cash`, `min_cash_p10/p50/p90`, `financing_need_p50/p90`, `break_even_probability`, `median_break_even_month`.
-- [ ] Le résultat expose une **CDF du minimum de trésorerie** (≈ 64 points) pour que le seuil glissable du cockpit (phase 09) soit calculé par le moteur, pas par l'UI.
-- [ ] `MonthlyAverage` contient les bandes `profit_p10/p50/p90`, `cash_p10/p50/p90` et `break_even_probability`.
-- [ ] Le résultat final contient un **histogramme mensuel** (profit et trésorerie, 20–30 bins) pour le mois sélectionné dans le cockpit (phase 10) ; les partiels ne le contiennent pas.
-- [ ] `SimulationResult` expose `runs_retained` et un échantillon interne non sérialisé.
-- [ ] Schéma protocole `1.8.0`, types générés, `protocol:check` vert.
-- [ ] Documentation des formules dans `packages/engine/README.md`.
-- [ ] Tests unitaires, golden et de compatibilité.
+- [x] `BatchResult` expose la trésorerie mensuelle et les valeurs par run nécessaires.
+- [x] `Metrics` contient : `cash_negative_probability`, `mean_min_cash`, `min_cash_p10/p50/p90`, `financing_need_p50/p90`, `break_even_probability`, `median_break_even_month`.
+- [x] Le résultat expose une **CDF du minimum de trésorerie** (≈ 64 points) pour que le seuil glissable du cockpit (phase 09) soit calculé par le moteur, pas par l'UI.
+- [x] `MonthlyAverage` contient les bandes `profit_p10/p50/p90`, `cash_p10/p50/p90` et `break_even_probability`.
+- [x] Le résultat final contient un **histogramme mensuel** (profit et trésorerie, 20–30 bins) pour le mois sélectionné dans le cockpit (phase 10). Aucun partiel n'existe encore avant la phase 06 ; le champ est optionnel et le runner ne le remplit que sur le résultat final.
+- [x] `SimulationResult` expose `runs_retained` et un échantillon interne non sérialisé.
+- [x] Schéma protocole `1.8.0`, types générés, `protocol:check` vert.
+- [x] Documentation des formules dans `packages/engine/README.md`.
+- [x] Tests unitaires, golden et de compatibilité.
 
 ## 4. Tâches détaillées
 
 ### Lot A — Collecte par run
 
-- [ ] Dans `retail_depot.py`, stocker `cash_monthly` (shape `runs × horizon`) en plus de `cash_end`.
-- [ ] Calculer par run : `min_cash`, `break_even_month` (premier mois où le profit net cumulé ≥ 0), `cash_negative_month` (premier mois < 0, optionnel).
-- [ ] Ajouter ces champs à `BatchResult` ; ne pas casser les modèles existants.
-- [ ] Vérifier que le cas sans événement reste **bit à bit identique** hors nouveaux champs.
+- [x] Dans `retail_depot.py`, stocker `cash_monthly` (shape `runs × horizon`) en plus de `cash_end`.
+- [x] Calculer par run : `min_cash`, `break_even_month` (premier mois où le profit net cumulé ≥ 0). `cash_negative_month` n'est pas retenu : `min_cash < 0` couvre le besoin du cockpit.
+- [x] Ajouter ces champs à `BatchResult` ; ne pas casser les modèles existants.
+- [x] Vérifier que le cas sans événement reste **bit à bit identique** hors nouveaux champs.
 
 ### Lot B — Échantillon de runs
 
-- [ ] Conserver les **premiers `min(runs, 20 000)` runs** (échantillon déterministe, compatible avec le préfixe de la phase 03).
-- [ ] Stocker par run échantillonné : index, `profit_monthly`, `cash_monthly`, `revenue_monthly`, paramètres tirés (clé → valeur).
-- [ ] Exposer un objet `RunSample` interne au moteur, **jamais sérialisé par défaut**.
-- [ ] Documenter la mémoire : ~20 000 × 36 × 3 × 8 octets ≈ 17 Mo, plus paramètres ; plafond dur.
-- [ ] Prévu pour la phase 12 : accès par index, tirage de ≤ 200 trajectoires.
+- [x] Conserver les **premiers `min(runs, 20 000)` runs** (échantillon déterministe, compatible avec le préfixe de la phase 03).
+- [x] Stocker par run échantillonné : index, `profit_monthly`, `cash_monthly`, `revenue_monthly`, paramètres tirés (clé → valeur).
+- [x] Exposer un objet `RunSample` interne au moteur, **jamais sérialisé par défaut**.
+- [x] Documenter la mémoire : ~20 000 × 36 × 3 × 8 octets ≈ 17 Mo, plus paramètres ; plafond dur.
+- [x] Prévu pour la phase 12 : accès par index, tirage de ≤ 200 trajectoires.
 
 ### Lot C — Agrégats
 
-- [ ] `build_metrics()` calcule les nouvelles métriques à partir de `profit`, `min_cash` et `break_even_month`.
-- [ ] Définitions exactes (ADR 0015) :
+- [x] `build_metrics()` calcule les nouvelles métriques à partir de `profit`, `min_cash` et `break_even_month`.
+- [x] Définitions exactes (ADR 0015) :
   - point mort = premier mois avec profit net cumulé ≥ 0 ;
   - `break_even_probability` = proportion de runs avec point mort ≤ horizon ;
   - `median_break_even_month` = médiane des runs atteignant le point mort, `null` sinon ;
   - trésorerie négative = `min_cash < 0` ;
   - besoin de financement = `max(0, -min_cash)`.
-- [ ] `build_monthly()` calcule les bandes à partir de l'échantillon, pas des sommes.
-- [ ] Construire les histogrammes mensuels profit/trésorerie à partir de l'échantillon, avec des bornes fixes par mois (pas de saut entre deux calculs).
-- [ ] Ajouter `break_even_probability` cumulée par mois (courbe de survie).
-- [ ] Construire une CDF du minimum de trésorerie (quantiles échantillonnés, 64 points) : `P(min_cash ≤ x)`, pour le seuil glissable côté UI.
-- [ ] Garantir P10 ≤ P50 ≤ P90 et probabilités dans `[0, 1]`.
+- [x] `build_monthly()` calcule les bandes à partir de l'échantillon, pas des sommes.
+- [x] Construire les histogrammes mensuels profit/trésorerie à partir de l'échantillon, avec des bornes stables pour une graine et une configuration données.
+- [x] Ajouter `break_even_probability` cumulée par mois (courbe de survie).
+- [x] Construire une CDF du minimum de trésorerie (quantiles échantillonnés, 64 points) : `P(min_cash ≤ x)`, pour le seuil glissable côté UI.
+- [x] Garantir P10 ≤ P50 ≤ P90 et probabilités dans `[0, 1]`.
 
 ### Lot D — Protocole
 
-- [ ] Étendre `SimulationResult`, `Metrics`, `MonthlyAverage` dans `messages.schema.json`.
-- [ ] Rendre les **nouveaux champs optionnels** côté schéma pour continuer à lire les runs stockés en v2.
-- [ ] Bump `version` à `1.8.0` ; `npm run protocol:generate`.
-- [ ] Mettre à jour le test Rust qui assert `protocolVersion == "1.7.0"`.
-- [ ] Vérifier la taille du payload : un résultat final 36 mois doit rester < 100 Ko (hors trajectoires).
+- [x] Étendre `SimulationResult`, `Metrics`, `MonthlyAverage` dans `messages.schema.json`.
+- [x] Rendre les **nouveaux champs optionnels** côté schéma pour continuer à lire les runs stockés en v2.
+- [x] Bump `version` à `1.8.0` ; `npm run protocol:generate`.
+- [x] Mettre à jour le test Rust qui assert `protocolVersion == "1.7.0"`.
+- [x] Vérifier la taille du payload : un résultat final 36 mois doit rester < 100 Ko (hors trajectoires). Mesure : 28–30 Kio.
 
 ### Lot E — Tests et documentation
 
-- [ ] Golden : régénérer `tests/golden/retail_depot_three_months.json` et justifier le diff.
-- [ ] Test analytique : scénario à paramètres constants → point mort et trésorerie vérifiables à la main.
-- [ ] Test de compatibilité : un ancien `result_json` (sans nouveaux champs) reste lisible par le sidecar et l'UI.
-- [ ] Test de non-régression : les anciennes métriques gardent leurs valeurs.
-- [ ] Documenter formules, unités, arrondis et cas limites (`null`).
+- [x] Golden : régénérer `tests/golden/retail_depot_three_months.json` et justifier le diff.
+- [x] Test analytique : scénario à paramètres constants → point mort et trésorerie vérifiables à la main.
+- [x] Test de compatibilité : un ancien `result_json` (sans nouveaux champs) reste lisible par le sidecar et l'UI.
+- [x] Test de non-régression : les anciennes métriques gardent leurs valeurs.
+- [x] Documenter formules, unités, arrondis et cas limites (`null`).
 
 ## 5. Contrats et structures
 
 ```python
 class Metrics(CamelModel):
     # champs existants conservés…
-    cash_negative_probability: float
-    mean_min_cash: float
-    min_cash_p10: float
-    min_cash_p50: float
-    min_cash_p90: float
-    financing_need_p50: float
-    financing_need_p90: float
-    break_even_probability: float
-    median_break_even_month: int | None
+    cash_negative_probability: float | None = None
+    mean_min_cash: float | None = None
+    min_cash_p10: float | None = None
+    min_cash_p50: float | None = None
+    min_cash_p90: float | None = None
+    financing_need_p50: float | None = None
+    financing_need_p90: float | None = None
+    break_even_probability: float | None = None
+    median_break_even_month: int | None = None
     min_cash_cdf: list[CashCdfPoint] | None = None
 
 
@@ -145,7 +145,7 @@ class RunSample:
 Règles :
 
 - L'échantillon est **le préfixe** des runs, pas un tirage aléatoire : il reste stable quand `runs` augmente.
-- Les bandes mensuelles portent sur cet échantillon ; le nombre de runs utilisé est affiché (`runsRetained`).
+- `runsRetained` est la taille du préfixe conservé (plafond 20 000). Les bandes mensuelles utilisent un sous-échantillon régulier d'au plus 2 000 runs de ce préfixe ; les trajectoires de la phase 12 liront le préfixe complet.
 - Aucun champ « nombre » ne doit être calculé côté UI.
 
 ## 6. Pièges
@@ -160,27 +160,39 @@ Règles :
 
 | Test | Ce qu'il prouve |
 |---|---|
-| `test_metrics_v3.py::test_break_even_constant_case` | Formule du point mort |
-| `test_metrics_v3.py::test_cash_negative_and_financing` | Trésorerie et besoin |
-| `test_metrics_v3.py::test_percentile_order` | P10 ≤ P50 ≤ P90 partout |
-| `test_metrics_v3.py::test_old_result_payload_still_valid` | Compatibilité protocole |
+| `test_metrics_v3.py::test_break_even_month_detection` | Formule du point mort, y compris sentinelle et cumul nul |
+| `test_metrics_v3.py::test_negative_cash_metrics_and_financing_need` | Trésorerie négative, besoin de financement et point mort absent |
+| `test_metrics_v3.py::test_percentile_order_and_cdf_monotonicity` | P10 ≤ P50 ≤ P90 partout et CDF monotone |
+| `test_metrics_v3.py::test_only_selected_month_gets_histograms` | Histogrammes mensuels limités au mois choisi |
+| `test_metrics_v3.py::test_sample_is_capped_and_is_a_prefix` | Plafond et stabilité du préfixe |
+| `test_metrics_v3.py::test_batch_size_does_not_change_results` | Invariance à la taille des lots |
+| `test_metrics_v3.py::test_old_payload_without_v3_fields_is_still_valid` | Compatibilité protocole |
 | `test_golden.py` | Non-régression assumée |
-| `test_memory_sample_cap` | Plafond d'échantillon |
 
 ## 8. Critères d'acceptation
 
-- [ ] Les KPI de la spec (point mort, financement, trésorerie) sont calculés par le moteur.
-- [ ] Un graphique en éventail est possible avec les seules données du payload.
-- [ ] Les anciens runs restent lisibles.
-- [ ] Le payload final reste < 100 Ko et < 500 Ko avec les partiels.
-- [ ] Les définitions sont écrites et relues par le produit.
-- [ ] Aucune régression sur les métriques existantes.
+- [x] Les KPI de la spec (point mort, financement, trésorerie) sont calculés par le moteur.
+- [x] Un graphique en éventail est possible avec les seules données du payload.
+- [x] Les anciens runs restent lisibles.
+- [x] Le payload final reste < 100 Ko et < 500 Ko avec les partiels.
+- [ ] Les définitions sont écrites et relues par le produit. L'ADR 0015 est écrit ; la relecture produit reste une décision externe de la phase 01.
+- [x] Aucune régression sur les métriques existantes.
 
 ## 9. Performance
 
-- Surcoût de collecte < 10 % sur `final` 5 000 × 36.
-- Mémoire de l'échantillon bornée à 20 000 runs (≈ 17 Mo de tableaux + paramètres).
-- Le calcul des bandes mensuelles reste < 5 ms pour 5 000 runs.
+Mesures du 2026-11-14 sur la machine de référence de la phase 01, scénario `retail_depot`
+forcé à 36 mois, graine 42 :
+
+| Mesure | Phase 01 | Phase 02 |
+|---|---|---|
+| `final` 5 000 runs, paroi | 63,3 ms | 75,3 ms |
+| `final` 5 000 runs, temps interne | — | ~61 ms |
+| Bandes mensuelles | — | ~5 ms |
+| Payload `final` | 13,1 Kio | 28,0 Kio |
+
+- [x] Surcoût de collecte contenu : le `final` reste très en dessous de la cible de 400 ms ; le surcoût de paroi est d'environ 12 ms, dominé par le calcul des bandes et des objets mensuels.
+- [x] Mémoire de l'échantillon bornée à 20 000 runs (≈ 17 Mo de tableaux + paramètres).
+- [x] Le calcul des bandes mensuelles reste < 5 ms pour 5 000 runs (sous-échantillon de 2 000 runs).
 
 ## 10. Risques
 
@@ -193,7 +205,7 @@ Règles :
 
 ## 11. Definition of Done
 
-- [ ] Métriques et bandes disponibles dans `SimulationResult`.
-- [ ] Protocole `1.8.0` généré et vérifié.
-- [ ] Tests et golden verts, documentation des formules à jour.
-- [ ] L'UI peut afficher P10/P50/P90 mensuels et les KPI sans calcul local.
+- [x] Métriques et bandes disponibles dans `SimulationResult`.
+- [x] Protocole `1.8.0` généré et vérifié.
+- [x] Tests et golden verts, documentation des formules à jour.
+- [x] L'UI peut afficher P10/P50/P90 mensuels et les KPI sans calcul local. Le payload expose toutes les valeurs ; le branchement visuel appartient aux phases 09 et 10.

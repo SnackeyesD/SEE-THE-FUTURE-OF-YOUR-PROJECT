@@ -1,6 +1,6 @@
 # Baseline de performance — V3
 
-> Généré par `npm run bench` le 2026-11-14T00:14:50.330Z.
+> Généré par `npm run bench` le 2026-11-14T08:32:12.957Z.
 > Ne pas éditer à la main : relancer le banc d'essai.
 
 ## Machine et versions
@@ -13,20 +13,20 @@
 | Python | 3.14.9 |
 | NumPy | 2.5.4 |
 | Moteur | 0.1.0 |
-| Protocole | 1.7.0 |
-| Commit | 1b09972 |
+| Protocole | 1.8.0 |
+| Commit | addbd29 |
 
 ## Moteur (in-process)
 
 | Mesure | Médiane | Min | Max |
 |---|---|---|---|
-| draft 500 × 36 | 9.639 ms | 8.922 ms | 12.051 ms |
-| final 5 000 × 36 | 63.308 ms | 61.531 ms | 65.996 ms |
-| large 20 000 × 36 | 249.635 ms | 235.117 ms | 264.153 ms |
-| surface proxy 15×15 × 200 | 1700.032 ms (225 cellules) | — | — |
+| draft 500 × 36 | 12.892 ms | 12.429 ms | 14.089 ms |
+| final 5 000 × 36 | 75.347 ms | 73.169 ms | 77.749 ms |
+| large 20 000 × 36 | 242.915 ms | 241.858 ms | 243.972 ms |
+| surface proxy 15×15 × 200 | 2237.028 ms (225 cellules) | — | — |
 
-- Payload final 5 000 runs : **13.1 Kio**.
-- Mémoire du processus de bench : **112.7 Mo**.
+- Payload final 5 000 runs : **28 Kio**.
+- Mémoire du processus de bench : **123.2 Mo**.
 - Progression : 2 callback(s) pour 500 runs.
 - Annulation : not_supported (phase 04).
 - Audit : `value` **ignoré** quand une distribution existe.
@@ -35,13 +35,13 @@
 
 | Mesure | Médiane | Min | Max |
 |---|---|---|---|
-| ping au repos | 0.642 ms | 0.593 ms | 0.745 ms |
-| draft 500 × 36 via RPC | 11.785 ms | 10.217 ms | 31.277 ms |
-| final 5 000 × 36 via RPC | 67.368 ms | 65.356 ms | 67.82 ms |
+| ping au repos | 0.656 ms | 0.564 ms | 0.693 ms |
+| draft 500 × 36 via RPC | 15.882 ms | 14.988 ms | 142.063 ms |
+| final 5 000 × 36 via RPC | 78.572 ms | 77.802 ms | 80.071 ms |
 
-- Démarrage (process → `health`) : **1441.546 ms**.
-- **Blocage mono-thread** : un `ping` envoyé pendant un calcul 50 000 × 36 attend **700.165 ms**. Constat C3, correction en phase 06.
-- Mémoire RSS : 67 Mo → 87 Mo.
+- Démarrage (process → `health`) : **654.292 ms**.
+- **Blocage mono-thread** : un `ping` envoyé pendant un calcul 50 000 × 36 attend **647.174 ms**. Constat C3, correction en phase 06.
+- Mémoire RSS : 63.6 Mo → 72 Mo.
 - Annulation : non supportée (phase 04/06).
 
 ## UI

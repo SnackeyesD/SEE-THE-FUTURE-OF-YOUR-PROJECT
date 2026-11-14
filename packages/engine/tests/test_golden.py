@@ -33,6 +33,23 @@ def test_retail_depot_golden_values() -> None:
     for field, value in expected["breakEven"].items():
         assert actual_break_even[field] == pytest.approx(value), field
 
+    assert result.runs_retained == expected["runsRetained"]
+    assert [
+        month.index for month in result.monthly.values if month.profit_histogram
+    ] == [1]
+    assert result.metrics.min_cash_cdf is not None
+    actual_cdf = [
+        point.model_dump(by_alias=True) for point in result.metrics.min_cash_cdf
+    ]
+    assert len(actual_cdf) == len(expected["cashCdf"])
+    for actual_point, expected_point in zip(
+        actual_cdf, expected["cashCdf"], strict=True
+    ):
+        assert actual_point["value"] == pytest.approx(expected_point["value"])
+        assert actual_point["probability"] == pytest.approx(
+            expected_point["probability"]
+        )
+
 
 def _snake_case(name: str) -> str:
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()

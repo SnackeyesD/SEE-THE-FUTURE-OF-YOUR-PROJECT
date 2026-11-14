@@ -3,7 +3,9 @@ from __future__ import annotations
 import re
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
+
+from .run_sample import RunSample
 
 FiniteFloat = Annotated[float, Field(allow_inf_nan=False)]
 DistributionKind = Literal["normal", "lognormal", "triangular", "uniform", "poisson", "empirical"]
@@ -152,6 +154,13 @@ class SimulationConfig(CamelModel):
     seed: int = Field(default=42, ge=0, le=2**63 - 1)
     batch_size: int = Field(default=50_000, ge=1, le=1_000_000)
     histogram_bins: int = Field(default=40, ge=1, le=200)
+    monthly_histogram_bins: int = Field(default=20, ge=10, le=30)
+    histogram_month: int | None = Field(default=1, ge=1, le=120)
+
+
+class CashCdfPoint(CamelModel):
+    value: float
+    probability: float
 
 
 class Metrics(CamelModel):
@@ -175,6 +184,16 @@ class Metrics(CamelModel):
     mean_end_stock: float
     mean_inventory_value: float
     mean_profit_margin: float
+    cash_negative_probability: float | None = None
+    mean_min_cash: float | None = None
+    min_cash_p10: float | None = None
+    min_cash_p50: float | None = None
+    min_cash_p90: float | None = None
+    financing_need_p50: float | None = None
+    financing_need_p90: float | None = None
+    break_even_probability: float | None = None
+    median_break_even_month: int | None = None
+    min_cash_cdf: list[CashCdfPoint] | None = None
 
 
 class HistogramBin(CamelModel):
@@ -197,6 +216,15 @@ class MonthlyAverage(CamelModel):
     mean_units_sold: float
     mean_stock_end: float
     stockout_probability: float
+    profit_p10: float | None = None
+    profit_p50: float | None = None
+    profit_p90: float | None = None
+    cash_p10: float | None = None
+    cash_p50: float | None = None
+    cash_p90: float | None = None
+    break_even_probability: float | None = None
+    profit_histogram: list[HistogramBin] | None = None
+    cash_histogram: list[HistogramBin] | None = None
 
 
 class MonthlyAverages(CamelModel):
@@ -224,6 +252,7 @@ class SimulationResult(CamelModel):
     currency: str
     horizon_months: int
     runs: int
+    runs_retained: int | None = None
     seed: int
     duration_ms: float
     metrics: Metrics
@@ -231,6 +260,21 @@ class SimulationResult(CamelModel):
     monthly: MonthlyAverages
     sensitivity: list[SensitivityEntry]
     break_even: BreakEven
+
+    _run_sample: RunSample | None = PrivateAttr(default=None)
+
+    @property
+    def run_sample(self) -> RunSample | None:
+        """Échantillon interne (non sérialisé) des premiers runs."""
+        return self._run_sample
+
+    def attach_sample(self, sample: RunSample) -> None:
+        self._run_sample = sample
+
+    def __repr_args__(self):  # type: ignore[no-untyped-def]
+        for name, value in super().__repr_args__():
+            if name != "run_sample":
+                yield name, value
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump(by_alias=True, mode="json")

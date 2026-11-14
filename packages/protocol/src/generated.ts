@@ -1,9 +1,9 @@
 // AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 // Source: packages/protocol/schema/messages.schema.json
-// Protocol version: 1.7.0
+// Protocol version: 1.8.0
 // Regenerate with: npm run protocol:generate
 
-export const PROTOCOL_VERSION = "1.7.0";
+export const PROTOCOL_VERSION = "1.8.0";
 
 export type RequestId = number | string;
 
@@ -105,6 +105,13 @@ export interface SimulationConfig {
   seed?: number;
   batchSize?: number;
   histogramBins?: number;
+  monthlyHistogramBins?: number;
+  histogramMonth?: number | null;
+}
+
+export interface CashCdfPoint {
+  value: number;
+  probability: number;
 }
 
 export interface Metrics {
@@ -128,6 +135,16 @@ export interface Metrics {
   meanEndStock: number;
   meanInventoryValue: number;
   meanProfitMargin: number;
+  cashNegativeProbability?: number;
+  meanMinCash?: number;
+  minCashP10?: number;
+  minCashP50?: number;
+  minCashP90?: number;
+  financingNeedP50?: number;
+  financingNeedP90?: number;
+  breakEvenProbability?: number;
+  medianBreakEvenMonth?: number | null;
+  minCashCdf?: CashCdfPoint[] | null;
 }
 
 export interface HistogramBin {
@@ -150,6 +167,15 @@ export interface MonthlyAverage {
   meanUnitsSold: number;
   meanStockEnd: number;
   stockoutProbability: number;
+  profitP10?: number | null;
+  profitP50?: number | null;
+  profitP90?: number | null;
+  cashP10?: number | null;
+  cashP50?: number | null;
+  cashP90?: number | null;
+  breakEvenProbability?: number | null;
+  profitHistogram?: HistogramBin[] | null;
+  cashHistogram?: HistogramBin[] | null;
 }
 
 export interface MonthlyAverages {
@@ -177,6 +203,7 @@ export interface SimulationResult {
   currency: string;
   horizonMonths: number;
   runs: number;
+  runsRetained?: number;
   seed: number;
   durationMs: number;
   metrics: Metrics;

@@ -8,7 +8,7 @@
     "python": "3.14.9",
     "numpy": "2.5.4",
     "engineVersion": "0.1.0",
-    "commit": "1b09972"
+    "commit": "addbd29"
   },
   "scenario": {
     "path": "packages/engine/examples/retail_depot.json",
@@ -21,59 +21,59 @@
       "unit": "ms",
       "repeats": 10,
       "samples": [
-        10.196,
-        9.763,
-        8.978,
-        9.585,
-        12.051,
-        9.32,
-        9.032,
-        11.331,
-        9.693,
-        8.922
+        12.89,
+        13.954,
+        12.719,
+        14.089,
+        12.894,
+        14.029,
+        12.929,
+        12.747,
+        12.593,
+        12.429
       ],
-      "median": 9.639,
-      "min": 8.922,
-      "max": 12.051
+      "median": 12.892,
+      "min": 12.429,
+      "max": 14.089
     },
     "final5000x36": {
       "unit": "ms",
       "repeats": 5,
       "samples": [
-        63.686,
-        65.996,
-        61.531,
-        63.308,
-        62.372
+        73.169,
+        77.749,
+        73.768,
+        75.747,
+        75.347
       ],
-      "median": 63.308,
-      "min": 61.531,
-      "max": 65.996
+      "median": 75.347,
+      "min": 73.169,
+      "max": 77.749
     },
     "large20000x36": {
       "unit": "ms",
       "repeats": 2,
       "samples": [
-        264.153,
-        235.117
+        241.858,
+        243.972
       ],
-      "median": 249.635,
-      "min": 235.117,
-      "max": 264.153
+      "median": 242.915,
+      "min": 241.858,
+      "max": 243.972
     },
     "surfaceProxy15x15x200": {
       "grid": 15,
       "runsPerPoint": 200,
       "cells": 225,
       "totalRuns": 45000,
-      "elapsedMs": 1700.032,
-      "msPerCell": 7.556,
+      "elapsedMs": 2237.028,
+      "msPerCell": 9.942,
       "checksum": 288000862.8
     }
   },
   "payload": {
-    "final5000Bytes": 13429,
-    "final5000KiB": 13.1
+    "final5000Bytes": 28677,
+    "final5000KiB": 28.0
   },
   "progress": {
     "runs": 500,
@@ -85,7 +85,7 @@
     "note": "phase 04"
   },
   "memory": {
-    "maxRssMb": 112.7,
+    "maxRssMb": 123.2,
     "unit": "Mo (maxRSS du processus de bench)"
   },
   "auditObservations": {

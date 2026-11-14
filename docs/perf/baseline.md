@@ -1,9 +1,9 @@
 # Baseline de performance — phase 01
 
 > Mesure de départ de la V3, sur la machine de référence modeste décrite dans [`machine-reference.md`](machine-reference.md).
-> Commande : `npm run bench`. Rapport brut : [`latest.json`](latest.json), [`latest.md`](latest.md), `engine.json`, `sidecar.json`, `ui.json`.
+> Commande : `npm run bench`. Rapport brut du run de référence : [`archive/2026-11-14-phase-01.json`](archive/2026-11-14-phase-01.json) et [`archive/2026-11-14-phase-01.md`](archive/2026-11-14-phase-01.md).
 
-> Les durées varient de quelques pourcents entre deux exécutions sur la même machine. Ce document cite le run `latest.json` du 2026-11-14 ; seuls les ordres de grandeur et les écarts relatifs sont interprétables.
+> Les durées varient de quelques pourcents entre deux exécutions sur la même machine. Ce document cite le run `latest.json` du 2026-11-14 ; seuls les ordres de grandeur et les écarts relatifs sont interprétables. `latest.json` contient désormais le run de contrôle de la phase 02 (section 8) ; le run de référence de la phase 01 est archivé sous `archive/`.
 
 ## 1. Conditions
 
@@ -99,3 +99,34 @@ Les fichiers `engine.json`, `sidecar.json` et `ui.json` sont écrasés à chaque
 - `final` ≤ 400 ms malgré les bandes mensuelles et l'échantillon.
 
 À la fin de la phase 11, mesurer la **vraie** surface CRN et confirmer ou réduire la grille par défaut.
+
+## 8. Contrôle après la phase 02 (2026-11-14)
+
+Run `npm run bench` exécuté sur `addbd29` avec les changements de la phase 02 non encore
+commités (protocole `1.8.0`, métriques cockpit, échantillon de runs). Rapport brut :
+[`latest.json`](latest.json), [`latest.md`](latest.md).
+
+| Mesure | Phase 01 | Phase 02 | Écart | Budget |
+|---|---|---|---|---|
+| `draft` 500 × 36 (moteur) | 9,6 ms | **12,9 ms** | +34 % | ≤ 50 ms |
+| `final` 5 000 × 36 (moteur) | 63,3 ms | **75,3 ms** | +19 % | ≤ 400 ms |
+| `large` 20 000 × 36 (moteur) | 249,6 ms | **242,9 ms** | −3 % | — |
+| Surface proxy 15×15 × 200 | 1 700 ms | **2 237 ms** | +32 % | ≤ 8 s |
+| Payload `final` | 13,1 Kio | **28,0 Kio** | +114 % | < 100 Kio |
+| `draft` RPC sidecar | 11,8 ms | **15,9 ms** | +35 % | ≤ 50 ms |
+| `final` RPC sidecar | 67,4 ms | **78,6 ms** | +17 % | ≤ 400 ms |
+| Démarrage sidecar | 1 442 ms | **654 ms** | −55 % | à consigner |
+| Mémoire sidecar | 87,0 Mo | **72,0 Mo** | — | ≤ 500 Mo |
+
+Lecture :
+
+- les budgets produit restent largement tenus : `draft` ≈ 4× sous la cible, `final` ≈ 5× sous
+  la cible, payload ≈ 3,5× sous le plafond de 100 Kio ;
+- le surcoût relatif vient surtout du calcul des bandes mensuelles (~5 ms), de la CDF et de
+  la construction des objets mensuels, pas de la collecte par run ;
+- la surface augmente mécaniquement avec le coût par point ; elle reste sous 8 s et sera
+  réévaluée avec les tirages communs en phase 11 ;
+- la variance de démarrage du sidecar est forte sur cette machine ; la mesure phase 02 est
+  plus favorable, sans optimisation dédiée.
+
+Prochaine mesure : fin de phase 04, avec le banc d'annulation et les partiels.

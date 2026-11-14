@@ -3,7 +3,7 @@
   "$id": "https://seethefuture.local/protocol/messages.schema.json",
   "title": "See The Future IPC protocol",
   "description": "Source unique des messages JSON-RPC 2.0 échangés entre le shell Tauri et le sidecar Python.",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "$defs": {
     "RequestId": {
       "description": "Identifiant de requête JSON-RPC (entier ou chaîne).",
@@ -240,7 +240,23 @@
         "runs": { "type": "integer" },
         "seed": { "type": "integer" },
         "batchSize": { "type": "integer" },
-        "histogramBins": { "type": "integer" }
+        "histogramBins": { "type": "integer" },
+        "monthlyHistogramBins": { "type": "integer", "minimum": 10, "maximum": 30 },
+        "histogramMonth": {
+          "anyOf": [
+            { "type": "integer", "minimum": 1, "maximum": 120 },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "CashCdfPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "probability"],
+      "properties": {
+        "value": { "type": "number" },
+        "probability": { "type": "number" }
       }
     },
     "Metrics": {
@@ -288,7 +304,27 @@
         "meanStockoutMonths": { "type": "number" },
         "meanEndStock": { "type": "number" },
         "meanInventoryValue": { "type": "number" },
-        "meanProfitMargin": { "type": "number" }
+        "meanProfitMargin": { "type": "number" },
+        "cashNegativeProbability": { "type": "number" },
+        "meanMinCash": { "type": "number" },
+        "minCashP10": { "type": "number" },
+        "minCashP50": { "type": "number" },
+        "minCashP90": { "type": "number" },
+        "financingNeedP50": { "type": "number" },
+        "financingNeedP90": { "type": "number" },
+        "breakEvenProbability": { "type": "number" },
+        "medianBreakEvenMonth": {
+          "anyOf": [{ "type": "integer" }, { "type": "null" }]
+        },
+        "minCashCdf": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": { "$ref": "#/$defs/CashCdfPoint" }
+            },
+            { "type": "null" }
+          ]
+        }
       }
     },
     "HistogramBin": {
@@ -334,7 +370,34 @@
         "meanDemand": { "type": "number" },
         "meanUnitsSold": { "type": "number" },
         "meanStockEnd": { "type": "number" },
-        "stockoutProbability": { "type": "number" }
+        "stockoutProbability": { "type": "number" },
+        "profitP10": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "profitP50": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "profitP90": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "cashP10": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "cashP50": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "cashP90": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "breakEvenProbability": {
+          "anyOf": [{ "type": "number" }, { "type": "null" }]
+        },
+        "profitHistogram": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": { "$ref": "#/$defs/HistogramBin" }
+            },
+            { "type": "null" }
+          ]
+        },
+        "cashHistogram": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": { "$ref": "#/$defs/HistogramBin" }
+            },
+            { "type": "null" }
+          ]
+        }
       }
     },
     "MonthlyAverages": {
@@ -405,6 +468,7 @@
         "currency": { "type": "string" },
         "horizonMonths": { "type": "integer" },
         "runs": { "type": "integer" },
+        "runsRetained": { "type": "integer" },
         "seed": { "type": "integer" },
         "durationMs": { "type": "number" },
         "metrics": { "$ref": "#/$defs/Metrics" },

@@ -39,7 +39,8 @@ print(result.metrics.p10, result.metrics.p50, result.metrics.p90)
   bornes `min`/`max`.
 - `DistributionSpec` : `normal`, `lognormal`, `triangular`, `uniform`, `poisson`,
   `empirical`.
-- `SimulationConfig` : `runs`, `seed`, `batchSize`, `histogramBins`.
+- `SimulationConfig` : `runs`, `seed`, `batchSize`, `histogramBins`,
+  `monthlyHistogramBins`, `histogramMonth`.
 
 Les clés d'hypothèses sont en `snake_case` et ne peuvent contenir que des minuscules,
 chiffres et `_`.
@@ -99,6 +100,48 @@ Pour chaque run et chaque mois `t` :
 - Seuil de rentabilité : `coûts fixes moyens ÷ marge unitaire moyenne`, avec marge
   `prix - coût - logistique`.
 
+### Métriques cockpit (V3)
+
+Les définitions de référence sont dans l'ADR 0015. Toutes sont calculées par le moteur ;
+l'UI ne recalcule aucun nombre.
+
+Pour chaque run :
+
+- `cash_monthly[t]` est la trésorerie **après** le mois `t` (le stock initial est déjà payé) ;
+- `min_cash = min(cash_monthly)` ;
+- `break_even_month` est le premier mois où le **profit net cumulé** est `≥ 0` ;
+  la sentinelle interne `horizon + 1` signifie « non atteint sur l'horizon » ;
+- `financing_need = max(0, -min_cash)`.
+
+Agrégats exposés dans `Metrics` :
+
+| Champ | Formule |
+|---|---|
+| `cash_negative_probability` | proportion de runs avec `min_cash < 0` |
+| `mean_min_cash` | moyenne de `min_cash` |
+| `min_cash_p10/p50/p90` | quantiles linéaires de `min_cash` (méthode numpy) |
+| `financing_need_p50` | `max(0, -min_cash_p50)` |
+| `financing_need_p90` | `max(0, -min_cash_p10)` |
+| `break_even_probability` | proportion de runs avec `break_even_month ≤ horizon` |
+| `median_break_even_month` | médiane des runs atteignant le point mort, `null` sinon |
+| `min_cash_cdf` | CDF empirique `P(min_cash ≤ value)`, au plus 64 points triés |
+
+`financing_need_p50/p90` sont des transformations monotones des quantiles de trésorerie :
+elles évitent un second passage sur les runs et restent cohérentes avec l'éventail affiché.
+
+Bandes et histogrammes mensuels :
+
+- l'échantillon de runs est le **préfixe** `min(runs, 20 000)`, jamais un tirage aléatoire ;
+  il est exposé par `runsRetained` et reste interne au moteur (non sérialisé) ;
+- les bandes `profit_p10/p50/p90` et `cash_p10/p50/p90` sont calculées par mois sur un
+  sous-échantillon régulier d'au plus 2 000 runs de ce préfixe ;
+- `break_even_probability` mensuel est la proportion de runs dont le point mort est atteint
+  au plus tard à ce mois (courbe de survie) ;
+- les histogrammes mensuels de profit et de trésorerie ne sont produits que pour le mois
+  `histogramMonth` (défaut `1`) ; `null` les désactive. Un mois supérieur à l'horizon lève
+  `EngineError`. Les bornes sont arrondies à cinq chiffres significatifs et les probabilités
+  à cinq décimales, sauf si cet arrondi rendrait une borne non strictement croissante.
+
 ## Reproductibilité
 
 - Un seul générateur `numpy.random.Generator(PCG64(seed))` pour les hypothèses.
@@ -109,6 +152,8 @@ Pour chaque run et chaque mois `t` :
   `durationMs` sont des métadonnées non reproductibles.
 - La taille des lots ne change pas les tirages ; seuls des écarts d'arrondi flottant
   négligeables peuvent apparaître dans les sommes mensuelles.
+- L'échantillon de runs est un préfixe : augmenter `runs` conserve les runs déjà
+  échantillonnés et n'en remplace aucun.
 
 ## Performance et mémoire
 
@@ -117,6 +162,14 @@ dans `tests/test_performance.py`). Les hypothèses et le bruit sont pré-génér
 mensuelle est vectorisée sur les runs et découpée en lots. Mémoire approximative pour
 100 000 runs et 12 mois : quelques dizaines de Mo.
 
+Les métriques V3 ajoutent :
+
+- un échantillon de préfixe plafonné à 20 000 runs : 20 000 × 36 × 3 tableaux `float64`
+  ≈ 17 Mo, plus les paramètres tirés ;
+- le calcul des bandes sur au plus 2 000 runs, mesuré autour de 5 ms pour 5 000 runs ;
+- un payload final d'environ 28–30 Kio pour 5 000 runs × 36 mois avec un mois
+  d'histogramme sélectionné (limite : 100 Kio hors trajectoires).
+
 ## Limites assumées
 
 - Modèle volontairement simple : pas de saisonnalité intra-mensuelle, pas de crédit, pas de
@@ -124,5 +177,7 @@ mensuelle est vectorisée sur les runs et découpée en lots. Mémoire approxima
 - Les distributions sont indépendantes entre hypothèses ; aucune corrélation explicite.
 - Les paramètres par défaut sont prudents et doivent être revus par un expert métier.
 - Le délai de réapprovisionnement est arrondi au mois entier, avec un minimum de 1.
+- Les champs V3 sont optionnels dans le protocole : un résultat stocké avant la phase 02
+  reste lisible, avec `null` pour les métriques indisponibles.
 - Les golden tests sont sensibles aux changements de version de numpy ; ils doivent être
   rejoués à chaque montée de version.

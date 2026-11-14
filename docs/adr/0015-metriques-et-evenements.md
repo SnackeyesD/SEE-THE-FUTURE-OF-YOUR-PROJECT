@@ -112,6 +112,28 @@ Règles de validation :
 - La CDF permet un seuil glissable sans recalcul (phase 09) ; l'interpolation linéaire est autorisée, pas l'extrapolation.
 - La phase 10 peut éditer des événements sans modifier le moteur ; le catalogue est exposé comme donnée.
 
+## Amendement phase 02 (2026-11-14)
+
+L'implémentation précise trois points laissés ouverts par la décision initiale.
+
+1. **Deux niveaux d'échantillon.** `RunSample` conserve le préfixe complet
+   `min(runs, 20 000)` et `runsRetained` en reflète la taille. Les bandes mensuelles
+   utilisent un **sous-échantillon régulier d'au plus 2 000 runs** de ce préfixe, pour
+   tenir la cible de 5 ms sur 5 000 runs. Le sous-échantillonnage est déterministe
+   (indices espacés linéairement) et n'affecte pas les trajectoires de la phase 12, qui
+   liront le préfixe complet.
+2. **Histogrammes mensuels à la demande.** Pour rester sous 100 Kio, le résultat ne
+   contient que les histogrammes du mois `histogramMonth` (défaut `1`) ; `null` les
+   désactive. La phase 10 pourra demander un autre mois sans changer le contrat.
+   Les bornes sont arrondies à cinq chiffres significatifs, avec repli sur la valeur
+   exacte si l'arrondi rendrait une borne non strictement croissante.
+3. **Besoin de financement sans second passage.** `financing_need_p50/p90` sont dérivés
+   des quantiles de `min_cash` (`max(0, -P50)` et `max(0, -P10)`). La transformation est
+   monotone, donc les valeurs restent cohérentes avec la CDF et l'éventail affichés.
+
+Les nouveaux champs restent optionnels côté protocole : un run stocké avant la phase 02
+se valide avec des valeurs `null`, et l'UI affiche « non disponible ».
+
 ## Vérification
 
 - Cas analytique à paramètres constants : point mort et trésorerie vérifiables à la main.

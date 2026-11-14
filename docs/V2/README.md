@@ -20,7 +20,8 @@ Ce dossier contient la spécification de la V3 et son découpage d'implémentati
 | Phase | Statut | Livrables |
 |---|---|---|
 | 01 — Audit, décisions & banc d'essai | **terminée** (2026-11-14), décisions externes en attente | [`audit.md`](01-audit-et-decisions/audit.md), ADR 0010–0016, [`docs/perf/baseline.md`](../perf/baseline.md), `npm run bench` |
-| 02 à 16 | à démarrer | voir le plan maître |
+| 02 — Métriques cockpit | **terminée** (2026-11-14), relecture produit en attente | [`02-moteur-metriques-v3/README.md`](02-moteur-metriques-v3/README.md), protocole `1.8.0`, métriques/bandes/CDF/histogrammes, tests V3 |
+| 03 à 16 | à démarrer | voir le plan maître |
 
 ## Règle d'or
 

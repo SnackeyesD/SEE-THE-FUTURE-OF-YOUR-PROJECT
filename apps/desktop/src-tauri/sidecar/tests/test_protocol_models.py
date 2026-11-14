@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from sidecar.protocol_models import PROTOCOL_VERSION, JSONRPCRequest
+from sidecar.protocol_models import PROTOCOL_VERSION, JSONRPCRequest, SimulationResult
 
 
 def test_protocol_version_matches_schema() -> None:
-    assert PROTOCOL_VERSION == "1.7.0"
+    assert PROTOCOL_VERSION == "1.8.0"
 
 
 def test_request_accepts_valid_payload() -> None:
@@ -29,3 +29,69 @@ def test_request_rejects_unknown_fields() -> None:
 def test_request_requires_jsonrpc_2() -> None:
     with pytest.raises(ValidationError):
         JSONRPCRequest.model_validate({"jsonrpc": "1.0", "method": "ping"})
+
+
+def test_old_simulation_result_without_v3_fields_is_still_valid() -> None:
+    """Un run stocké en protocole 1.7.0 doit rester lisible après la phase 02."""
+    payload = {
+        "runId": "abc",
+        "engineVersion": "0.1.0",
+        "scenarioName": "Ancien run",
+        "model": "retail_depot",
+        "currency": "XOF",
+        "horizonMonths": 1,
+        "runs": 10,
+        "seed": 42,
+        "durationMs": 1.0,
+        "metrics": {
+            "meanProfit": 1.0,
+            "medianProfit": 1.0,
+            "stdProfit": 0.0,
+            "minProfit": 1.0,
+            "maxProfit": 1.0,
+            "p10": 1.0,
+            "p50": 1.0,
+            "p90": 1.0,
+            "lossProbability": 0.0,
+            "profitPositiveProbability": 1.0,
+            "meanRevenue": 2.0,
+            "meanCosts": 1.0,
+            "meanTax": 0.0,
+            "meanCashEnd": 2.0,
+            "meanUnitsSold": 1.0,
+            "meanUnitsLost": 0.0,
+            "meanStockoutMonths": 0.0,
+            "meanEndStock": 0.0,
+            "meanInventoryValue": 0.0,
+            "meanProfitMargin": 0.5,
+        },
+        "histogram": {"bins": []},
+        "monthly": {
+            "values": [
+                {
+                    "index": 1,
+                    "month": 1,
+                    "meanRevenue": 2.0,
+                    "meanProfit": 1.0,
+                    "meanDemand": 1.0,
+                    "meanUnitsSold": 1.0,
+                    "meanStockEnd": 0.0,
+                    "stockoutProbability": 0.0,
+                }
+            ]
+        },
+        "sensitivity": [],
+        "breakEven": {
+            "monthlyFixedCosts": 0.0,
+            "unitMargin": 1.0,
+            "breakEvenUnitsMonthly": 0.0,
+            "breakEvenRevenueMonthly": 0.0,
+        },
+    }
+
+    result = SimulationResult.model_validate(payload)
+
+    assert result.runsRetained is None
+    assert result.metrics.cashNegativeProbability is None
+    assert result.metrics.minCashCdf is None
+    assert result.monthly.values[0].profitP10 is None

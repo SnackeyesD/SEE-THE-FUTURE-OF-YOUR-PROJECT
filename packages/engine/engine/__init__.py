@@ -8,9 +8,11 @@ __version__ = "0.1.0"
 
 from .errors import EngineError, UnknownModelError
 from .models import get_model
+from .run_sample import RunSample
 from .runner import simulate
 from .scenario import (
     BreakEven,
+    CashCdfPoint,
     DistributionSpec,
     Histogram,
     HistogramBin,
@@ -27,6 +29,7 @@ from .scenario import (
 
 __all__ = [
     "BreakEven",
+    "CashCdfPoint",
     "DistributionSpec",
     "EngineError",
     "Histogram",
@@ -35,6 +38,7 @@ __all__ = [
     "Metrics",
     "MonthlyAverage",
     "MonthlyAverages",
+    "RunSample",
     "Scenario",
     "SensitivityEntry",
     "SimulationConfig",

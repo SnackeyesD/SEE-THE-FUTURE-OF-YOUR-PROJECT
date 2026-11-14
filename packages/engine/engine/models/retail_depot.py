@@ -164,6 +164,7 @@ class RetailDepotModel:
         lost_monthly = np.empty((run_count, horizon), dtype=np.float64)
         tax_monthly = np.empty((run_count, horizon), dtype=np.float64)
         costs_monthly = np.empty((run_count, horizon), dtype=np.float64)
+        cash_monthly = np.empty((run_count, horizon), dtype=np.float64)
 
         for month in range(horizon):
             pipeline[:, :-1] = pipeline[:, 1:].copy()
@@ -204,6 +205,7 @@ class RetailDepotModel:
             lost_monthly[:, month] = lost
             tax_monthly[:, month] = tax
             costs_monthly[:, month] = cogs + logistics + fixed + loss_cost + tax
+            cash_monthly[:, month] = cash
 
             target = demand_mean * seasonal * target_stock_months
             order_quantity = np.maximum(target - stock_end, 0.0)
@@ -223,6 +225,7 @@ class RetailDepotModel:
             lost_monthly=lost_monthly,
             tax_monthly=tax_monthly,
             costs_monthly=costs_monthly,
+            cash_monthly=cash_monthly,
             cash_end=cash,
             inventory_value_end=stock_end_monthly[:, -1] * cost,
             units_sold=sold_monthly.sum(axis=1),

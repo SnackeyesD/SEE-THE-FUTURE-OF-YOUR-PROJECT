@@ -43,8 +43,19 @@
       "meanStockoutMonths": 0,
       "meanEndStock": 850,
       "meanInventoryValue": 6800,
-      "meanProfitMargin": 0.45
+      "meanProfitMargin": 0.45,
+      "cashNegativeProbability": 0,
+      "meanMinCash": 1350,
+      "minCashP10": 1350,
+      "minCashP50": 1350,
+      "minCashP90": 1350,
+      "financingNeedP50": 0,
+      "financingNeedP90": 0,
+      "breakEvenProbability": 1,
+      "medianBreakEvenMonth": 1
     },
+    "runsRetained": 100,
+    "cashCdf": [{ "value": 1350, "probability": 1 }],
     "monthly": [
       {
         "index": 1,
@@ -54,7 +65,14 @@
         "meanDemand": 50,
         "meanUnitsSold": 50,
         "meanStockEnd": 950,
-        "stockoutProbability": 0
+        "stockoutProbability": 0,
+        "profitP10": 450,
+        "profitP50": 450,
+        "profitP90": 450,
+        "cashP10": 1350,
+        "cashP50": 1350,
+        "cashP90": 1350,
+        "breakEvenProbability": 1
       },
       {
         "index": 2,
@@ -64,7 +82,14 @@
         "meanDemand": 50,
         "meanUnitsSold": 50,
         "meanStockEnd": 900,
-        "stockoutProbability": 0
+        "stockoutProbability": 0,
+        "profitP10": 450,
+        "profitP50": 450,
+        "profitP90": 450,
+        "cashP10": 2200,
+        "cashP50": 2200,
+        "cashP90": 2200,
+        "breakEvenProbability": 1
       },
       {
         "index": 3,
@@ -74,7 +99,14 @@
         "meanDemand": 50,
         "meanUnitsSold": 50,
         "meanStockEnd": 850,
-        "stockoutProbability": 0
+        "stockoutProbability": 0,
+        "profitP10": 450,
+        "profitP50": 450,
+        "profitP90": 450,
+        "cashP10": 3050,
+        "cashP50": 3050,
+        "cashP90": 3050,
+        "breakEvenProbability": 1
       }
     ],
     "breakEven": {

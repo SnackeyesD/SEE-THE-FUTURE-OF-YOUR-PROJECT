@@ -26,6 +26,8 @@ import {
 } from "@see/ui";
 import { useState } from "react";
 
+import { PROTOCOL_VERSION } from "@see/protocol";
+
 const sectionStyle: React.CSSProperties = {
   padding: "var(--sp-5)",
   border: "1px solid var(--border)",
@@ -185,7 +187,7 @@ export function ComponentsShowcase() {
           <Badge tone="ok">Sidecar actif</Badge>
           <Badge tone="warn">Révision requise</Badge>
           <Badge tone="danger">Clé invalide</Badge>
-          <Badge tone="accent">protocol 1.7.0</Badge>
+          <Badge tone="accent">protocol {PROTOCOL_VERSION}</Badge>
         </div>
       </section>
 

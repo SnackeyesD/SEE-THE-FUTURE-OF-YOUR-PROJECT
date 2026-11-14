@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-14T00:14:50.330Z",
-  "commit": "1b09972",
+  "generatedAt": "2026-11-14T08:32:12.957Z",
+  "commit": "addbd29",
   "machine": {
     "platform": "Linux-7.1.1-76070101-generic-x86_64-with-glibc2.35",
     "machine": "x86_64",
@@ -10,7 +10,7 @@
     "python": "3.14.9",
     "numpy": "2.5.4",
     "engineVersion": "0.1.0",
-    "commit": "1b09972"
+    "commit": "addbd29"
   },
   "engine": {
     "machine": {
@@ -22,7 +22,7 @@
       "python": "3.14.9",
       "numpy": "2.5.4",
       "engineVersion": "0.1.0",
-      "commit": "1b09972"
+      "commit": "addbd29"
     },
     "scenario": {
       "path": "packages/engine/examples/retail_depot.json",
@@ -35,59 +35,59 @@
         "unit": "ms",
         "repeats": 10,
         "samples": [
-          10.196,
-          9.763,
-          8.978,
-          9.585,
-          12.051,
-          9.32,
-          9.032,
-          11.331,
-          9.693,
-          8.922
+          12.89,
+          13.954,
+          12.719,
+          14.089,
+          12.894,
+          14.029,
+          12.929,
+          12.747,
+          12.593,
+          12.429
         ],
-        "median": 9.639,
-        "min": 8.922,
-        "max": 12.051
+        "median": 12.892,
+        "min": 12.429,
+        "max": 14.089
       },
       "final5000x36": {
         "unit": "ms",
         "repeats": 5,
         "samples": [
-          63.686,
-          65.996,
-          61.531,
-          63.308,
-          62.372
+          73.169,
+          77.749,
+          73.768,
+          75.747,
+          75.347
         ],
-        "median": 63.308,
-        "min": 61.531,
-        "max": 65.996
+        "median": 75.347,
+        "min": 73.169,
+        "max": 77.749
       },
       "large20000x36": {
         "unit": "ms",
         "repeats": 2,
         "samples": [
-          264.153,
-          235.117
+          241.858,
+          243.972
         ],
-        "median": 249.635,
-        "min": 235.117,
-        "max": 264.153
+        "median": 242.915,
+        "min": 241.858,
+        "max": 243.972
       },
       "surfaceProxy15x15x200": {
         "grid": 15,
         "runsPerPoint": 200,
         "cells": 225,
         "totalRuns": 45000,
-        "elapsedMs": 1700.032,
-        "msPerCell": 7.556,
+        "elapsedMs": 2237.028,
+        "msPerCell": 9.942,
         "checksum": 288000862.8
       }
     },
     "payload": {
-      "final5000Bytes": 13429,
-      "final5000KiB": 13.1
+      "final5000Bytes": 28677,
+      "final5000KiB": 28
     },
     "progress": {
       "runs": 500,
@@ -99,7 +99,7 @@
       "note": "phase 04"
     },
     "memory": {
-      "maxRssMb": 112.7,
+      "maxRssMb": 123.2,
       "unit": "Mo (maxRSS du processus de bench)"
     },
     "auditObservations": {
@@ -113,87 +113,87 @@
   },
   "sidecar": {
     "sidecar": {
-      "protocolVersion": "1.7.0",
+      "protocolVersion": "1.8.0",
       "sidecarVersion": "0.1.0",
       "python": "3.14.9",
-      "startupMs": 1441.546
+      "startupMs": 654.292
     },
     "measurements": {
       "pingAtRest": {
         "unit": "ms",
         "repeats": 20,
         "samples": [
-          0.699,
-          0.596,
-          0.604,
-          0.603,
-          0.605,
-          0.597,
+          0.61,
+          0.599,
+          0.632,
           0.633,
-          0.65,
-          0.616,
-          0.667,
-          0.745,
-          0.699,
-          0.71,
-          0.702,
-          0.707,
-          0.625,
-          0.695,
+          0.64,
+          0.673,
+          0.613,
+          0.69,
+          0.691,
           0.593,
-          0.653,
-          0.6
+          0.678,
+          0.676,
+          0.564,
+          0.688,
+          0.691,
+          0.633,
+          0.688,
+          0.691,
+          0.62,
+          0.693
         ],
-        "median": 0.642,
-        "min": 0.593,
-        "max": 0.745
+        "median": 0.656,
+        "min": 0.564,
+        "max": 0.693
       },
       "draft500x36OverRpc": {
         "unit": "ms",
         "repeats": 10,
         "samples": [
-          31.277,
-          10.459,
-          12.426,
-          11.432,
-          10.899,
-          12.886,
-          10.303,
-          12.138,
-          12.548,
-          10.217
+          142.063,
+          20.743,
+          16.233,
+          15.177,
+          15.289,
+          15.3,
+          17.038,
+          14.988,
+          17.26,
+          15.531
         ],
-        "median": 11.785,
-        "min": 10.217,
-        "max": 31.277
+        "median": 15.882,
+        "min": 14.988,
+        "max": 142.063
       },
       "final5000x36OverRpc": {
         "unit": "ms",
         "repeats": 5,
         "samples": [
-          67.438,
-          66.983,
-          65.356,
-          67.82,
-          67.368
+          80.071,
+          78.572,
+          77.802,
+          79.24,
+          78.082
         ],
-        "median": 67.368,
-        "min": 65.356,
-        "max": 67.82
+        "median": 78.572,
+        "min": 77.802,
+        "max": 80.071
       },
       "pingDuring50000x36": {
         "unit": "ms",
-        "blockedMs": 700.165,
+        "blockedMs": 647.174,
         "note": "La boucle rpc.py est mono-thread : le ping attend la fin du calcul. Constat C3, correction en phase 06."
       }
     },
     "correctness": {
       "smallRunOk": true,
-      "smallRunDurationMs": 2.696288996958174
+      "smallRunDurationMs": 2.9661109999779
     },
     "memory": {
-      "rssBeforeMb": 67,
-      "rssAfterMb": 87,
+      "rssBeforeMb": 63.6,
+      "rssAfterMb": 72,
       "unit": "Mo (VmRSS du processus sidecar)"
     },
     "limitations": {

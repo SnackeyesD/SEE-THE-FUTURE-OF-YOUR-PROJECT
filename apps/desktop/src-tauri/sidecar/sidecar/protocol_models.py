@@ -1,6 +1,6 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 # Source: packages/protocol/schema/messages.schema.json
-# Protocol version: 1.7.0
+# Protocol version: 1.8.0
 # Regenerate with: npm run protocol:generate
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-PROTOCOL_VERSION = "1.7.0"
+PROTOCOL_VERSION = "1.8.0"
 
 RequestId = int | str
 
@@ -194,6 +194,15 @@ class SimulationConfig(BaseModel):
     seed: int | None = None
     batchSize: int | None = None
     histogramBins: int | None = None
+    monthlyHistogramBins: int | None = None
+    histogramMonth: int | None = None
+
+
+class CashCdfPoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    value: float
+    probability: float
 
 
 class Metrics(BaseModel):
@@ -219,6 +228,16 @@ class Metrics(BaseModel):
     meanEndStock: float
     meanInventoryValue: float
     meanProfitMargin: float
+    cashNegativeProbability: float | None = None
+    meanMinCash: float | None = None
+    minCashP10: float | None = None
+    minCashP50: float | None = None
+    minCashP90: float | None = None
+    financingNeedP50: float | None = None
+    financingNeedP90: float | None = None
+    breakEvenProbability: float | None = None
+    medianBreakEvenMonth: int | None = None
+    minCashCdf: list[CashCdfPoint] | None = None
 
 
 class HistogramBin(BaseModel):
@@ -247,6 +266,15 @@ class MonthlyAverage(BaseModel):
     meanUnitsSold: float
     meanStockEnd: float
     stockoutProbability: float
+    profitP10: float | None = None
+    profitP50: float | None = None
+    profitP90: float | None = None
+    cashP10: float | None = None
+    cashP50: float | None = None
+    cashP90: float | None = None
+    breakEvenProbability: float | None = None
+    profitHistogram: list[HistogramBin] | None = None
+    cashHistogram: list[HistogramBin] | None = None
 
 
 class MonthlyAverages(BaseModel):
@@ -282,6 +310,7 @@ class SimulationResult(BaseModel):
     currency: str
     horizonMonths: int
     runs: int
+    runsRetained: int | None = None
     seed: int
     durationMs: float
     metrics: Metrics

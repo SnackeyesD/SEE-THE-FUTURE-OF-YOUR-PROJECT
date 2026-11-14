@@ -31,6 +31,7 @@ class BatchResult:
     lost_monthly: np.ndarray
     tax_monthly: np.ndarray
     costs_monthly: np.ndarray
+    cash_monthly: np.ndarray
     cash_end: np.ndarray
     inventory_value_end: np.ndarray
     units_sold: np.ndarray
