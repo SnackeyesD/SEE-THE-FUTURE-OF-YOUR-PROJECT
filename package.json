@@ -26,6 +26,7 @@
     "engine:sync": "uv sync --project packages/engine",
     "engine:lint": "uv run --project packages/engine ruff check packages/engine",
     "engine:test": "uv run --project packages/engine pytest packages/engine/tests",
+    "engine:bench": "uv run --project packages/engine python packages/engine/bench/bench_engine.py",
     "providers:sync": "uv sync --project packages/providers",
     "providers:lint": "uv run --project packages/providers ruff check packages/providers",
     "providers:test": "uv run --project packages/providers pytest packages/providers/tests",
@@ -41,6 +42,10 @@
     "benchmarks:sync": "uv sync --project packages/benchmarks",
     "benchmarks:lint": "uv run --project packages/benchmarks ruff check packages/benchmarks data/benchmark-packs/tools",
     "benchmarks:test": "uv run --project packages/benchmarks pytest packages/benchmarks/tests",
+    "bench": "node scripts/perf/run-bench.mjs",
+    "bench:engine": "uv run --project packages/engine python packages/engine/bench/bench_engine.py --json-out docs/perf/engine.json",
+    "bench:sidecar": "uv run --project apps/desktop/src-tauri/sidecar python scripts/perf/bench_sidecar.py --json-out docs/perf/sidecar.json",
+    "bench:ui": "node scripts/perf/bench_ui.mjs --json-out docs/perf/ui.json",
     "icons": "powershell -ExecutionPolicy Bypass -File infra/scripts/generate-icons.ps1"
   },
   "engines": {

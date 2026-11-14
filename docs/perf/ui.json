@@ -1,0 +1,33 @@
+{
+  "kind": "ui",
+  "status": "skipped",
+  "skipReason": "aucune infrastructure navigateur (Playwright + shim IPC déterministe) : la mesure fps/latence serait inventée. Créée en phase 08 (Vitest) puis 16 (Playwright).",
+  "infrastructure": {
+    "playwrightAvailable": false,
+    "distExists": false,
+    "vizComponents": [
+      "BarChart.tsx",
+      "DivergingBars.tsx",
+      "Histogram.tsx",
+      "Legend.tsx",
+      "LineChart.tsx",
+      "Sparkline.tsx",
+      "index.ts",
+      "scale.ts"
+    ]
+  },
+  "measurements": {
+    "fpsWhileDragging": null,
+    "chartUpdateMs": null,
+    "bundleBytes": null,
+    "bundleKiB": null
+  },
+  "plannedMetrics": [
+    "fps médian pendant un glissement de curseur (cible 30–60 i/s)",
+    "temps de mise à jour du FanChart 36 points + 3 fantômes (cible ≤ 16 ms)",
+    "temps de traitement d'un partiel (cible ≤ 4 ms)",
+    "mémoire UI (cible < 100 Mo)",
+    "taille du chunk 3D gzip (cible < 1,2 Mo, phase 14)"
+  ],
+  "nextPhase": "08 pour l'outillage UI, 16 pour les E2E et les mesures de release"
+}

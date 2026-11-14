@@ -1,0 +1,99 @@
+{
+  "machine": {
+    "platform": "Linux-7.1.1-76070101-generic-x86_64-with-glibc2.35",
+    "machine": "x86_64",
+    "cpu": "Intel(R) Pentium(R) CPU 6405U @ 2.40GHz",
+    "cpuCount": 4,
+    "memTotalMb": 7742,
+    "python": "3.14.9",
+    "numpy": "2.5.4",
+    "engineVersion": "0.1.0",
+    "commit": "1b09972"
+  },
+  "scenario": {
+    "path": "packages/engine/examples/retail_depot.json",
+    "horizonMonths": 36,
+    "assumptions": 12,
+    "runs": 0
+  },
+  "measurements": {
+    "draft500x36": {
+      "unit": "ms",
+      "repeats": 10,
+      "samples": [
+        10.196,
+        9.763,
+        8.978,
+        9.585,
+        12.051,
+        9.32,
+        9.032,
+        11.331,
+        9.693,
+        8.922
+      ],
+      "median": 9.639,
+      "min": 8.922,
+      "max": 12.051
+    },
+    "final5000x36": {
+      "unit": "ms",
+      "repeats": 5,
+      "samples": [
+        63.686,
+        65.996,
+        61.531,
+        63.308,
+        62.372
+      ],
+      "median": 63.308,
+      "min": 61.531,
+      "max": 65.996
+    },
+    "large20000x36": {
+      "unit": "ms",
+      "repeats": 2,
+      "samples": [
+        264.153,
+        235.117
+      ],
+      "median": 249.635,
+      "min": 235.117,
+      "max": 264.153
+    },
+    "surfaceProxy15x15x200": {
+      "grid": 15,
+      "runsPerPoint": 200,
+      "cells": 225,
+      "totalRuns": 45000,
+      "elapsedMs": 1700.032,
+      "msPerCell": 7.556,
+      "checksum": 288000862.8
+    }
+  },
+  "payload": {
+    "final5000Bytes": 13429,
+    "final5000KiB": 13.1
+  },
+  "progress": {
+    "runs": 500,
+    "callbacks": 2,
+    "note": "baseline sans annulation ni partiels (phase 04)"
+  },
+  "cancellation": {
+    "status": "not_supported",
+    "note": "phase 04"
+  },
+  "memory": {
+    "maxRssMb": 112.7,
+    "unit": "Mo (maxRSS du processus de bench)"
+  },
+  "auditObservations": {
+    "valueIgnoredWhenDistributionSet": {
+      "meanProfitBaseline": 1420261.949572,
+      "meanProfitShiftedValue": 1420261.949572,
+      "identical": true,
+      "explanation": "sample_hypothesis utilise `value` uniquement si distribution est None. Changer value avec une distribution active ne change pas le tirage."
+    }
+  }
+}

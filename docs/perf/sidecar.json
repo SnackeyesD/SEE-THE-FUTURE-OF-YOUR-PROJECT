@@ -1,0 +1,90 @@
+{
+  "sidecar": {
+    "protocolVersion": "1.7.0",
+    "sidecarVersion": "0.1.0",
+    "python": "3.14.9",
+    "startupMs": 1441.546
+  },
+  "measurements": {
+    "pingAtRest": {
+      "unit": "ms",
+      "repeats": 20,
+      "samples": [
+        0.699,
+        0.596,
+        0.604,
+        0.603,
+        0.605,
+        0.597,
+        0.633,
+        0.65,
+        0.616,
+        0.667,
+        0.745,
+        0.699,
+        0.71,
+        0.702,
+        0.707,
+        0.625,
+        0.695,
+        0.593,
+        0.653,
+        0.6
+      ],
+      "median": 0.642,
+      "min": 0.593,
+      "max": 0.745
+    },
+    "draft500x36OverRpc": {
+      "unit": "ms",
+      "repeats": 10,
+      "samples": [
+        31.277,
+        10.459,
+        12.426,
+        11.432,
+        10.899,
+        12.886,
+        10.303,
+        12.138,
+        12.548,
+        10.217
+      ],
+      "median": 11.785,
+      "min": 10.217,
+      "max": 31.277
+    },
+    "final5000x36OverRpc": {
+      "unit": "ms",
+      "repeats": 5,
+      "samples": [
+        67.438,
+        66.983,
+        65.356,
+        67.82,
+        67.368
+      ],
+      "median": 67.368,
+      "min": 65.356,
+      "max": 67.82
+    },
+    "pingDuring50000x36": {
+      "unit": "ms",
+      "blockedMs": 700.165,
+      "note": "La boucle rpc.py est mono-thread : le ping attend la fin du calcul. Constat C3, correction en phase 06."
+    }
+  },
+  "correctness": {
+    "smallRunOk": true,
+    "smallRunDurationMs": 2.696288996958174
+  },
+  "memory": {
+    "rssBeforeMb": 67.0,
+    "rssAfterMb": 87.0,
+    "unit": "Mo (VmRSS du processus sidecar)"
+  },
+  "limitations": {
+    "cancellation": "non supportée (phase 04/06)",
+    "streaming": "aucun partiel, seulement simulate.progress (phase 04/06)"
+  }
+}

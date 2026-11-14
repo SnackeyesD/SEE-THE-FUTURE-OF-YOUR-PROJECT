@@ -11,6 +11,24 @@
 - Les types IPC sont générés depuis `packages/protocol` ; ne pas les écrire à la main des deux côtés.
 - Le LLM comprend et explique ; le moteur calcule. Aucun chiffre de simulation ne vient du LLM.
 
+## Règles V3 — cockpit interactif
+
+- **Un seul producteur de chiffres** : le moteur. Aucun calcul de simulation, d'agrégat, de percentile ou de probabilité dans React, Rust ou le LLM.
+- **Reproductibilité d'abord** : mêmes tirages de base pour tous les runs ; les `n` premiers runs d'un calcul à `N` runs sont identiques. Toute modification de l'échantillonnage exige des tests de préfixe (ADR 0010).
+- **Un run `draft` n'est jamais persisté** et n'est jamais épinglable. Seul un run `final` peut être enregistré, épinglé ou comparé (ADR 0011, 0014). Un **run final** est un calcul de qualité `final` (5 000 runs par défaut), terminé sans annulation, portant sa graine, sa version de moteur et son `runId`.
+- **Une comparaison exige la même graine** et la même version de moteur ; sinon l'UI doit avertir explicitement.
+- **Pas d'interpolation de chiffres** pour simuler une fluidité : on peut animer l'apparition d'un résultat, jamais ses valeurs. La cible est 30–60 i/s réels, pas une promesse de 50 i/s.
+- **Toujours des fourchettes** : P10/P50/P90 et probabilités viennent du payload ; l'UI affiche « non disponible » ou « non atteint », jamais `0` par défaut.
+- **Dataviz** : conserver et étendre `@see/ui/viz` (SVG/canvas, tokens, `ui:check`). ECharts, uPlot et dockview sont refusés sauf preuve mesurée (ADR 0012).
+- **3D** : Three.js + `@react-three/fiber`, chargement paresseux, détection WebGL, repli heatmap 2D obligatoire. Aucune information exclusive à la 3D (ADR 0013).
+- **État UI** : Zustand + commandes inversibles pour les entrées. Les **résultats ne sont pas annulables** : undo restaure les entrées et invalide le run courant (ADR 0014).
+- **Pas de nouvelle dépendance de calcul dans le moteur** : numpy et pydantic uniquement. Les lois sont inversées explicitement, sans scipy.
+- **Protocole** : `1.8.0` (métriques), `1.9.0` (événements), `1.10.0` (IPC de flux), `1.11.0` (surface/goal seek), `1.12.0` (provenance). Un seul propriétaire du schéma à la fois ; `protocol:generate` puis `protocol:check` obligatoires.
+- **Persistance** : migration `0006` pour branches/versions/qualité ; toute migration destructive exige un test sur base réelle et une sauvegarde.
+- **Explication LLM** : payload de provenance minimal, validateur numérique côté sidecar, réparation limitée, repli déterministe hors ligne. Aucune clé, aucun chemin, aucun projet entier dans le payload, les logs ou le cache (ADR 0016).
+- **Performance** : toute régression > 20 % sur un budget de `docs/perf/baseline.md` bloque le merge. Mesurer sur la machine de référence modeste, pas sur un poste de développement rapide.
+- **Hors ligne** : l'application reste utilisable sans fournisseur IA ; l'explication est alors déterministe.
+
 ## Commandes
 
 ```powershell
@@ -38,6 +56,10 @@ npm run agent:lint
 npm run benchmarks:sync
 npm run benchmarks:test
 npm run benchmarks:lint
+npm run bench
+npm run bench:engine
+npm run bench:sidecar
+npm run bench:ui
 ```
 
 ## Structure
@@ -52,6 +74,9 @@ npm run benchmarks:lint
 - `packages/benchmarks` : chargement, vérification et lookup des référentiels signés.
 - `data/benchmark-packs` : packs sourcés, schéma, clés publiques et outils de signature.
 - `docs/adr` : décisions d'architecture.
+- `docs/perf` : machine de référence, baseline et rapports `npm run bench`.
+- `scripts/perf` : bancs moteur/sidecar/UI et orchestrateur.
+- `docs/V2` : plan d'implémentation V3 et une phase par dossier.
 
 ## Conventions
 
