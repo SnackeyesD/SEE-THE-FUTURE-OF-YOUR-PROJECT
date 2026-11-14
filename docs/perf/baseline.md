@@ -130,3 +130,38 @@ Lecture :
   plus favorable, sans optimisation dédiée.
 
 Prochaine mesure : fin de phase 04, avec le banc d'annulation et les partiels.
+
+## 9. Contrôle après la phase 03 (2026-11-14)
+
+Run `npm run bench` exécuté sur `v3/cockpit` avec les changements de la phase 03 non encore
+commités (banque de tirages, transformations `U`/`Z`, moteur `0.2.0`, protocole `1.8.0`).
+Rapport brut : [`latest.json`](latest.json), [`latest.md`](latest.md).
+
+| Mesure | Phase 02 | Phase 03 | Écart | Budget |
+|---|---|---|---|---|
+| `draft` 500 × 36 (moteur) | 12,9 ms | **14,4 ms** | +11 % | ≤ 50 ms |
+| `final` 5 000 × 36 (moteur) | 75,3 ms | **77,6 ms** | **+3,0 %** | ≤ 400 ms, surcoût banc < 5 % |
+| `large` 20 000 × 36 (moteur) | 242,9 ms | **252,1 ms** | +3,8 % | — |
+| Surface proxy 15×15 × 200 | 2 237 ms | **2 524 ms** | +13 % | ≤ 8 s |
+| Payload `final` | 28,0 Kio | **28,0 Kio** | 0 % | < 100 Kio |
+| `draft` RPC sidecar | 15,9 ms | **16,9 ms** | +6 % | ≤ 50 ms |
+| `final` RPC sidecar | 78,6 ms | **80,2 ms** | +2 % | ≤ 400 ms |
+| Démarrage sidecar | 654 ms | **654 ms** | 0 % | à consigner |
+| Mémoire sidecar | 72,0 Mo | **77,2 Mo** | +7 % | ≤ 500 Mo |
+
+Lecture :
+
+- la cible de surcoût de la banque est tenue : **+3,0 %** sur `final` 5 000 × 36, contre
+  une cible de 5 %. Le coût principal est la génération `Z` du bruit par blocs ; les
+  hypothèses ne demandent qu'un flux chacune ;
+- `draft` et la surface paient la granularité des blocs (2048 runs pour un slot scalaire)
+  quand `runs` est petit ; ils restent très loin des plafonds (14,4 ms contre 50 ms,
+  2,5 s contre 8 s) et seront réévalués en phase 11 ;
+- le payload est inchangé ; `approximations` n'est émis que lorsqu'une approximation
+  Poisson est réellement utilisée ;
+- le test de performance `100 000 runs < 2 s` reste vert (`npm run engine:test`).
+
+Détail de la méthode : les chiffres ci-dessus proviennent d'un run `npm run bench` sur la
+machine de référence. Le surcoût de la banque a aussi été vérifié par cinq exécutions
+alternées du seul banc moteur contre le commit `79fe9b2` (phase 02), pour neutraliser la
+dérive thermique de la machine.

@@ -7,8 +7,8 @@
     "memTotalMb": 7742,
     "python": "3.14.9",
     "numpy": "2.5.4",
-    "engineVersion": "0.1.0",
-    "commit": "addbd29"
+    "engineVersion": "0.2.0",
+    "commit": "79fe9b2"
   },
   "scenario": {
     "path": "packages/engine/examples/retail_depot.json",
@@ -21,58 +21,58 @@
       "unit": "ms",
       "repeats": 10,
       "samples": [
-        12.89,
-        13.954,
-        12.719,
-        14.089,
-        12.894,
-        14.029,
-        12.929,
-        12.747,
-        12.593,
-        12.429
+        14.85,
+        13.95,
+        13.591,
+        13.497,
+        13.936,
+        15.135,
+        13.849,
+        14.791,
+        14.805,
+        14.845
       ],
-      "median": 12.892,
-      "min": 12.429,
-      "max": 14.089
+      "median": 14.37,
+      "min": 13.497,
+      "max": 15.135
     },
     "final5000x36": {
       "unit": "ms",
       "repeats": 5,
       "samples": [
-        73.169,
-        77.749,
-        73.768,
-        75.747,
-        75.347
+        76.212,
+        79.06,
+        76.82,
+        78.54,
+        77.596
       ],
-      "median": 75.347,
-      "min": 73.169,
-      "max": 77.749
+      "median": 77.596,
+      "min": 76.212,
+      "max": 79.06
     },
     "large20000x36": {
       "unit": "ms",
       "repeats": 2,
       "samples": [
-        241.858,
-        243.972
+        250.138,
+        254.137
       ],
-      "median": 242.915,
-      "min": 241.858,
-      "max": 243.972
+      "median": 252.137,
+      "min": 250.138,
+      "max": 254.137
     },
     "surfaceProxy15x15x200": {
       "grid": 15,
       "runsPerPoint": 200,
       "cells": 225,
       "totalRuns": 45000,
-      "elapsedMs": 2237.028,
-      "msPerCell": 9.942,
-      "checksum": 288000862.8
+      "elapsedMs": 2523.691,
+      "msPerCell": 11.216,
+      "checksum": 206551909.575
     }
   },
   "payload": {
-    "final5000Bytes": 28677,
+    "final5000Bytes": 28695,
     "final5000KiB": 28.0
   },
   "progress": {
@@ -85,13 +85,13 @@
     "note": "phase 04"
   },
   "memory": {
-    "maxRssMb": 123.2,
+    "maxRssMb": 128.0,
     "unit": "Mo (maxRSS du processus de bench)"
   },
   "auditObservations": {
     "valueIgnoredWhenDistributionSet": {
-      "meanProfitBaseline": 1420261.949572,
-      "meanProfitShiftedValue": 1420261.949572,
+      "meanProfitBaseline": 1353716.264614,
+      "meanProfitShiftedValue": 1353716.264614,
       "identical": true,
       "explanation": "sample_hypothesis utilise `value` uniquement si distribution est None. Changer value avec une distribution active ne change pas le tirage."
     }

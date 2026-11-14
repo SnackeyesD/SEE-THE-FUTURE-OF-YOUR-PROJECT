@@ -478,7 +478,16 @@
           "type": "array",
           "items": { "$ref": "#/$defs/SensitivityEntry" }
         },
-        "breakEven": { "$ref": "#/$defs/BreakEven" }
+        "breakEven": { "$ref": "#/$defs/BreakEven" },
+        "approximations": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            { "type": "null" }
+          ]
+        }
       }
     },
     "SimulateParams": {

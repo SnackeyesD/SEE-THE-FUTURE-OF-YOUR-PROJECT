@@ -4,8 +4,9 @@ Le moteur est le seul producteur de chiffres de simulation.
 Il ne dépend ni de l'UI, ni du réseau, ni d'un fournisseur IA.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
+from .draws import DrawBank, DrawSlot
 from .errors import EngineError, UnknownModelError
 from .models import get_model
 from .run_sample import RunSample
@@ -31,6 +32,8 @@ __all__ = [
     "BreakEven",
     "CashCdfPoint",
     "DistributionSpec",
+    "DrawBank",
+    "DrawSlot",
     "EngineError",
     "Histogram",
     "HistogramBin",

@@ -142,25 +142,96 @@ Bandes et histogrammes mensuels :
   `EngineError`. Les bornes sont arrondies à cinq chiffres significatifs et les probabilités
   à cinq décimales, sauf si cet arrondi rendrait une borne non strictement croissante.
 
-## Reproductibilité
+## Tirages communs et reproductibilité
 
-- Un seul générateur `numpy.random.Generator(PCG64(seed))` pour les hypothèses.
-- Un second flux, dérivé de `SeedSequence([seed, 0x5EED])`, pour le bruit mensuel.
-- Aucun appel à l'état aléatoire global de numpy.
-- Les hypothèses sont échantillonnées dans l'ordre alphabétique de leurs clés.
-- Même scénario, même graine et même configuration ⇒ mêmes agrégats. `runId` et
-  `durationMs` sont des métadonnées non reproductibles.
-- La taille des lots ne change pas les tirages ; seuls des écarts d'arrondi flottant
-  négligeables peuvent apparaître dans les sommes mensuelles.
-- L'échantillon de runs est un préfixe : augmenter `runs` conserve les runs déjà
-  échantillonnés et n'en remplace aucun.
+Depuis la phase 03, le moteur ne tire plus directement dans les distributions de numpy : il
+consomme une **banque de tirages** (`engine/draws.py`), puis applique une transformation
+déterministe. Deux tirages de base par slot :
+
+- `U ~ U(0,1)` ;
+- `Z ~ N(0,1)`.
+
+### Slots et identifiants
+
+| Slot | Contenu |
+|---|---|
+| `hyp:<clé>` | une valeur par run pour chaque hypothèse résolue |
+| `noise` | un `Z` de forme `(runs, horizon)` |
+| `event:<id>:active`, `event:<id>:magnitude` | réservés à la phase 05 |
+
+L'identifiant d'un slot est `BLAKE2b(nom, digest_size=8)` interprété en entier 64 bits non
+signé. Ajouter, renommer ou réordonner un slot ne décale donc jamais les tirages des autres.
+
+### Blocs, flux et cache
+
+- Un bloc est généré par :
+  ```python
+  rng = np.random.Generator(
+      np.random.PCG64(np.random.SeedSequence([seed, slot_id, block_index, stream]))
+  )
+  ```
+  avec `stream = 0` pour `U` et `stream = 1` pour `Z`. Les deux flux sont **indépendants** :
+  demander seulement `Z` ne consomme pas d'uniformes, et réciproquement.
+- Les flux sont générés **à la demande** : une loi normale ne demande que `Z`, une
+  triangulaire que `U`. Le mapping est centralisé dans `distribution_streams()`.
+- Taille de bloc : `1024` runs pour les slots vectoriels (bruit), `2048` pour les slots
+  scalaires. Le bruit n'est jamais alloué en `(runs, horizon)` : il est produit bloc par
+  bloc, puis concaténé au plus au niveau du lot courant.
+- Le cache est un LRU de `16` blocs (les deux flux d'un même bloc partagent une entrée).
+  Une éviction ne change jamais les valeurs, elle provoque seulement une régénération
+  déterministe.
+
+### Transformations
+
+| Loi | Flux | Formule |
+|---|---|---|
+| `normal` | `Z` | `moyenne + écart_type × Z` |
+| `lognormal` | `Z` | `exp(mu + sigma × Z)` |
+| `uniform` | `U` | `low + U × (high - low)` |
+| `triangular` | `U` | inversion fermée de la CDF, cas `low == mode` et `mode == high` inclus |
+| `empirical` | `U` | `searchsorted` sur la CDF cumulée des poids |
+| `poisson` (λ ≤ 50 000) | `U` | inversion exacte de la CDF `P(X ≤ k)` |
+| `poisson` (λ > 50 000) | `Z` | approximation normale, signalée dans le résultat |
+
+Pour Poisson, la table de CDF est calculée en espace logarithmique (stable pour les grands
+λ) et mise en cache par λ. Au-delà de `POISSON_EXACT_MAX = 50 000`, le moteur utilise
+`N(λ, √λ)` arrondie et expose `approximations: ["poisson_normal"]` dans
+`SimulationResult`. Le champ est optionnel : les résultats stockés sans lui restent
+lisibles (protocole `1.8.0`, pas de rupture).
+
+Les bornes `min`/`max` de l'hypothèse et du modèle sont appliquées **après** la
+transformation, comme avant.
+
+### Garanties testées
+
+- **Préfixe** : `take(slot, n)[:k] == take(slot, k)` pour tout `k ≤ n`, y compris aux
+  frontières de blocs (`250`, `256`, `257`, `500`, `1000`, `1023`, `1024`, `1025`,
+  `2047`, `2048`).
+- **Paramètres** : changer `mean/std`, `low/mode/high`, etc. ne modifie ni `U` ni `Z`.
+- **Famille** : passer de `normal` à `triangular` conserve les deux flux du slot ; seules
+  les valeurs transformées changent.
+- **Ordre et ajout** : réordonner les hypothèses ou en ajouter une ne décale aucun tirage
+  existant.
+- **Lots** : la taille de lot ne change pas les tirages, seulement le découpage des appels
+  à la banque.
+- **Cache** : vider le cache ne change aucune valeur.
+
+Aucun appel à l'état aléatoire global de numpy n'est effectué. Même scénario, même graine
+et même configuration ⇒ mêmes agrégats ; `runId` et `durationMs` restent des métadonnées
+non reproductibles. L'échantillon de runs est un préfixe : augmenter `runs` conserve les
+runs déjà échantillonnés.
 
 ## Performance et mémoire
 
 Cible : **100 000 runs en moins de 2 s** sur la machine de référence (test de performance
-dans `tests/test_performance.py`). Les hypothèses et le bruit sont pré-générés ; la boucle
-mensuelle est vectorisée sur les runs et découpée en lots. Mémoire approximative pour
-100 000 runs et 12 mois : quelques dizaines de Mo.
+dans `tests/test_performance.py`). Les hypothèses sont tirées une fois par slot ; le bruit
+mensuel est généré par blocs au fil des lots. La boucle mensuelle est vectorisée sur les
+runs. Mémoire approximative pour 100 000 runs et 12 mois : quelques dizaines de Mo, sans
+allocation `runs × horizon × nombre_de_slots`.
+
+La banque ajoute **3,0 %** sur `final` 5 000 × 36 (77,6 ms contre 75,3 ms pour la phase 02
+sur la machine de référence, `npm run bench`), sous la cible de 5 %. Le coût principal est
+la génération `Z` du bruit ; les hypothèses ne demandent qu'un flux chacune.
 
 Les métriques V3 ajoutent :
 

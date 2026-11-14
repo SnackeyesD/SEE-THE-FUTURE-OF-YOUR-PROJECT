@@ -211,6 +211,7 @@ export interface SimulationResult {
   monthly: MonthlyAverages;
   sensitivity: SensitivityEntry[];
   breakEven: BreakEven;
+  approximations?: string[] | null;
 }
 
 export interface SimulateParams {

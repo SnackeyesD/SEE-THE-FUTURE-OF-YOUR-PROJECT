@@ -318,6 +318,7 @@ class SimulationResult(BaseModel):
     monthly: MonthlyAverages
     sensitivity: list[SensitivityEntry]
     breakEven: BreakEven
+    approximations: list[str] | None = None
 
 
 class SimulateParams(BaseModel):

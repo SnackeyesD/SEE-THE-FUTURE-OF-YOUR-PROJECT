@@ -260,6 +260,7 @@ class SimulationResult(CamelModel):
     monthly: MonthlyAverages
     sensitivity: list[SensitivityEntry]
     break_even: BreakEven
+    approximations: list[str] | None = None
 
     _run_sample: RunSample | None = PrivateAttr(default=None)
 

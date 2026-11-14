@@ -3,84 +3,84 @@
     "protocolVersion": "1.8.0",
     "sidecarVersion": "0.1.0",
     "python": "3.14.9",
-    "startupMs": 654.292
+    "startupMs": 653.838
   },
   "measurements": {
     "pingAtRest": {
       "unit": "ms",
       "repeats": 20,
       "samples": [
-        0.61,
-        0.599,
-        0.632,
-        0.633,
-        0.64,
-        0.673,
-        0.613,
-        0.69,
-        0.691,
-        0.593,
-        0.678,
+        0.583,
+        0.683,
+        0.672,
+        0.626,
+        0.68,
+        0.677,
+        0.648,
+        0.679,
         0.676,
-        0.564,
+        0.635,
+        0.677,
+        0.667,
+        0.661,
+        0.619,
+        0.68,
+        0.606,
         0.688,
-        0.691,
-        0.633,
-        0.688,
-        0.691,
-        0.62,
-        0.693
+        0.69,
+        0.697,
+        0.682
       ],
-      "median": 0.656,
-      "min": 0.564,
-      "max": 0.693
+      "median": 0.676,
+      "min": 0.583,
+      "max": 0.697
     },
     "draft500x36OverRpc": {
       "unit": "ms",
       "repeats": 10,
       "samples": [
-        142.063,
-        20.743,
-        16.233,
-        15.177,
-        15.289,
-        15.3,
-        17.038,
-        14.988,
-        17.26,
-        15.531
+        36.316,
+        23.607,
+        16.131,
+        17.656,
+        16.352,
+        18.443,
+        16.121,
+        16.25,
+        16.22,
+        17.522
       ],
-      "median": 15.882,
-      "min": 14.988,
-      "max": 142.063
+      "median": 16.937,
+      "min": 16.121,
+      "max": 36.316
     },
     "final5000x36OverRpc": {
       "unit": "ms",
       "repeats": 5,
       "samples": [
-        80.071,
-        78.572,
-        77.802,
-        79.24,
-        78.082
+        80.227,
+        77.856,
+        80.49,
+        81.219,
+        79.536
       ],
-      "median": 78.572,
-      "min": 77.802,
-      "max": 80.071
+      "median": 80.227,
+      "min": 77.856,
+      "max": 81.219
     },
     "pingDuring50000x36": {
       "unit": "ms",
-      "blockedMs": 647.174,
+      "blockedMs": 639.397,
       "note": "La boucle rpc.py est mono-thread : le ping attend la fin du calcul. Constat C3, correction en phase 06."
     }
   },
   "correctness": {
     "smallRunOk": true,
-    "smallRunDurationMs": 2.9661109999779
+    "smallRunDurationMs": 4.047220999837009
   },
   "memory": {
-    "rssBeforeMb": 63.6,
-    "rssAfterMb": 72.0,
+    "rssBeforeMb": 63.7,
+    "rssAfterMb": 77.2,
     "unit": "Mo (VmRSS du processus sidecar)"
   },
   "limitations": {

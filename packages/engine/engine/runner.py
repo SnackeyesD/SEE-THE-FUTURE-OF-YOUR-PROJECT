@@ -16,7 +16,12 @@ from .aggregation import (
     run_break_even_months,
     run_min_cash,
 )
-from .distributions import default_rng, sample_hypothesis
+from .distributions import (
+    distribution_approximation,
+    distribution_streams,
+    sample_hypothesis,
+)
+from .draws import DrawBank
 from .errors import EngineError
 from .models import get_model
 from .models.retail_depot import DEFAULT_SEASONALITY
@@ -53,20 +58,43 @@ def simulate(
     started = time.perf_counter()
 
     assumptions = model.resolve(scenario)
-    assumption_rng = default_rng(config.seed)
+    bank = DrawBank(config.seed, scenario.horizon_months)
+    for key in sorted(assumptions):
+        bank.register(f"hyp:{key}")
+    bank.register("noise", width=scenario.horizon_months, squeeze=False)
+
+    approximations: set[str] = set()
     samples: dict[str, np.ndarray] = {}
     for key in sorted(assumptions):
-        samples[key] = sample_hypothesis(
-            assumptions[key],
-            assumption_rng,
-            config.runs,
-            model.bounds(key),
-        )
-
-    noise_rng = np.random.Generator(
-        np.random.PCG64(np.random.SeedSequence([config.seed, 0x5EED]))
-    )
-    noise = noise_rng.standard_normal((config.runs, scenario.horizon_months))
+        hypothesis = assumptions[key]
+        slot = f"hyp:{key}"
+        if hypothesis.distribution is None:
+            samples[key] = sample_hypothesis(
+                hypothesis,
+                None,
+                None,
+                model.bounds(key),
+                size=config.runs,
+            )
+        else:
+            needs_uniform, needs_normal = distribution_streams(
+                hypothesis.distribution
+            )
+            uniform, normal = bank.take(
+                slot,
+                config.runs,
+                uniform=needs_uniform,
+                normal=needs_normal,
+            )
+            samples[key] = sample_hypothesis(
+                hypothesis,
+                uniform,
+                normal,
+                model.bounds(key),
+            )
+            approximation = distribution_approximation(hypothesis.distribution)
+            if approximation is not None:
+                approximations.add(approximation)
 
     seasonality = (
         np.asarray(scenario.seasonality, dtype=np.float64)
@@ -90,7 +118,13 @@ def simulate(
     for start in range(0, config.runs, batch_size):
         end = min(start + batch_size, config.runs)
         batch_inputs = {key: values[start:end] for key, values in samples.items()}
-        batch = model.simulate_batch(batch_inputs, noise[start:end], seasonality)
+        batch_noise = bank.take_range(
+            "noise",
+            start,
+            end,
+            uniform=False,
+        )[1]
+        batch = model.simulate_batch(batch_inputs, batch_noise, seasonality)
         state.add(batch)
         profit_batches.append(batch.profit)
         min_cash_batches.append(run_min_cash(batch.cash_monthly))
@@ -150,6 +184,7 @@ def simulate(
         ),
         sensitivity=build_sensitivity(samples, profit),
         break_even=build_break_even(samples),
+        approximations=sorted(approximations) or None,
     )
     result.attach_sample(sample)
     return result
