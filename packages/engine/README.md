@@ -31,6 +31,96 @@ print(result.metrics.p10, result.metrics.p50, result.metrics.p90)
 
 `SimulationResult.to_dict()` sérialise en camelCase pour l'IPC.
 
+### Calcul progressif et annulation
+
+L'API reste rétrocompatible avec `simulate(scenario, config, progress=callback)`.
+Les options progressives sont des arguments nommés :
+
+```python
+from engine import CancelToken, SimulationConfig, simulate
+
+token = CancelToken()
+result = simulate(
+    scenario,
+    SimulationConfig(seed=42),
+    quality="final",                 # "draft" ou "final"
+    on_progress=lambda fraction: ...,  # 0.0 → 1.0, strictement croissant
+    on_partial=lambda partial: ...,    # PartialAggregates
+    cancel=token,
+)
+print(result.quality, result.convergence)
+```
+
+`progress` est un alias historique de `on_progress` ; si les deux sont fournis,
+les deux callbacks sont appelés. Le calcul est découpé en blocs et le jeton est
+vérifié **entre deux blocs**. Une annulation lève `SimulationCancelled` (sous-classe
+d'`EngineError`) après le bloc en cours, sans publier de partiel supplémentaire.
+
+### Profils de qualité
+
+| Qualité | Runs | Bloc | Convergence |
+|---|---|---|---|
+| `draft` | 500 | 256 | 1 transition stable, au moins 500 runs |
+| `final` | 5 000 | 256 | 2 transitions stables, au moins 2 000 runs |
+
+Pour les calculs beaucoup plus grands (CLI, bancs), le bloc du profil est élargi
+jusqu'à 2 048 runs afin de garder au plus 64 blocs : le coût d'appel du modèle
+dépend peu du nombre de runs, et 100 000 runs en blocs de 256 seraient inutilement
+lents. Un `batchSize` explicite reste toujours respecté, même s'il est plus petit.
+
+La précédence est stricte : un champ **explicitement fourni** dans
+`SimulationConfig` gagne toujours sur le profil. Par exemple
+`SimulationConfig(runs=10_000)` exécute 10 000 runs avec le bloc du profil (256)
+si `batchSize` n'est pas fourni. Les valeurs par défaut de `SimulationConfig`
+(10 000 runs, `batchSize` 50 000) restent inchangées pour les appelants qui
+construisent l'objet sans le passer à `simulate`.
+
+`draft` et `final` partagent les mêmes tirages : les 500 premiers runs du
+`final` sont **identiques** au `draft` (test `test_draft_is_an_exact_prefix_of_final`).
+
+### Partiels
+
+`PartialAggregates` contient `completed_runs`, `total_runs`, les métriques
+principales, l'histogramme du profit, les bandes mensuelles et l'état de
+convergence. Il ne contient **jamais** de trajectoire, de paramètre par run ou
+d'échantillon brut. `to_dict()` produit le payload camelCase prêt pour l'IPC.
+
+- Les métriques probabilistes d'un partiel utilisent au plus 5 000 runs
+  régulièrement espacés dans le préfixe ; les moyennes mensuelles restent
+  exactes car elles viennent de l'état d'agrégation complet.
+- Les bandes mensuelles d'un partiel utilisent au plus 1 000 runs, contre
+  2 000 pour le résultat final.
+- Les bornes de l'histogramme sont fixées au premier bloc, puis élargies
+  **symétriquement** autour du même centre si une valeur sort de la plage. Elles
+  ne rétrécissent jamais et ne changent pas sans extension justifiée.
+- Les histogrammes mensuels sont omis des partiels. Pour 5 000 runs × 36 mois,
+  le payload mesuré est d'environ 26 Kio (limite : 50 Kio).
+- Le nombre de partiels est plafonné à 64 par calcul ; au-delà, ils sont espacés
+  régulièrement. La vérification d'annulation reste faite à chaque bloc.
+
+### Convergence
+
+À chaque bloc, le moteur calcule le vecteur
+`[p10_profit, p50_profit, p90_profit, P(point mort), p50(min_cash)]`. La variation
+relative maximale par rapport au bloc précédent est comparée au seuil de 2 %
+avec un dénominateur protégé (`max(abs(x), 1e-9)`).
+
+`ConvergenceState` expose :
+
+- `converged` : seuil tenu sur le nombre de transitions du profil **et**
+  nombre de runs minimal atteint ;
+- `stability` : valeur d'affichage 0–1, inverse normalisée de la variation du
+  dernier bloc ;
+- `max_relative_change` : variation relative maximale observée ;
+- `stable_blocks` : nombre de transitions stables consécutives.
+
+Un calcul d'un seul bloc ne peut jamais être marqué convergé. Un `final` peut ne
+jamais converger : c'est un état honnête, pas un blocage. La convergence est une
+stabilité observée, jamais une garantie de précision.
+
+`SimulationResult` expose `quality` et `convergence` en champs optionnels du
+protocole : les résultats stockés avant la phase 04 restent lisibles.
+
 ## Schéma d'entrée
 
 - `Scenario` : `schemaVersion`, `name`, `model`, `currency`, `horizonMonths`,
@@ -224,20 +314,32 @@ runs déjà échantillonnés.
 ## Performance et mémoire
 
 Cible : **100 000 runs en moins de 2 s** sur la machine de référence (test de performance
-dans `tests/test_performance.py`). Les hypothèses sont tirées une fois par slot ; le bruit
-mensuel est généré par blocs au fil des lots. La boucle mensuelle est vectorisée sur les
-runs. Mémoire approximative pour 100 000 runs et 12 mois : quelques dizaines de Mo, sans
-allocation `runs × horizon × nombre_de_slots`.
+dans `tests/test_performance.py`). Les hypothèses sont tirées bloc par bloc, le bruit
+mensuel est généré par blocs, et la boucle mensuelle est vectorisée sur les runs. Mémoire
+approximative pour 100 000 runs et 12 mois : quelques dizaines de Mo, sans allocation
+`runs × horizon × nombre_de_slots`.
 
-La banque ajoute **3,0 %** sur `final` 5 000 × 36 (77,6 ms contre 75,3 ms pour la phase 02
-sur la machine de référence, `npm run bench`), sous la cible de 5 %. Le coût principal est
-la génération `Z` du bruit ; les hypothèses ne demandent qu'un flux chacune.
+Mesures de la phase 04 sur la machine de référence (`npm run bench:engine`,
+scénario 36 mois, processeur Pentium 6405U) :
 
-Les métriques V3 ajoutent :
+| Mesure | Cible | Plafond | Valeur mesurée |
+|---|---|---|---|
+| `draft` 500 × 36 | 50 ms | 150 ms | 18–26 ms |
+| `final` 5 000 × 36 | 400 ms | 1,5 s | 150–170 ms |
+| Latence d'annulation (après 512 runs) | 60 ms | 100 ms | 0,17 ms (max 0,19 ms) |
+| Calcul d'un partiel | 10 ms | 30 ms | 7–9 ms médian, ≤ 19 ms max |
+| Payload d'un partiel | < 50 Kio | 500 Kio | 26,1 Kio |
+
+Le découpage en blocs de 256 ajoute environ 2× de surcoût au calcul `final` par rapport à
+la phase 03, mais reste largement sous la cible et rend l'annulation quasi instantanée.
+Pour les calculs beaucoup plus grands, le bloc est élargi jusqu'à 2 048 runs (au plus 64
+blocs) : 100 000 runs × 36 restent sous la cible de 2 s (≈ 0,9 s mesurée). Les métriques V3
+ajoutent :
 
 - un échantillon de préfixe plafonné à 20 000 runs : 20 000 × 36 × 3 tableaux `float64`
   ≈ 17 Mo, plus les paramètres tirés ;
-- le calcul des bandes sur au plus 2 000 runs, mesuré autour de 5 ms pour 5 000 runs ;
+- le calcul des bandes sur au plus 2 000 runs pour le résultat final et 1 000 pour un
+  partiel ;
 - un payload final d'environ 28–30 Kio pour 5 000 runs × 36 mois avec un mois
   d'histogramme sélectionné (limite : 100 Kio hors trajectoires).
 

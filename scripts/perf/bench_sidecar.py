@@ -243,7 +243,7 @@ def run(*, scenario_path: Path, repeats: int) -> dict[str, Any]:
                     "unit": "Mo (VmRSS du processus sidecar)",
                 },
                 "limitations": {
-                    "cancellation": "non supportée (phase 04/06)",
+                    "cancellation": "moteur prêt (phase 04), transport sidecar en phase 06",
                     "streaming": "aucun partiel, seulement simulate.progress (phase 04/06)",
                 },
             }

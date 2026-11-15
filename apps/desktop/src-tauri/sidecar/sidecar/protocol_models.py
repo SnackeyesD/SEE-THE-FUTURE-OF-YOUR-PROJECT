@@ -295,6 +295,15 @@ class SensitivityEntry(BaseModel):
     contribution: float
 
 
+class ConvergenceState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    converged: bool
+    stability: float
+    maxRelativeChange: float
+    stableBlocks: int
+
+
 class BreakEven(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -323,6 +332,8 @@ class SimulationResult(BaseModel):
     sensitivity: list[SensitivityEntry]
     breakEven: BreakEven
     approximations: list[str] | None = None
+    quality: Literal["draft", "final"] | None = None
+    convergence: ConvergenceState | None = None
 
 
 class SimulateParams(BaseModel):

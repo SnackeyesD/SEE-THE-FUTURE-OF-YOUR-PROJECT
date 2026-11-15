@@ -426,6 +426,23 @@
         "contribution": { "type": "number" }
       }
     },
+    "ConvergenceState": {
+      "description": "Stabilité observée des agrégats, jamais une garantie de précision.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "converged",
+        "stability",
+        "maxRelativeChange",
+        "stableBlocks"
+      ],
+      "properties": {
+        "converged": { "type": "boolean" },
+        "stability": { "type": "number", "minimum": 0, "maximum": 1 },
+        "maxRelativeChange": { "type": "number", "minimum": 0 },
+        "stableBlocks": { "type": "integer", "minimum": 0 }
+      }
+    },
     "BreakEven": {
       "type": "object",
       "additionalProperties": false,
@@ -490,6 +507,18 @@
               "type": "array",
               "items": { "type": "string" }
             },
+            { "type": "null" }
+          ]
+        },
+        "quality": {
+          "anyOf": [
+            { "type": "string", "enum": ["draft", "final"] },
+            { "type": "null" }
+          ]
+        },
+        "convergence": {
+          "anyOf": [
+            { "$ref": "#/$defs/ConvergenceState" },
             { "type": "null" }
           ]
         }

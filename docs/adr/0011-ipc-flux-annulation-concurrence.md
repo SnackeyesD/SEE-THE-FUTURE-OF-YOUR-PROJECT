@@ -89,3 +89,21 @@ Le calcul interactif devient un **job asynchrone** identifié par `runId`, avec 
 - `cancel` de bout en bout < 150 ms.
 - Aucun `partial` après `done`/`cancelled`.
 - Aucun `draft` en base.
+
+## Amendement phase 04 (2026-11-15)
+
+Le contrat côté moteur est implémenté avant le worker de la phase 06.
+
+- `engine.CancelToken` encapsule un `threading.Event` : `cancel()` et
+  `is_cancelled()` sont sûrs entre threads, `reset()` réarme le jeton.
+- `simulate(..., cancel=token)` vérifie le jeton **entre deux blocs** ; un bloc
+  interrompu est terminé puis abandonné, sans publier de partiel. L'annulation
+  lève `SimulationCancelled(completed_runs, total_runs)`.
+- Les profils `draft`/`final` utilisent un bloc de 256 runs, ce qui borne la
+  latence. Pour les calculs beaucoup plus grands, le bloc est élargi jusqu'à
+  2 048 runs (au plus 64 blocs) afin d'éviter un surcoût d'appels de modèle
+  sans dépasser le budget d'annulation. Mesure de référence : 0,17 ms médian
+  (0,19 ms max) entre `cancel()` et le retour du moteur après 512 runs.
+- Les partiels (`PartialAggregates`) et la progression sont des callbacks
+  synchrones du moteur. La phase 06 conserve la responsabilité du worker, de
+  la sérialisation JSON-RPC, de `seq` et de la limitation à ~1 partiel / 50 ms.

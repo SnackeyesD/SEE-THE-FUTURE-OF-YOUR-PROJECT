@@ -142,3 +142,29 @@ se valide avec des valeurs `null`, et l'UI affiche « non disponible ».
 - Test de préfixe : ajouter/désactiver un événement ne change pas les tirages d'hypothèses.
 - Test de non-régression : scénario sans événement → tableaux identiques à la version précédente.
 - Test de compatibilité : un ancien `result_json` (sans nouveaux champs) reste lisible.
+
+## Amendement phase 04 (2026-11-15)
+
+Les agrégats partiels et l'indicateur de convergence précisent la sémantique sans
+changer les définitions métier.
+
+1. **Partiels bornés en coût.** Les métriques probabilistes d'un
+   `PartialAggregates` utilisent au plus 5 000 runs régulièrement espacés dans
+   le préfixe ; les moyennes mensuelles restent exactes car elles viennent de
+   l'état d'agrégation complet. Les bandes mensuelles d'un partiel utilisent au
+   plus 1 000 runs (2 000 pour le résultat final). Les histogrammes mensuels et
+   les trajectoires sont absents des partiels.
+2. **Bornes d'histogramme stables.** Les partiels partagent un centre fixe
+   dérivé du premier bloc ; la demi-largeur est élargie symétriquement si une
+   valeur sort de la plage. Le résultat final conserve les bornes min/max de
+   tous les runs, ce qui préserve l'invariance au `batchSize` déjà testée.
+3. **Convergence.** Le vecteur
+   `[p10_profit, p50_profit, p90_profit, P(point mort), p50(min_cash)]` est
+   comparé au bloc précédent avec un seuil de variation relative de 2 % et un
+   dénominateur protégé. Un `final` exige deux transitions stables consécutives
+   (trois états de blocs) et 2 000 runs ; un `draft` exige une transition et
+   500 runs. Un calcul d'un seul bloc n'est jamais convergé. `stability` est une
+   valeur d'affichage, pas une précision.
+4. **Champs optionnels.** `quality` et `convergence` sont ajoutés à
+   `SimulationResult` sans changer la version de protocole `1.8.0` ; les runs
+   antérieurs restent valides avec `null`.

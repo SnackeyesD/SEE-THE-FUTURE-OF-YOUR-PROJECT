@@ -7,8 +7,8 @@
     "memTotalMb": 7742,
     "python": "3.14.9",
     "numpy": "2.5.4",
-    "engineVersion": "0.2.0",
-    "commit": "79fe9b2"
+    "engineVersion": "0.3.0",
+    "commit": "bfbbb3e"
   },
   "scenario": {
     "path": "packages/engine/examples/retail_depot.json",
@@ -21,71 +21,102 @@
       "unit": "ms",
       "repeats": 10,
       "samples": [
-        14.85,
-        13.95,
-        13.591,
-        13.497,
-        13.936,
-        15.135,
-        13.849,
-        14.791,
-        14.805,
-        14.845
+        31.456,
+        24.756,
+        31.538,
+        24.778,
+        30.858,
+        27.5,
+        21.058,
+        22.047,
+        28.162,
+        22.911
       ],
-      "median": 14.37,
-      "min": 13.497,
-      "max": 15.135
+      "median": 26.139,
+      "min": 21.058,
+      "max": 31.538
     },
     "final5000x36": {
       "unit": "ms",
       "repeats": 5,
       "samples": [
-        76.212,
-        79.06,
-        76.82,
-        78.54,
-        77.596
+        167.631,
+        158.516,
+        157.684,
+        168.455,
+        179.068
       ],
-      "median": 77.596,
-      "min": 76.212,
-      "max": 79.06
+      "median": 167.631,
+      "min": 157.684,
+      "max": 179.068
     },
     "large20000x36": {
       "unit": "ms",
       "repeats": 2,
       "samples": [
-        250.138,
-        254.137
+        572.22,
+        751.765
       ],
-      "median": 252.137,
-      "min": 250.138,
-      "max": 254.137
+      "median": 661.993,
+      "min": 572.22,
+      "max": 751.765
     },
     "surfaceProxy15x15x200": {
       "grid": 15,
       "runsPerPoint": 200,
       "cells": 225,
       "totalRuns": 45000,
-      "elapsedMs": 2523.691,
-      "msPerCell": 11.216,
+      "elapsedMs": 4030.505,
+      "msPerCell": 17.913,
       "checksum": 206551909.575
     }
   },
   "payload": {
-    "final5000Bytes": 28695,
-    "final5000KiB": 28.0
+    "final5000Bytes": 28832,
+    "final5000KiB": 28.2
   },
   "progress": {
     "runs": 500,
-    "callbacks": 2,
-    "note": "baseline sans annulation ni partiels (phase 04)"
+    "callbacks": 3,
+    "note": "progression par blocs, callbacks monotones de 0 à 1"
+  },
+  "partials": {
+    "runs": 5000,
+    "count": 20,
+    "maxPayloadKiB": 26.1,
+    "maxBuildMs": 18.323,
+    "medianBuildMs": 8.542,
+    "maxGapMs": 29.686,
+    "medianGapMs": 17.161,
+    "note": "l'écart entre partiels inclut le calcul du bloc courant, pas seulement la construction du partiel"
+  },
+  "convergence": {
+    "quality": "final",
+    "converged": false,
+    "stability": 0.0,
+    "maxRelativeChange": 0.08279631246704029,
+    "stableBlocks": 0
   },
   "cancellation": {
-    "status": "not_supported",
-    "note": "phase 04"
+    "status": "supported",
+    "unit": "ms",
+    "repeats": 3,
+    "afterRuns": 512,
+    "completedRuns": [
+      512,
+      512,
+      512
+    ],
+    "samples": [
+      0.184,
+      0.168,
+      0.116
+    ],
+    "median": 0.168,
+    "max": 0.184
   },
   "memory": {
-    "maxRssMb": 128.0,
+    "maxRssMb": 76.5,
     "unit": "Mo (maxRSS du processus de bench)"
   },
   "auditObservations": {

@@ -105,7 +105,22 @@ function buildMarkdown(report) {
     lines.push(`- Payload final 5 000 runs : **${engine.payload.final5000KiB} Kio**.`);
     lines.push(`- Mémoire du processus de bench : **${formatMb(engine.memory.maxRssMb)}**.`);
     lines.push(`- Progression : ${engine.progress.callbacks} callback(s) pour 500 runs.`);
-    lines.push(`- Annulation : ${engine.cancellation.status} (${engine.cancellation.note}).`);
+    const partials = engine.partials;
+    if (partials) {
+      lines.push(
+        `- Partiels : ${partials.count} messages, payload max **${partials.maxPayloadKiB} Kio**, calcul max **${formatMs(partials.maxBuildMs)}**, écart max **${formatMs(partials.maxGapMs)}**.`,
+      );
+    }
+    const cancellation = engine.cancellation;
+    lines.push(
+      `- Annulation : ${cancellation.status}, médiane **${formatMs(cancellation.median)}**, max **${formatMs(cancellation.max)}** après ${cancellation.completedRuns?.[0] ?? "—"} runs.`,
+    );
+    const convergence = engine.convergence;
+    if (convergence) {
+      lines.push(
+        `- Convergence (\`${convergence.quality}\`) : ${convergence.converged ? "oui" : "non"}, stabilité ${convergence.stability}, ${convergence.stableBlocks} bloc(s) stable(s).`,
+      );
+    }
     const audit = engine.auditObservations?.valueIgnoredWhenDistributionSet;
     if (audit) {
       lines.push(
@@ -170,7 +185,8 @@ function buildMarkdown(report) {
   lines.push("");
   lines.push("- Les mesures moteur sont **in-process** ; celles du sidecar incluent JSON-RPC et la validation.");
   lines.push("- Le « surface proxy » rend les deux axes déterministes (`distribution = None`) : il mesure le **temps**, pas une vraie surface en tirages communs (phase 11).");
-  lines.push("- L'absence d'annulation et de flux partiels est un constat de la phase 01, pas une régression.");
+  lines.push("- Le moteur expose depuis la phase 04 l'annulation et les partiels ; leur transport JSON-RPC reste planifié en phase 06.");
+  lines.push("- L'écart entre partiels inclut le calcul du bloc courant, pas seulement la construction du partiel.");
   lines.push("- Une mesure UI réelle exige un navigateur piloté ; elle est planifiée en phase 08/16.");
   lines.push("- Comparer deux exécutions sur la **même machine** ; les durées varient avec la charge système.");
   lines.push("");

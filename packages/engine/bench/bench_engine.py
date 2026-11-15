@@ -27,7 +27,14 @@ from typing import Any
 import numpy as np
 
 import engine
-from engine import Scenario, SimulationConfig, simulate
+from engine import (
+    CancelToken,
+    Scenario,
+    SimulationCancelled,
+    SimulationConfig,
+    simulate,
+)
+from engine import runner as runner_module
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_SCENARIO = REPO_ROOT / "packages" / "engine" / "examples" / "retail_depot.json"
@@ -102,6 +109,57 @@ def _measure(
     }
 
 
+def _cancellation_latency(
+    scenario: Scenario,
+    *,
+    seed: int,
+    after_runs: int,
+    repeats: int,
+) -> dict[str, Any]:
+    """Annule depuis un callback partiel et mesure le retour du moteur."""
+
+    latencies: list[float] = []
+    completed_runs: list[int] = []
+    for _ in range(repeats):
+        token = CancelToken()
+        cancelled_at: list[float] = []
+
+        def on_partial(  # type: ignore[no-untyped-def]
+            partial,
+            *,
+            _token: CancelToken = token,
+            _cancelled_at: list[float] = cancelled_at,
+        ) -> None:
+            if partial.completed_runs >= after_runs and not _token.is_cancelled():
+                _cancelled_at.append(time.perf_counter())
+                _token.cancel()
+
+        try:
+            simulate(
+                scenario,
+                SimulationConfig(seed=seed),
+                on_partial=on_partial,
+                cancel=token,
+            )
+        except SimulationCancelled as exc:
+            completed_runs.append(exc.completed_runs)
+        else:  # pragma: no cover - protection contre une régression
+            raise AssertionError("le calcul aurait dû être annulé")
+        if not cancelled_at:  # pragma: no cover - protection contre une régression
+            raise AssertionError("aucun partiel n'a déclenché l'annulation")
+        latencies.append((time.perf_counter() - cancelled_at[0]) * 1000.0)
+
+    return {
+        "unit": "ms",
+        "repeats": repeats,
+        "afterRuns": after_runs,
+        "completedRuns": completed_runs,
+        "samples": [round(value, 3) for value in latencies],
+        "median": round(statistics.median(latencies), 3),
+        "max": round(max(latencies), 3),
+    }
+
+
 def _scenario_36_months(path: Path) -> Scenario:
     scenario = Scenario.model_validate_json(path.read_text(encoding="utf-8"))
     payload = scenario.model_dump(by_alias=True)
@@ -156,11 +214,11 @@ def run(path: Path, *, repeats: int) -> dict[str, Any]:
     seed = 42
 
     draft = _measure(
-        lambda: simulate(scenario, SimulationConfig(runs=500, seed=seed)),
+        lambda: simulate(scenario, SimulationConfig(seed=seed), quality="draft"),
         repeats=repeats * 2,
     )
     final = _measure(
-        lambda: simulate(scenario, SimulationConfig(runs=5_000, seed=seed)),
+        lambda: simulate(scenario, SimulationConfig(seed=seed), quality="final"),
         repeats=repeats,
     )
     large = _measure(
@@ -168,7 +226,7 @@ def run(path: Path, *, repeats: int) -> dict[str, Any]:
         repeats=max(2, repeats // 2),
     )
 
-    sample = simulate(scenario, SimulationConfig(runs=5_000, seed=seed))
+    sample = simulate(scenario, SimulationConfig(seed=seed), quality="final")
     payload = sample.to_dict()
     payload_bytes = len(json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode())
 
@@ -180,10 +238,60 @@ def run(path: Path, *, repeats: int) -> dict[str, Any]:
 
     progress_sample = simulate(
         scenario,
-        SimulationConfig(runs=500, seed=seed),
-        progress=_progress,
+        SimulationConfig(seed=seed),
+        quality="draft",
+        on_progress=_progress,
     )
     assert progress_sample.runs == 500
+
+    partials = []
+    partial_gaps: list[float] = []
+    previous_partial_at: list[float] = []
+
+    def _partial(partial) -> None:  # type: ignore[no-untyped-def]
+        now = time.perf_counter()
+        if previous_partial_at:
+            partial_gaps.append((now - previous_partial_at[0]) * 1000.0)
+        previous_partial_at[:] = [now]
+        partials.append(partial)
+
+    build_times: list[float] = []
+    original_build = runner_module.build_partial_aggregates
+
+    def _timed_build(*args, **kwargs):  # type: ignore[no-untyped-def]
+        began = time.perf_counter()
+        result = original_build(*args, **kwargs)
+        build_times.append((time.perf_counter() - began) * 1000.0)
+        return result
+
+    runner_module.build_partial_aggregates = _timed_build
+    try:
+        partial_sample = simulate(
+            scenario,
+            SimulationConfig(seed=seed),
+            quality="final",
+            on_partial=_partial,
+        )
+    finally:
+        runner_module.build_partial_aggregates = original_build
+    assert partial_sample.convergence is not None
+    partial_sizes = [
+        len(
+            json.dumps(
+                partial.to_dict(),
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode()
+        )
+        for partial in partials
+    ]
+
+    cancellation = _cancellation_latency(
+        scenario,
+        seed=seed,
+        after_runs=512,
+        repeats=3,
+    )
 
     # Constat d'audit : `value` est ignoré quand une distribution existe.
     baseline_price = scenario.assumptions["unit_price"].value
@@ -213,11 +321,35 @@ def run(path: Path, *, repeats: int) -> dict[str, Any]:
             "final5000KiB": round(payload_bytes / 1024, 1),
         },
         "progress": {
-            "runs": 500,
+            "runs": progress_sample.runs,
             "callbacks": progress_calls,
-            "note": "baseline sans annulation ni partiels (phase 04)",
+            "note": "progression par blocs, callbacks monotones de 0 à 1",
         },
-        "cancellation": {"status": "not_supported", "note": "phase 04"},
+        "partials": {
+            "runs": partial_sample.runs,
+            "count": len(partials),
+            "maxPayloadKiB": round(max(partial_sizes) / 1024, 1),
+            "maxBuildMs": round(max(build_times), 3) if build_times else None,
+            "medianBuildMs": (
+                round(statistics.median(build_times), 3) if build_times else None
+            ),
+            "maxGapMs": round(max(partial_gaps), 3) if partial_gaps else None,
+            "medianGapMs": (
+                round(statistics.median(partial_gaps), 3) if partial_gaps else None
+            ),
+            "note": (
+                "l'écart entre partiels inclut le calcul du bloc courant, "
+                "pas seulement la construction du partiel"
+            ),
+        },
+        "convergence": {
+            "quality": partial_sample.quality,
+            "converged": partial_sample.convergence.converged,
+            "stability": partial_sample.convergence.stability,
+            "maxRelativeChange": partial_sample.convergence.max_relative_change,
+            "stableBlocks": partial_sample.convergence.stable_blocks,
+        },
+        "cancellation": {"status": "supported", **cancellation},
         "memory": {
             "maxRssMb": round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 1),
             "unit": "Mo (maxRSS du processus de bench)",
@@ -260,6 +392,26 @@ def main() -> int:
         f"({measurements['surfaceProxy15x15x200']['cells']} cellules)"
     )
     print(f"payload final     : {results['payload']['final5000KiB']} Kio")
+    partials = results["partials"]
+    print(
+        "partiels          : "
+        f"{partials['count']} messages, max {partials['maxPayloadKiB']} Kio, "
+        f"calcul max {partials['maxBuildMs']} ms, "
+        f"écart max {partials['maxGapMs']} ms"
+    )
+    cancellation = results["cancellation"]
+    print(
+        "annulation        : "
+        f"{cancellation['median']} ms (max {cancellation['max']} ms) "
+        f"après {cancellation['completedRuns'][0]} runs"
+    )
+    convergence = results["convergence"]
+    print(
+        "convergence       : "
+        f"{'oui' if convergence['converged'] else 'non'} "
+        f"(stabilité {convergence['stability']:.3f}, "
+        f"{convergence['stableBlocks']} blocs stables)"
+    )
     print(f"mémoire maxRSS    : {results['memory']['maxRssMb']} Mo")
     audit = results["auditObservations"]["valueIgnoredWhenDistributionSet"]
     print(

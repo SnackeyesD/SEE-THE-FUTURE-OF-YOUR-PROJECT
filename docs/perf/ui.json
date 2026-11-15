@@ -4,7 +4,7 @@
   "skipReason": "aucune infrastructure navigateur (Playwright + shim IPC déterministe) : la mesure fps/latence serait inventée. Créée en phase 08 (Vitest) puis 16 (Playwright).",
   "infrastructure": {
     "playwrightAvailable": false,
-    "distExists": false,
+    "distExists": true,
     "vizComponents": [
       "BarChart.tsx",
       "DivergingBars.tsx",
@@ -19,8 +19,8 @@
   "measurements": {
     "fpsWhileDragging": null,
     "chartUpdateMs": null,
-    "bundleBytes": null,
-    "bundleKiB": null
+    "bundleBytes": 1512876,
+    "bundleKiB": 1477.4
   },
   "plannedMetrics": [
     "fps médian pendant un glissement de curseur (cible 30–60 i/s)",

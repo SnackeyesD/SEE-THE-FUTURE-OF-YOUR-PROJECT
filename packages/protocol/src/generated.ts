@@ -190,6 +190,13 @@ export interface SensitivityEntry {
   contribution: number;
 }
 
+export interface ConvergenceState {
+  converged: boolean;
+  stability: number;
+  maxRelativeChange: number;
+  stableBlocks: number;
+}
+
 export interface BreakEven {
   monthlyFixedCosts: number;
   unitMargin: number;
@@ -214,6 +221,8 @@ export interface SimulationResult {
   sensitivity: SensitivityEntry[];
   breakEven: BreakEven;
   approximations?: string[] | null;
+  quality?: "draft" | "final" | null;
+  convergence?: ConvergenceState | null;
 }
 
 export interface SimulateParams {

@@ -1,7 +1,7 @@
 [project]
 name = "see-engine"
-version = "0.2.0"
-description = "Moteur de simulation déterministe de See The Future (phase 03)."
+version = "0.3.0"
+description = "Moteur de simulation déterministe de See The Future (phase 04)."
 requires-python = ">=3.11"
 dependencies = [
     "numpy>=2.1,<3",

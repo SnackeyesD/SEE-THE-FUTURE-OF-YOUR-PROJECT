@@ -10,6 +10,7 @@ from .run_sample import RunSample
 FiniteFloat = Annotated[float, Field(allow_inf_nan=False)]
 DistributionKind = Literal["normal", "lognormal", "triangular", "uniform", "poisson", "empirical"]
 ModelName = Literal["retail_depot"]
+Quality = Literal["draft", "final"]
 
 _KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 
@@ -231,6 +232,28 @@ class MonthlyAverages(CamelModel):
     values: list[MonthlyAverage]
 
 
+class ConvergenceState(CamelModel):
+    """Stabilité observée du calcul, jamais une garantie de précision.
+
+    ``stable_blocks`` compte les transitions de bloc consécutives dont la
+    variation relative est restée sous le seuil. ``stability`` est une valeur
+    d'affichage entre 0 (instable) et 1 (parfaitement stable sur le dernier
+    bloc) ; elle ne doit pas être présentée comme un pourcentage de précision.
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+        frozen=True,
+    )
+
+    converged: bool
+    stability: float = Field(ge=0.0, le=1.0)
+    max_relative_change: float = Field(ge=0.0)
+    stable_blocks: int = Field(ge=0)
+
+
 class SensitivityEntry(CamelModel):
     hypothesis: str
     correlation: float
@@ -261,6 +284,8 @@ class SimulationResult(CamelModel):
     sensitivity: list[SensitivityEntry]
     break_even: BreakEven
     approximations: list[str] | None = None
+    quality: Quality | None = None
+    convergence: ConvergenceState | None = None
 
     _run_sample: RunSample | None = PrivateAttr(default=None)
 
