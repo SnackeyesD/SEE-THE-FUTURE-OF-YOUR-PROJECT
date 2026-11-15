@@ -159,11 +159,11 @@ Trois couloirs peuvent avancer en parallèle après la phase 02 :
 | Stockage | pytest + fixtures de migration | `packages/storage/tests/` |
 | Sidecar | pytest + faux moteur | `apps/desktop/src-tauri/sidecar/tests/` |
 | Rust | `cargo test` | `apps/desktop/src-tauri/src/sidecar.rs` |
-| UI | **à introduire** : Vitest + Testing Library | `apps/desktop/src/**/*.test.tsx` |
+| UI | Vitest + Testing Library (introduits au durcissement de la phase 03, étendus aux phases 08/09) | `apps/desktop/src/**/*.test.tsx` |
 | E2E | Playwright en mode web + shim IPC déterministe | `apps/desktop/e2e/` |
 | Contrat | `protocol:check` + tests générés | `packages/protocol/test/` |
 
-> L'infrastructure UI/E2E n'existe pas encore : elle est créée en phase 08 (Vitest) puis 16 (Playwright). Ne pas attendre la fin pour tester les composants critiques.
+> L'infrastructure UI existe depuis le durcissement de la phase 03 (Vitest + Testing Library + jsdom, intégrée à `npm test`) ; Playwright E2E reste créé en phase 16. Ne pas attendre la fin pour tester les composants critiques.
 
 ### 5.4 Performance
 

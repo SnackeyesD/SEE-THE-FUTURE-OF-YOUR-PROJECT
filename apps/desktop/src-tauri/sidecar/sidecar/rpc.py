@@ -110,6 +110,7 @@ def simulate(params: dict[str, Any], context: RequestContext) -> dict[str, Any]:
 
     progress_callback = None
     if params.get("progress") is True:
+        # Notification JSON-RPC uniquement : ne jamais exposer ce nom dans MethodName.
         progress_callback = lambda fraction: context.notify(  # noqa: E731
             "simulate.progress", {"progress": round(fraction, 4)}
         )
@@ -118,6 +119,12 @@ def simulate(params: dict[str, Any], context: RequestContext) -> dict[str, Any]:
         result = run_simulation(scenario, config, progress=progress_callback)
     except EngineError as exc:
         raise RpcError(INVALID_PARAMS, str(exc)) from exc
+    except Exception as exc:
+        logger.exception("échec interne du moteur pendant simulate")
+        raise RpcError(
+            INTERNAL_ERROR,
+            "échec interne du moteur pendant la simulation; consultez les journaux du sidecar",
+        ) from exc
 
     return result.to_dict()
 

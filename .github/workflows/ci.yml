@@ -7,7 +7,11 @@ on:
 
 jobs:
   web:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,22 +26,50 @@ jobs:
       - run: npm run build:web
 
   python:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      # Le protocole est la source des types TS et Python : on vérifie sa
+      # génération sur les trois OS, même sans installer les dépendances Node.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run protocol:check
       - run: uv sync --project packages/engine
       - run: uv sync --project packages/storage
+      - run: uv sync --project packages/providers
+      - run: uv sync --project packages/agent-core
+      - run: uv sync --project packages/benchmarks
+      - run: uv sync --project packages/sandbox
       - run: uv sync --project apps/desktop/src-tauri/sidecar
       - run: uv run --project packages/engine ruff check packages/engine
       - run: uv run --project packages/engine pytest packages/engine/tests
       - run: uv run --project packages/storage ruff check packages/storage
       - run: uv run --project packages/storage pytest packages/storage/tests
+      - run: uv run --project packages/providers ruff check packages/providers
+      - run: uv run --project packages/providers pytest packages/providers/tests
+      - run: uv run --project packages/agent-core ruff check packages/agent-core
+      - run: uv run --project packages/agent-core pytest packages/agent-core/tests
+      - run: uv run --project packages/benchmarks ruff check packages/benchmarks data/benchmark-packs/tools
+      - run: uv run --project packages/benchmarks pytest packages/benchmarks/tests
+      - run: uv run --project packages/sandbox ruff check packages/sandbox
+      - run: uv run --project packages/sandbox pytest packages/sandbox/tests
       - run: uv run --project apps/desktop/src-tauri/sidecar ruff check apps/desktop/src-tauri/sidecar
       - run: uv run --project apps/desktop/src-tauri/sidecar pytest apps/desktop/src-tauri/sidecar/tests
 
   rust:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,6 +80,13 @@ jobs:
       - run: npm run protocol:check
       - run: npm run build:web
       - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
       - run: uv sync --project apps/desktop/src-tauri/sidecar
+      - name: Install Tauri system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml

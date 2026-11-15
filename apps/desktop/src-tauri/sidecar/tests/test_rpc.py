@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import queue
 import subprocess
@@ -224,6 +225,29 @@ def test_simulate_rejects_invalid_scenario(sidecar: SidecarProcess) -> None:
     response = sidecar.call("simulate", {"scenario": {"name": "Sans hypothèses"}})
     assert response["error"]["code"] == -32602
     assert "requise" in response["error"]["message"]
+
+
+def test_simulate_maps_unexpected_engine_error_to_internal_error(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    import engine
+
+    from sidecar import rpc
+
+    def explode(*_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("secret interne à ne pas exposer")
+
+    monkeypatch.setattr(engine, "simulate", explode)
+    context = rpc.RequestContext(lambda _method, _params: None)
+
+    with caplog.at_level(logging.ERROR, logger="see.sidecar"):
+        with pytest.raises(rpc.RpcError) as caught:
+            rpc.simulate({"scenario": SIMULATION_SCENARIO, "config": {"runs": 1}}, context)
+
+    assert caught.value.code == rpc.INTERNAL_ERROR
+    assert "simulation" in caught.value.message
+    assert "secret interne" not in caught.value.message
+    assert any(record.exc_info for record in caplog.records)
 
 
 def test_simulate_emits_progress_notifications(sidecar: SidecarProcess) -> None:

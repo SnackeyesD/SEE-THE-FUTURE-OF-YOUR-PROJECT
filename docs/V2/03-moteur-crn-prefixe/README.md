@@ -222,3 +222,19 @@ Fichiers principaux :
 
 Commandes de validation : `npm run engine:test` (96 tests), `npm run engine:lint`,
 `npm run protocol:check`, `npm run bench`.
+
+## 12. Durcissement après revue senior
+
+La revue a demandé de rendre explicites les garde-fous qui étaient implicites :
+
+| Point | Mise en œuvre |
+|---|---|
+| Couverture CI multi-OS | Jobs `web`, `python` et `rust` en matrice `ubuntu-latest`, `macos-latest`, `windows-latest`, avec `fail-fast: false`. |
+| Tests Python complets | `providers`, `agent-core`, `benchmarks` et `sandbox` sont sync, lint et testés en CI, en plus de `engine`, `storage` et `sidecar`. |
+| Tests UI | Vitest + Testing Library + jsdom dans `apps/desktop` ; parcours couverts : validation et lancement de simulation, résultats et contrôle de narration, ouverture d'un projet et passage simulation → résultats, remontée d'erreur moteur. |
+| Protocole | `npm run protocol:check` tourne dans les jobs web **et** Python ; `CLAUDE.md` rappelle que tout changement de schéma exige `protocol:generate` et le commit des fichiers générés. |
+| Erreurs sidecar | `simulate()` journalise le traceback complet via `logger.exception` et renvoie `INTERNAL_ERROR` avec un message actionnable, sans exposer le détail interne. Un test vérifie le code, le message et la présence du traceback. |
+| Notifications | `simulate.progress` quitte `MethodName` et rejoint `NotificationName` ; un commentaire dans `rpc.py` rappelle qu'il s'agit d'une notification JSON-RPC sans `id`. |
+| Shell Rust | `cargo test` tourne sur les trois OS avec la toolchain stable ; les dépendances système Tauri sont installées sur Linux. Vérifié localement sur Linux : 5 tests passent (`keychain`, `sidecar`). Windows reste couvert par le job CI, mais ne peut pas être exécuté sur la machine de développement Linux. |
+
+Commandes ajoutées : `npm test` (protocole + Vitest), `npm run test -w @see/desktop`.

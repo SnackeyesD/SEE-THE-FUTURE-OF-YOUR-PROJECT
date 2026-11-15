@@ -45,14 +45,13 @@
       }
     },
     "MethodName": {
-      "description": "Méthodes exposées par le sidecar.",
+      "description": "Méthodes requêtables exposées par le sidecar. Les notifications serveur (ex. progression) sont déclarées séparément dans NotificationName.",
       "enum": [
         "ping",
         "health",
         "log",
         "shutdown",
         "simulate",
-        "simulate.progress",
         "project.list",
         "project.create",
         "project.open",
@@ -99,6 +98,12 @@
         "benchmark.lookup",
         "benchmark.pack.list",
         "benchmark.pack.import"
+      ]
+    },
+    "NotificationName": {
+      "description": "Notifications JSON-RPC 2.0 envoyées par le sidecar sans identifiant de requête. Elles ne doivent jamais être appelées comme méthodes.",
+      "enum": [
+        "simulate.progress"
       ]
     },
     "PingParams": {

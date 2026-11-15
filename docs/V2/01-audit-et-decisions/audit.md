@@ -208,7 +208,7 @@ Les trois constats les plus structurants :
 | E4 | `simulate()` ne vérifie pas de jeton d'annulation ; aucun type `SimulationCancelled`. | `engine/runner.py:26-95`, absence dans `engine/errors.py`. | Phase 04. |
 | E5 | Le sidecar garde un timeout de 600 s pour la simulation ; une annulation ne peut pas interrompre l'attente Rust. | `src/sidecar.rs:15-18`, `:236-248`. | Phase 06. |
 | E6 | `project_service.simulate` crée un scénario si `raw_scenario` est fourni, même pour un simple run. | `sidecar/project_service.py:206-214`. | Phase 06/07 : clarifier création vs exécution. |
-| E7 | L'UI n'a pas de tests de composants ni d'infrastructure navigateur. | `apps/desktop/package.json`. | Phase 08 (Vitest), 16 (Playwright). |
+| E7 | L'UI n'a pas de tests de composants ni d'infrastructure navigateur. | `apps/desktop/package.json`. | Phase 03 (durcissement : Vitest), 16 (Playwright). |
 | E8 | La narration est vérifiée côté client seulement ; le service sidecar n'a pas de validateur. | `apps/desktop/src/lib/narration.ts`, absence dans `sidecar/`. | Phase 12. |
 | E9 | Les benchmarks existent mais ne sont pas exposés par paramètre dans l'UI. | `data/benchmark-packs/packs/`, `benchmark_service`. | Phase 09. |
 | E10 | Le `Mutex` Tauri est tenu pour toutes les commandes, y compris les lectures rapides. | `src/lib.rs:172-184` et commandes voisines. | Phase 06. |

@@ -39,7 +39,8 @@ test("the schema declares a version and definitions", () => {
   }
 
   assert.ok(schema.$defs.MethodName.enum.includes("simulate"));
-  assert.ok(schema.$defs.MethodName.enum.includes("simulate.progress"));
+  assert.ok(!schema.$defs.MethodName.enum.includes("simulate.progress"));
+  assert.ok(schema.$defs.NotificationName.enum.includes("simulate.progress"));
 });
 
 test("generated files expose every definition", () => {

@@ -170,6 +170,6 @@ La spec V3 a été écrite sans audit du code. Plusieurs affirmations sont fauss
 3. **Périmètre janvier** : signer l'ordre de sacrifice du plan §7 (3D et mode pitch en premier).
 4. **Projet d'exemple** : valider le secteur (Bangui ou Brazzaville) et le sourcing des benchmarks avant la phase 15.
 5. **Signature Windows** : choisir OV / EV / Azure et lancer la vérification d'identité (phase 01–02), même si la signature est appliquée en phase 16.
-6. **Mesure UI** : outiller Vitest + navigateur en phase 08, Playwright en phase 16.
+6. **Mesure UI** : Vitest + Testing Library ont été outillés au durcissement de la phase 03 ; Playwright reste en phase 16.
 
 Aucune modification de comportement fonctionnel n'a été faite : `engine:test` (52 tests) et `protocol:check` sont verts, le moteur et le protocole sont inchangés.

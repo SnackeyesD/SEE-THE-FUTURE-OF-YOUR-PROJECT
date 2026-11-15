@@ -23,7 +23,7 @@
 - **3D** : Three.js + `@react-three/fiber`, chargement paresseux, détection WebGL, repli heatmap 2D obligatoire. Aucune information exclusive à la 3D (ADR 0013).
 - **État UI** : Zustand + commandes inversibles pour les entrées. Les **résultats ne sont pas annulables** : undo restaure les entrées et invalide le run courant (ADR 0014).
 - **Pas de nouvelle dépendance de calcul dans le moteur** : numpy et pydantic uniquement. Les lois sont inversées explicitement, sans scipy.
-- **Protocole** : `1.8.0` (métriques), `1.9.0` (événements), `1.10.0` (IPC de flux), `1.11.0` (surface/goal seek), `1.12.0` (provenance). Un seul propriétaire du schéma à la fois ; `protocol:generate` puis `protocol:check` obligatoires.
+- **Protocole** : `1.8.0` (métriques), `1.9.0` (événements), `1.10.0` (IPC de flux), `1.11.0` (surface/goal seek), `1.12.0` (provenance). Un seul propriétaire du schéma à la fois ; `protocol:generate` puis `protocol:check` obligatoires. `MethodName` ne contient que les méthodes requêtables ; les notifications serveur (ex. `simulate.progress`) vivent dans `NotificationName`.
 - **Persistance** : migration `0006` pour branches/versions/qualité ; toute migration destructive exige un test sur base réelle et une sauvegarde.
 - **Explication LLM** : payload de provenance minimal, validateur numérique côté sidecar, réparation limitée, repli déterministe hors ligne. Aucune clé, aucun chemin, aucun projet entier dans le payload, les logs ou le cache (ADR 0016).
 - **Performance** : toute régression > 20 % sur un budget de `docs/perf/baseline.md` bloque le merge. Mesurer sur la machine de référence modeste, pas sur un poste de développement rapide.
@@ -39,6 +39,8 @@ npm run dev
 npm run dev:web
 npm run typecheck
 npm run protocol:check
+npm test
+npm run test -w @see/desktop
 npm run sidecar:test
 npm run sidecar:lint
 npm run engine:sync
@@ -56,6 +58,8 @@ npm run agent:lint
 npm run benchmarks:sync
 npm run benchmarks:test
 npm run benchmarks:lint
+npm run sandbox:test
+npm run sandbox:lint
 npm run bench
 npm run bench:engine
 npm run bench:sidecar
@@ -83,4 +87,6 @@ npm run bench:ui
 - TypeScript strict ; Python typé ; Rust `clippy` sans avertissement.
 - Ne pas ajouter de commentaires évidents. Documenter les décisions en ADR.
 - Toute nouvelle commande IPC commence par son schéma dans `packages/protocol`.
+- **Fichiers générés** : tout changement de `packages/protocol/schema/messages.schema.json` exige `npm run protocol:generate`, puis le commit des fichiers générés (`packages/protocol/src/generated.ts` et `apps/desktop/src-tauri/sidecar/sidecar/protocol_models.py`). Ne jamais les éditer à la main. La CI exécute `npm run protocol:check` dans les jobs web et Python : un schéma modifié sans régénération bloque le merge.
+- **Tests UI** : les parcours critiques (simulation, résultats, ouverture de projet) sont couverts par Vitest + Testing Library + jsdom dans `apps/desktop/src/**/*.test.tsx`. `npm test` exécute ces tests avec les tests du protocole.
 - Ne pas committer de secrets, de bases locales, de `.simproj` ni de builds.

@@ -46,7 +46,6 @@ MethodName = Literal[
     "log",
     "shutdown",
     "simulate",
-    "simulate.progress",
     "project.list",
     "project.create",
     "project.open",
@@ -93,6 +92,11 @@ MethodName = Literal[
     "benchmark.lookup",
     "benchmark.pack.list",
     "benchmark.pack.import",
+]
+
+
+NotificationName = Literal[
+    "simulate.progress",
 ]
 
 

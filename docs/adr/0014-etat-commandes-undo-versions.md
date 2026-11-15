@@ -62,7 +62,7 @@
 
 ## Conséquences
 
-- Vitest + Testing Library + jsdom sont ajoutés en phase 08 et intégrés à `npm test`.
+- Vitest + Testing Library + jsdom ont été introduits dès le durcissement de la phase 03 et sont intégrés à `npm test` ; Playwright reste prévu en phase 16.
 - Le store expose des actions explicites ; aucun composant ne parle directement au transport IPC.
 - `useLiveSimulation` : un seul abonnement, `draft` throttlé à 50 ms pendant le geste, `final` au relâchement ou après 400 ms, annulation du run actif avant chaque `start`.
 - Un événement de run non actif ou avec `seq <= lastSeq` est ignoré.

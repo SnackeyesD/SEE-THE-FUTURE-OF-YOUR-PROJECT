@@ -9,6 +9,19 @@ from providers import ChatMessage, ToolCall, ToolDefinition
 from agent_core import AgentLoop, ModelResponse, ToolContext, default_registry
 from agent_core.eval import evaluate_case, load_cases
 
+
+def _numeric_values(value: Any) -> set[float]:
+    if isinstance(value, bool):
+        return set()
+    if isinstance(value, (int, float)):
+        return {float(value)}
+    if isinstance(value, dict):
+        return {item for nested in value.values() for item in _numeric_values(nested)}
+    if isinstance(value, (list, tuple)):
+        return {item for nested in value for item in _numeric_values(nested)}
+    return set()
+
+
 SCENARIO = {
     "name": "Évaluation",
     "currency": "XOF",
@@ -90,7 +103,7 @@ async def _run_case(case: Any, seed: int) -> Any:
         context=context,
     )
     tools_seen = [event.tool for event in result.tool_events]
-    allowed = {float(value) for value in final_result.values()}
+    allowed = _numeric_values(final_result)
     evaluation = evaluate_case(
         case,
         brief=context.brief,
