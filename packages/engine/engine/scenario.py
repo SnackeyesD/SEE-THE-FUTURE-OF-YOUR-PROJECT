@@ -1,133 +1,30 @@
 from __future__ import annotations
 
 import re
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
+from pydantic import ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
+from .events import ScenarioEvent
 from .run_sample import RunSample
+from .schema import BenchmarkProvenance as BenchmarkProvenance
+from .schema import CamelModel, FiniteFloat, Hypothesis, to_camel
+from .schema import DistributionSpec as DistributionSpec
 
-FiniteFloat = Annotated[float, Field(allow_inf_nan=False)]
-DistributionKind = Literal["normal", "lognormal", "triangular", "uniform", "poisson", "empirical"]
 ModelName = Literal["retail_depot"]
 Quality = Literal["draft", "final"]
 
 _KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 
 
-def to_camel(name: str) -> str:
-    head, *tail = name.split("_")
-    return head + "".join(part[:1].upper() + part[1:] for part in tail)
-
-
-class CamelModel(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        extra="forbid",
-    )
-
-
-class DistributionSpec(CamelModel):
-    kind: DistributionKind
-    mean: FiniteFloat | None = None
-    std: FiniteFloat | None = None
-    sigma: FiniteFloat | None = None
-    low: FiniteFloat | None = None
-    mode: FiniteFloat | None = None
-    high: FiniteFloat | None = None
-    values: list[FiniteFloat] | None = None
-    weights: list[FiniteFloat] | None = None
-
-    @model_validator(mode="after")
-    def _check_parameters(self) -> DistributionSpec:
-        kind = self.kind
-        if kind == "normal":
-            if self.mean is None or self.std is None:
-                raise ValueError("distribution normale: 'mean' et 'std' sont requis")
-            if self.std <= 0:
-                raise ValueError("distribution normale: 'std' doit être strictement positif")
-        elif kind == "lognormal":
-            if self.mean is None or self.sigma is None:
-                raise ValueError("distribution lognormale: 'mean' et 'sigma' sont requis")
-            if self.sigma <= 0:
-                raise ValueError("distribution lognormale: 'sigma' doit être strictement positif")
-        elif kind == "triangular":
-            if self.low is None or self.mode is None or self.high is None:
-                raise ValueError("distribution triangulaire: 'low', 'mode' et 'high' sont requis")
-            if not self.low <= self.mode <= self.high:
-                raise ValueError("distribution triangulaire: low <= mode <= high est requis")
-            if self.low == self.high:
-                raise ValueError("distribution triangulaire: low et high doivent différer")
-        elif kind == "uniform":
-            if self.low is None or self.high is None:
-                raise ValueError("distribution uniforme: 'low' et 'high' sont requis")
-            if self.low >= self.high:
-                raise ValueError(
-                    "distribution uniforme: low doit être strictement inférieur à high"
-                )
-        elif kind == "poisson":
-            if self.mean is None:
-                raise ValueError("distribution de Poisson: 'mean' est requis")
-            if self.mean <= 0:
-                raise ValueError("distribution de Poisson: 'mean' doit être strictement positif")
-        elif kind == "empirical":
-            if not self.values:
-                raise ValueError("distribution empirique: 'values' doit être non vide")
-            if self.weights is not None:
-                if len(self.weights) != len(self.values):
-                    raise ValueError("distribution empirique: 'weights' doit avoir la même taille")
-                if any(weight < 0 for weight in self.weights):
-                    raise ValueError("distribution empirique: les poids doivent être positifs")
-                if sum(self.weights) <= 0:
-                    raise ValueError(
-                        "distribution empirique: la somme des poids doit être positive"
-                    )
-        return self
-
-
-class BenchmarkProvenance(CamelModel):
-    kind: Literal["benchmark", "user"] = "user"
-    label: str = Field(min_length=1, max_length=300)
-    indicator: str | None = None
-    source: str | None = None
-    source_url: str | None = None
-    source_date: str | None = None
-    reliability: Literal["official", "study", "field", "estimate"] | None = None
-    freshness: Literal["fresh", "aging", "stale"] | None = None
-    pack_id: str | None = None
-    pack_version: str | None = None
-    pack_published_at: str | None = None
-    key_id: str | None = None
-    checksum: str | None = None
-    fallback: Literal["none", "country", "regional", "global"] | None = None
-    conflicts: int | None = Field(default=None, ge=0)
-
-
-class Hypothesis(CamelModel):
-    value: FiniteFloat
-    distribution: DistributionSpec | None = None
-    source: str | None = None
-    confidence: FiniteFloat | None = Field(default=None, ge=0, le=1)
-    min: FiniteFloat | None = None
-    max: FiniteFloat | None = None
-    description: str | None = None
-    provenance: BenchmarkProvenance | None = None
-
-    @model_validator(mode="after")
-    def _check_bounds(self) -> Hypothesis:
-        if self.min is not None and self.max is not None and self.min > self.max:
-            raise ValueError("hypothèse: 'min' doit être inférieur ou égal à 'max'")
-        return self
-
-
 class Scenario(CamelModel):
-    schema_version: Literal["1.0.0"] = "1.0.0"
+    schema_version: Literal["1.0.0", "1.1.0"] = "1.0.0"
     name: str = Field(min_length=1, max_length=200)
     model: ModelName = "retail_depot"
     currency: str = Field(default="XOF", min_length=1, max_length=8)
     horizon_months: int = Field(default=12, ge=1, le=120)
     assumptions: dict[str, Hypothesis] = Field(default_factory=dict)
+    events: list[ScenarioEvent] = Field(default_factory=list)
     seasonality: list[FiniteFloat] | None = None
     notes: str | None = None
 
@@ -147,6 +44,32 @@ class Scenario(CamelModel):
             raise ValueError("'seasonality' doit contenir exactement 12 valeurs mensuelles")
         if any(factor <= 0 for factor in self.seasonality):
             raise ValueError("'seasonality' doit contenir des facteurs strictement positifs")
+        return self
+
+    @model_validator(mode="after")
+    def _check_events(self) -> Scenario:
+        """Valide l'unicité et la fenêtre des événements, puis versionne.
+
+        Un scénario sans événement reste en ``1.0.0`` ; dès qu'il en contient,
+        le schéma émis passe en ``1.1.0`` sans rétrograder un scénario déjà
+        versionné en ``1.1.0``.
+        """
+
+        if not self.events:
+            return self
+        seen: set[str] = set()
+        for event in self.events:
+            if event.id in seen:
+                raise ValueError(f"id d'événement dupliqué: {event.id!r}")
+            seen.add(event.id)
+            last_month = event.start_month + event.duration_months - 1
+            if last_month > self.horizon_months:
+                raise ValueError(
+                    f"événement {event.id!r}: la fenêtre se termine au mois "
+                    f"{last_month}, au-delà de horizonMonths={self.horizon_months}"
+                )
+        if self.schema_version == "1.0.0":
+            self.schema_version = "1.1.0"
         return self
 
 

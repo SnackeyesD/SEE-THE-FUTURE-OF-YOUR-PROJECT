@@ -1,9 +1,9 @@
 // AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 // Source: packages/protocol/schema/messages.schema.json
-// Protocol version: 1.8.0
+// Protocol version: 1.9.0
 // Regenerate with: npm run protocol:generate
 
-export const PROTOCOL_VERSION = "1.8.0";
+export const PROTOCOL_VERSION = "1.9.0";
 
 export type RequestId = number | string;
 
@@ -91,13 +91,26 @@ export interface Hypothesis {
   provenance?: BenchmarkProvenance;
 }
 
+export interface ScenarioEvent {
+  id: string;
+  type: "supplier_price_rise" | "supply_disruption" | "competitor_entry" | "power_outage" | "fx_shock" | "demand_peak" | "key_customer_loss";
+  startMonth: number;
+  durationMonths: number;
+  target: string;
+  mode?: "multiplicative" | "additive";
+  magnitude: DistributionSpec;
+  probability?: number;
+  enabled?: boolean;
+}
+
 export interface Scenario {
-  schemaVersion?: "1.0.0";
+  schemaVersion?: "1.0.0" | "1.1.0";
   name: string;
   model?: "retail_depot";
   currency?: string;
   horizonMonths?: number;
   assumptions?: Record<string, Hypothesis>;
+  events?: ScenarioEvent[];
   seasonality?: number[] | null;
   notes?: string;
 }

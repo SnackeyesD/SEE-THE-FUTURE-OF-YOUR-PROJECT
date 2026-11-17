@@ -121,10 +121,121 @@ stabilité observée, jamais une garantie de précision.
 `SimulationResult` expose `quality` et `convergence` en champs optionnels du
 protocole : les résultats stockés avant la phase 04 restent lisibles.
 
+## Événements et chocs
+
+Un **événement** modifie une cible mensuelle du modèle pendant une fenêtre
+bornée, pour une fraction des runs. Il est daté, probabiliste et compatible avec
+les tirages communs : ajouter, désactiver ou retirer un événement ne change
+jamais les tirages des hypothèses ni du bruit.
+
+```python
+from engine import Scenario, SimulationConfig, simulate
+
+scenario = Scenario.model_validate({
+    "name": "Choc fournisseur",
+    "horizonMonths": 12,
+    "assumptions": {"unit_price": {"value": 500}, "unit_cost": {"value": 320}},
+    "events": [{
+        "id": "ev1",
+        "type": "supplier_price_rise",
+        "startMonth": 5,          # 1-based, comme l'UI
+        "durationMonths": 3,      # inclusif : mois 5, 6 et 7
+        "target": "unit_cost",
+        "mode": "multiplicative",
+        "magnitude": {"kind": "triangular", "low": 1.05, "mode": 1.15, "high": 1.30},
+        "probability": 0.6,
+    }],
+})
+result = simulate(scenario, SimulationConfig(runs=5_000, seed=42))
+```
+
+### Sémantique
+
+- `startMonth` est **1-based** dans le JSON, l'API et l'UI ; l'interne convertit
+  en `startMonth - 1`.
+- `durationMonths` est **inclusif** : 3 mois à partir du mois 5 couvrent 5, 6, 7.
+- La fenêtre doit tenir dans l'horizon
+  (`startMonth + durationMonths - 1 ≤ horizonMonths`) : un dépassement est
+  refusé, jamais tronqué silencieusement.
+- `probability` et `magnitude` sont tirées **une fois par run**, jamais par mois.
+  `p = 1` est toujours actif, `p = 0` jamais.
+- `enabled = false` ne consomme **aucun** tirage et n'apparaît pas dans les
+  modificateurs.
+- Les `id` sont uniques dans un scénario et servent de nom de slot : renommer un
+  événement change ses tirages (les autres restent stables).
+- Un scénario sans événement reste en `schemaVersion` `1.0.0` ; dès qu'il en
+  contient, le schéma émis passe en `1.1.0`. Les deux versions restent lisibles.
+
+### Catalogue
+
+Le catalogue est une donnée exposée par `engine.events.EVENT_CATALOG`, prête
+pour l'UI de la phase 10. Chaque type propose une cible, un mode et une
+magnitude par défaut prudente ; la cible reste bornée par `allowed_targets`.
+
+| Type | Cible par défaut | Mode | Magnitude par défaut | Effet attendu |
+|---|---|---|---|---|
+| `supplier_price_rise` | `unit_cost` | multiplicatif | triangulaire 1,05–1,15–1,30 | coût d'achat ↑ |
+| `supply_disruption` | `reorder_lead_time_months` | additif | triangulaire 1–2–4 mois | délai ↑ |
+| `competitor_entry` | `demand_mean_monthly` | multiplicatif | triangulaire 0,70–0,85–0,95 | demande ↓ |
+| `power_outage` | `loss_rate` | additif | uniforme 0,01–0,05 | pertes ↑ |
+| `fx_shock` | `logistics_cost_per_unit` | multiplicatif | triangulaire 1,03–1,08–1,15 | logistique ↑ |
+| `demand_peak` | `demand_mean_monthly` | multiplicatif | triangulaire 1,10–1,30–1,60 | demande ↑ |
+| `key_customer_loss` | `demand_mean_monthly` | multiplicatif | triangulaire 0,60–0,75–0,90 | demande ↓ |
+
+Cibles autorisées par type :
+
+- `supplier_price_rise` : `unit_cost`, `logistics_cost_per_unit` ;
+- `supply_disruption` : `reorder_lead_time_months`, `loss_rate` ;
+- `competitor_entry`, `demand_peak`, `key_customer_loss` : `demand_mean_monthly` ;
+- `power_outage` : `loss_rate`, `fixed_costs_monthly` ;
+- `fx_shock` : `logistics_cost_per_unit`, `unit_cost`.
+
+Une magnitude **multiplicative** doit être strictement positive : une loi
+normale ou de Poisson (qui peut atteindre zéro) est refusée, car elle rendrait un
+coût ou une demande négatifs. Une magnitude **additive** peut être signée ; le
+résultat est ramené dans le domaine de la cible (`loss_rate` ∈ [0, 1], délai ≤ 24
+mois, autres cibles ≥ 0).
+
+### Calcul
+
+Pour un run et un mois, la cible vaut `valeur × facteur + décalage`. Les facteurs
+partent à `1.0` et les décalages à `0.0` ; chaque événement actif multiplie ou
+ajoute sa magnitude sur les mois de sa fenêtre. Décomposer les deux évite qu'un
+effet additif et un effet multiplicatif sur la même cible ne s'écrasent.
+
+Le modèle applique ces modificateurs à `unit_cost`,
+`logistics_cost_per_unit`, `fixed_costs_monthly`, `demand_mean_monthly`,
+`loss_rate` et `reorder_lead_time_months`. Pour ce dernier, la profondeur du
+pipeline est recalculée comme le **maximum sur tout l'horizon**, jamais une
+moyenne.
+
+Sans événement actif, aucun modificateur n'est construit : le chemin rapide est
+identique au bit près à la phase 04 (test dédié).
+
+### Tirages et mémoire
+
+Chaque événement actif possède deux slots dédiés, `event:<id>:active` et
+`event:<id>:magnitude`, indépendants des hypothèses. L'occurrence et la
+magnitude (deux scalaires par run) sont tirées une fois pour tous les runs avant
+la boucle de blocs ; les tables de modificateurs, elles, sont construites bloc
+par bloc.
+
+Mesure sur la machine de référence modeste (2026-11-17, `final` 5 000 × 36) :
+
+| Cas | Durée | Surcoût |
+|---|---|---|
+| Sans événement | ≈ 133 ms | — |
+| 7 événements du catalogue, `p = 0.5` | ≈ 151 ms | **≈ +14 %** (13,6–14,8 % selon les passes) |
+
+La cible de la phase 05 (< 15 %) est tenue ; le test de performance accepte une
+marge de bruit de 25 ms sur cette machine à deux cœurs.
+
 ## Schéma d'entrée
 
-- `Scenario` : `schemaVersion`, `name`, `model`, `currency`, `horizonMonths`,
-  `assumptions`, `seasonality`, `notes`.
+- `Scenario` : `schemaVersion` (`1.0.0` ou `1.1.0`), `name`, `model`, `currency`,
+  `horizonMonths`, `assumptions`, `events`, `seasonality`, `notes`.
+- `ScenarioEvent` : `id`, `type`, `startMonth`, `durationMonths`, `target`,
+  `mode`, `magnitude`, `probability`, `enabled`.
 - `Hypothesis` : valeur nominale, distribution optionnelle, provenance, confiance,
   bornes `min`/`max`.
 - `DistributionSpec` : `normal`, `lognormal`, `triangular`, `uniform`, `poisson`,
@@ -247,7 +358,8 @@ déterministe. Deux tirages de base par slot :
 |---|---|
 | `hyp:<clé>` | une valeur par run pour chaque hypothèse résolue |
 | `noise` | un `Z` de forme `(runs, horizon)` |
-| `event:<id>:active`, `event:<id>:magnitude` | réservés à la phase 05 |
+| `event:<id>:active` | un uniforme par run : occurrence de l'événement |
+| `event:<id>:magnitude` | la magnitude tirée une fois par run |
 
 L'identifiant d'un slot est `BLAKE2b(nom, digest_size=8)` interprété en entier 64 bits non
 signé. Ajouter, renommer ou réordonner un slot ne décale donc jamais les tirages des autres.

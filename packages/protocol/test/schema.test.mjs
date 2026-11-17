@@ -31,6 +31,7 @@ test("the schema declares a version and definitions", () => {
     "HealthResult",
     "SidecarStatus",
     "Scenario",
+    "ScenarioEvent",
     "SimulationConfig",
     "SimulateParams",
     "SimulationResult",
@@ -41,6 +42,11 @@ test("the schema declares a version and definitions", () => {
   assert.ok(schema.$defs.MethodName.enum.includes("simulate"));
   assert.ok(!schema.$defs.MethodName.enum.includes("simulate.progress"));
   assert.ok(schema.$defs.NotificationName.enum.includes("simulate.progress"));
+
+  const scenario = schema.$defs.Scenario;
+  assert.deepEqual(scenario.properties.schemaVersion.enum, ["1.0.0", "1.1.0"]);
+  assert.equal(scenario.properties.events.items.$ref, "#/$defs/ScenarioEvent");
+  assert.equal(schema.$defs.ScenarioEvent.properties.magnitude.$ref, "#/$defs/DistributionSpec");
 });
 
 test("generated files expose every definition", () => {

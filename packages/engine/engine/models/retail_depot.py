@@ -5,6 +5,7 @@ from collections.abc import Mapping
 import numpy as np
 
 from ..errors import EngineError
+from ..events import EventModifiers
 from ..scenario import Hypothesis, Scenario
 from .base import BatchResult, InputSpec
 
@@ -129,6 +130,7 @@ class RetailDepotModel:
         inputs: Mapping[str, np.ndarray],
         noise: np.ndarray,
         seasonality: np.ndarray,
+        modifiers: EventModifiers | None = None,
     ) -> BatchResult:
         run_count, horizon = noise.shape
         if run_count == 0:
@@ -145,10 +147,45 @@ class RetailDepotModel:
         lead_time = inputs["reorder_lead_time_months"]
         tax_rate = inputs["tax_rate"]
 
+        factors = modifiers.factors if modifiers is not None else {}
+        offsets = modifiers.offsets if modifiers is not None else {}
+
+        def prepare(base: np.ndarray, target: str) -> np.ndarray | None:
+            """Prépare ``base × facteur + décalage`` pour toute la durée.
+
+            ``None`` signifie « aucun modificateur » : le tableau d'origine
+            reste alors utilisé tel quel, ce qui garde le chemin sans événement
+            identique au bit près. Les matrices sont calculées une fois par lot,
+            pas une fois par mois.
+            """
+
+            factor = factors.get(target)
+            offset = offsets.get(target)
+            if factor is None and offset is None:
+                return None
+            matrix = base[:, None] if factor is None else base[:, None] * factor
+            if offset is not None:
+                matrix = matrix + offset
+            # Transposée pour que ``matrix[month]`` soit un vecteur contigu :
+            # les opérations mensuelles du modèle restent séquentielles.
+            return matrix.T
+
+        cost_matrix = prepare(cost, "unit_cost")
+        fixed_matrix = prepare(fixed, "fixed_costs_monthly")
+        loss_matrix = prepare(loss_rate, "loss_rate")
+        demand_matrix = prepare(demand_mean, "demand_mean_monthly")
+        logistics_matrix = prepare(logistics_cost, "logistics_cost_per_unit")
+        lead_matrix = prepare(lead_time, "reorder_lead_time_months")
+
         sigma = np.sqrt(np.log1p(demand_cv**2))
         seasonal_series = seasonality[np.arange(horizon) % seasonality.shape[0]]
 
-        max_lead = max(1, int(np.rint(lead_time).max(initial=1.0)))
+        # Le délai peut varier par mois : la profondeur du pipeline dépend du
+        # maximum sur l'horizon, jamais d'une valeur moyenne.
+        if lead_matrix is None:
+            max_lead = max(1, int(np.rint(lead_time).max(initial=1.0)))
+        else:
+            max_lead = max(1, int(np.rint(float(lead_matrix.max()))))
         pipeline = np.zeros((run_count, max_lead + 1), dtype=np.float64)
         run_indices = np.arange(run_count)
 
@@ -167,17 +204,29 @@ class RetailDepotModel:
         cash_monthly = np.empty((run_count, horizon), dtype=np.float64)
 
         for month in range(horizon):
+            cost_month = cost if cost_matrix is None else cost_matrix[month]
+            fixed_month = fixed if fixed_matrix is None else fixed_matrix[month]
+            loss_month = loss_rate if loss_matrix is None else loss_matrix[month]
+            demand_base = (
+                demand_mean if demand_matrix is None else demand_matrix[month]
+            )
+            logistics_month = (
+                logistics_cost
+                if logistics_matrix is None
+                else logistics_matrix[month]
+            )
+
             pipeline[:, :-1] = pipeline[:, 1:].copy()
             pipeline[:, -1] = 0.0
             arrivals = pipeline[:, 0].copy()
 
             stock = stock + arrivals
-            lost = stock * loss_rate
+            lost = stock * loss_month
             available = stock - lost
             stock = available
 
             seasonal = seasonal_series[month]
-            demand = demand_mean * seasonal * np.exp(
+            demand = demand_base * seasonal * np.exp(
                 sigma * noise[:, month] - 0.5 * sigma**2
             )
             demand = np.maximum(demand, 0.0)
@@ -186,14 +235,14 @@ class RetailDepotModel:
             stock_end = available - sold
 
             revenue = sold * price
-            cogs = sold * cost
-            logistics = sold * logistics_cost
-            loss_cost = lost * cost
-            taxable = revenue - cogs - logistics - fixed - loss_cost
+            cogs = sold * cost_month
+            logistics = sold * logistics_month
+            loss_cost = lost * cost_month
+            taxable = revenue - cogs - logistics - fixed_month - loss_cost
             tax = np.maximum(taxable, 0.0) * tax_rate
             net = taxable - tax
 
-            cash = cash + revenue - arrivals * cost - logistics - fixed - tax
+            cash = cash + revenue - arrivals * cost_month - logistics - fixed_month - tax
             stock = stock_end
 
             revenue_monthly[:, month] = revenue
@@ -204,15 +253,17 @@ class RetailDepotModel:
             stockout_monthly[:, month] = stockout.astype(np.float64)
             lost_monthly[:, month] = lost
             tax_monthly[:, month] = tax
-            costs_monthly[:, month] = cogs + logistics + fixed + loss_cost + tax
+            costs_monthly[:, month] = cogs + logistics + fixed_month + loss_cost + tax
             cash_monthly[:, month] = cash
 
-            target = demand_mean * seasonal * target_stock_months
+            target = demand_base * seasonal * target_stock_months
             order_quantity = np.maximum(target - stock_end, 0.0)
-            delay = np.clip(np.rint(lead_time).astype(np.int64), 1, max_lead)
+            lead_month = lead_time if lead_matrix is None else lead_matrix[month]
+            delay = np.clip(np.rint(lead_month).astype(np.int64), 1, max_lead)
             np.add.at(pipeline, (run_indices, delay), order_quantity)
 
         profit = profit_monthly.sum(axis=1)
+        final_cost = cost if cost_matrix is None else cost_matrix[horizon - 1]
 
         return BatchResult(
             profit=profit,
@@ -227,7 +278,7 @@ class RetailDepotModel:
             costs_monthly=costs_monthly,
             cash_monthly=cash_monthly,
             cash_end=cash,
-            inventory_value_end=stock_end_monthly[:, -1] * cost,
+            inventory_value_end=stock_end_monthly[:, -1] * final_cost,
             units_sold=sold_monthly.sum(axis=1),
             units_lost=lost_monthly.sum(axis=1),
         )

@@ -5,6 +5,7 @@ from typing import Protocol
 
 import numpy as np
 
+from ..events import EventModifiers
 from ..scenario import Hypothesis, Scenario
 
 
@@ -50,4 +51,5 @@ class SimulationModel(Protocol):
         inputs: dict[str, np.ndarray],
         noise: np.ndarray,
         seasonality: np.ndarray,
+        modifiers: EventModifiers | None = None,
     ) -> BatchResult: ...

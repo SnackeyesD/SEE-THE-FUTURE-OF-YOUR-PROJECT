@@ -28,6 +28,7 @@ from .distributions import (
 )
 from .draws import DrawBank
 from .errors import EngineError, SimulationCancelled
+from .events import build_event_modifiers, draw_events
 from .models import get_model
 from .models.retail_depot import DEFAULT_SEASONALITY
 from .progressive import (
@@ -91,6 +92,7 @@ def simulate(
     for key in sorted(assumptions):
         bank.register(f"hyp:{key}")
     bank.register("noise", width=scenario.horizon_months, squeeze=False)
+    event_draws = draw_events(scenario.events, bank, runs)
 
     approximations: set[str] = set()
     for key in sorted(assumptions):
@@ -99,6 +101,12 @@ def simulate(
             approximation = distribution_approximation(hypothesis.distribution)
             if approximation is not None:
                 approximations.add(approximation)
+    for event in scenario.events:
+        if not event.enabled:
+            continue
+        approximation = distribution_approximation(event.magnitude)
+        if approximation is not None:
+            approximations.add(approximation)
 
     seasonality = (
         np.asarray(scenario.seasonality, dtype=np.float64)
@@ -218,7 +226,13 @@ def simulate(
             end,
             uniform=False,
         )[1]
-        batch = model.simulate_batch(batch_inputs, batch_noise, seasonality)
+        modifiers = build_event_modifiers(
+            event_draws,
+            start,
+            end,
+            scenario.horizon_months,
+        )
+        batch = model.simulate_batch(batch_inputs, batch_noise, seasonality, modifiers)
 
         state.add(batch)
         profit[start:end] = batch.profit

@@ -1,6 +1,6 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 # Source: packages/protocol/schema/messages.schema.json
-# Protocol version: 1.8.0
+# Protocol version: 1.9.0
 # Regenerate with: npm run protocol:generate
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-PROTOCOL_VERSION = "1.8.0"
+PROTOCOL_VERSION = "1.9.0"
 
 RequestId = int | str
 
@@ -178,15 +178,38 @@ class Hypothesis(BaseModel):
     provenance: BenchmarkProvenance | None = None
 
 
+class ScenarioEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    type: Literal[
+        "supplier_price_rise",
+        "supply_disruption",
+        "competitor_entry",
+        "power_outage",
+        "fx_shock",
+        "demand_peak",
+        "key_customer_loss",
+    ]
+    startMonth: int
+    durationMonths: int
+    target: str
+    mode: Literal["multiplicative", "additive"] | None = None
+    magnitude: DistributionSpec
+    probability: float | None = None
+    enabled: bool | None = None
+
+
 class Scenario(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    schemaVersion: Literal["1.0.0"] | None = None
+    schemaVersion: Literal["1.0.0", "1.1.0"] | None = None
     name: str
     model: Literal["retail_depot"] | None = None
     currency: str | None = None
     horizonMonths: int | None = None
     assumptions: dict[str, Hypothesis] | None = None
+    events: list[ScenarioEvent] | None = None
     seasonality: list[float] | None = None
     notes: str | None = None
 

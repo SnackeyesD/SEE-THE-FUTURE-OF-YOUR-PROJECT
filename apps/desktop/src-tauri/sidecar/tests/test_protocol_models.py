@@ -3,11 +3,16 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from sidecar.protocol_models import PROTOCOL_VERSION, JSONRPCRequest, SimulationResult
+from sidecar.protocol_models import (
+    PROTOCOL_VERSION,
+    JSONRPCRequest,
+    Scenario,
+    SimulationResult,
+)
 
 
 def test_protocol_version_matches_schema() -> None:
-    assert PROTOCOL_VERSION == "1.8.0"
+    assert PROTOCOL_VERSION == "1.9.0"
 
 
 def test_request_accepts_valid_payload() -> None:
@@ -95,3 +100,27 @@ def test_old_simulation_result_without_v3_fields_is_still_valid() -> None:
     assert result.metrics.cashNegativeProbability is None
     assert result.metrics.minCashCdf is None
     assert result.monthly.values[0].profitP10 is None
+
+
+def test_scenario_accepts_events_with_schema_version_1_1() -> None:
+    scenario = Scenario.model_validate(
+        {
+            "schemaVersion": "1.1.0",
+            "name": "Avec événement",
+            "events": [
+                {
+                    "id": "ev1",
+                    "type": "demand_peak",
+                    "startMonth": 3,
+                    "durationMonths": 2,
+                    "target": "demand_mean_monthly",
+                    "mode": "multiplicative",
+                    "magnitude": {"kind": "uniform", "low": 1.1, "high": 1.4},
+                    "probability": 0.5,
+                }
+            ],
+        }
+    )
+    assert scenario.events is not None
+    assert scenario.events[0].startMonth == 3
+    assert scenario.events[0].magnitude.kind == "uniform"

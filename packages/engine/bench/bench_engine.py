@@ -28,8 +28,10 @@ import numpy as np
 
 import engine
 from engine import (
+    EVENT_CATALOG,
     CancelToken,
     Scenario,
+    ScenarioEvent,
     SimulationCancelled,
     SimulationConfig,
     simulate,
@@ -160,6 +162,31 @@ def _cancellation_latency(
     }
 
 
+def _scenario_with_events(scenario: Scenario) -> Scenario:
+    """Scénario identique avec les sept événements du catalogue, `p=0.5`."""
+
+    payload = scenario.model_dump(by_alias=True)
+    payload["events"] = [
+        {
+            "id": f"ev{index}",
+            "type": name,
+            "startMonth": 6,
+            "durationMonths": 3,
+            "target": spec.target,
+            "mode": spec.mode,
+            "magnitude": spec.default_magnitude.model_dump(
+                by_alias=True,
+                exclude_none=True,
+            ),
+            "probability": 0.5,
+        }
+        for index, (name, spec) in enumerate(EVENT_CATALOG.items())
+    ]
+    scenario = Scenario.model_validate(payload)
+    assert all(isinstance(event, ScenarioEvent) for event in scenario.events)
+    return scenario
+
+
 def _scenario_36_months(path: Path) -> Scenario:
     scenario = Scenario.model_validate_json(path.read_text(encoding="utf-8"))
     payload = scenario.model_dump(by_alias=True)
@@ -224,6 +251,11 @@ def run(path: Path, *, repeats: int) -> dict[str, Any]:
     large = _measure(
         lambda: simulate(scenario, SimulationConfig(runs=20_000, seed=seed)),
         repeats=max(2, repeats // 2),
+    )
+    events_scenario = _scenario_with_events(scenario)
+    events_final = _measure(
+        lambda: simulate(events_scenario, SimulationConfig(seed=seed), quality="final"),
+        repeats=repeats,
     )
 
     sample = simulate(scenario, SimulationConfig(seed=seed), quality="final")
@@ -314,7 +346,17 @@ def run(path: Path, *, repeats: int) -> dict[str, Any]:
             "draft500x36": draft,
             "final5000x36": final,
             "large20000x36": large,
+            "eventsFinal5000x36": events_final,
             "surfaceProxy15x15x200": surface,
+        },
+        "events": {
+            "count": len(events_scenario.events),
+            "probability": 0.5,
+            "final5000x36": events_final,
+            "overheadPercent": round(
+                (events_final["median"] / final["median"] - 1.0) * 100.0,
+                2,
+            ),
         },
         "payload": {
             "final5000Bytes": payload_bytes,
@@ -386,6 +428,12 @@ def main() -> int:
     print(f"draft 500x36      : {measurements['draft500x36']['median']} ms")
     print(f"final 5000x36     : {measurements['final5000x36']['median']} ms")
     print(f"large 20000x36    : {measurements['large20000x36']['median']} ms")
+    events = results["events"]
+    print(
+        f"final + {events['count']} événements : "
+        f"{events['final5000x36']['median']} ms "
+        f"({events['overheadPercent']:+.1f} %)"
+    )
     print(
         "surface 15x15x200 : "
         f"{measurements['surfaceProxy15x15x200']['elapsedMs']} ms "

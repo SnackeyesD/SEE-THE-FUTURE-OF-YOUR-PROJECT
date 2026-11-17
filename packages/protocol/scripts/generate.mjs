@@ -131,15 +131,32 @@ function pyType(value) {
   }
 }
 
+function pyField(indent, fieldName, type) {
+  // Un ``Literal`` long dépasse la ligne de 100 caractères de ruff : on
+  // l'éclate sur plusieurs lignes, ce que les crochets rendent valide.
+  const prefix = `${indent}${fieldName}: `;
+  const line = `${prefix}${type}`;
+  if (line.length <= 100 || !type.includes("Literal[")) return line;
+  const open = type.indexOf("Literal[") + "Literal[".length;
+  const close = type.lastIndexOf("]");
+  if (close < open) return line;
+  const entries = type.slice(open, close).split(", ");
+  const suffix = type.slice(close + 1);
+  const body = entries.map((entry) => `${indent}    ${entry},`).join("\n");
+  return `${prefix}Literal[\n${body}\n${indent}]${suffix}`;
+}
+
 function pyDefinition(name, value) {
   if (isObjectWithProps(value)) {
     const required = new Set(value.required ?? []);
     const fields = Object.entries(value.properties).map(([fieldName, field]) => {
       const type = pyType(field);
-      if (required.has(fieldName)) return `    ${fieldName}: ${type}`;
-      if (type === "Any" || type === "None") return `    ${fieldName}: ${type} = None`;
+      if (required.has(fieldName)) return pyField("    ", fieldName, type);
+      if (type === "Any" || type === "None") {
+        return `    ${fieldName}: ${type} = None`;
+      }
       const optionalType = type.split(" | ").includes("None") ? type : `${type} | None`;
-      return `    ${fieldName}: ${optionalType} = None`;
+      return pyField("    ", fieldName, optionalType) + " = None";
     });
     return [
       `class ${name}(BaseModel):`,

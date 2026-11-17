@@ -168,3 +168,38 @@ changer les définitions métier.
 4. **Champs optionnels.** `quality` et `convergence` sont ajoutés à
    `SimulationResult` sans changer la version de protocole `1.8.0` ; les runs
    antérieurs restent valides avec `null`.
+
+## Amendement phase 05 (2026-11-17)
+
+L'implémentation des événements précise la sémantique et le coût sans changer
+les définitions métier.
+
+1. **Modificateurs décomposés.** `EventModifiers` sépare `factors` (multiplicatif,
+   initialisé à `1.0`) et `offsets` (additif, initialisé à `0.0`) : une cible vaut
+   `valeur × facteur + décalage`, et un effet additif et un effet multiplicatif
+   peuvent coexister sans s'écraser. Les tables restent denses, de forme
+   `(runs du lot, horizon)`, et sont construites bloc par bloc.
+2. **Tirages d'événements en amont.** L'occurrence et la magnitude sont deux
+   scalaires par run : elles sont tirées une fois pour tous les runs avant la
+   boucle de blocs (`draw_events`), dans les slots dédiés. Les grosses tables de
+   modificateurs, elles, ne sont jamais matérialisées pour tous les runs.
+3. **Validation par support.** Une magnitude multiplicative doit être
+   strictement positive au sens de sa loi : une lognormale convient, une
+   triangulaire ou uniforme à borne basse positive aussi ; une loi normale ou de
+   Poisson est refusée, car elle peut atteindre zéro. Une magnitude additive
+   peut être signée, mais le résultat est ramené dans le domaine de la cible
+   (`loss_rate` ∈ [0, 1], délai ≤ 24 mois, autres cibles ≥ 0).
+4. **Catalogue comme donnée.** `EVENT_CATALOG` expose `EventSpec` avec cible,
+   mode, magnitude par défaut, cibles autorisées, libellé et description. La
+   phase 10 peut construire l'UI sans modifier le moteur ; la méthode IPC de
+   lecture du catalogue reste tranchée en phase 06.
+5. **Non-régression exacte.** Sans événement actif, `simulate_batch` réutilise
+   les tableaux d'origine sans copie : le scénario sans événement produit des
+   résultats identiques au bit près à la phase 04. Un événement désactivé ou de
+   probabilité nulle est également identique, et les runs inactifs d'un
+   événement probabiliste conservent leur trajectoire sans choc.
+6. **Versionnement.** Le protocole passe à `1.9.0` (`ScenarioEvent`,
+   `Scenario.events`, `schemaVersion` `1.0.0 | 1.1.0`), le moteur à `0.4.0`.
+7. **Budget mesuré.** Sept événements coûtent **≈ +14 %** sur un `final`
+   5 000 × 36 (≈ 132 ms → ≈ 151 ms, 13,6–14,8 % selon les passes) sur la machine
+   de référence modeste, sous la cible de 15 %.

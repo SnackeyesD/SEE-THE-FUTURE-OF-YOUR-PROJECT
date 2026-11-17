@@ -15,6 +15,7 @@
 
 - **Un seul producteur de chiffres** : le moteur. Aucun calcul de simulation, d'agrégat, de percentile ou de probabilité dans React, Rust ou le LLM.
 - **Reproductibilité d'abord** : mêmes tirages de base pour tous les runs ; les `n` premiers runs d'un calcul à `N` runs sont identiques. Toute modification de l'échantillonnage exige des tests de préfixe (ADR 0010).
+- **Événements** : `startMonth` est 1-based et `durationMonths` inclusif ; occurrence et magnitude sont tirées une fois par run dans des slots dédiés `event:<id>:...`. Un événement désactivé ne consomme aucun tirage et ne doit jamais changer les tirages des hypothèses. Le catalogue (`engine.events.EVENT_CATALOG`) est une donnée, pas des `if` dans le modèle.
 - **Un run `draft` n'est jamais persisté** et n'est jamais épinglable. Seul un run `final` peut être enregistré, épinglé ou comparé (ADR 0011, 0014). Un **run final** est un calcul de qualité `final` (5 000 runs par défaut), terminé sans annulation, portant sa graine, sa version de moteur et son `runId`.
 - **Une comparaison exige la même graine** et la même version de moteur ; sinon l'UI doit avertir explicitement.
 - **Pas d'interpolation de chiffres** pour simuler une fluidité : on peut animer l'apparition d'un résultat, jamais ses valeurs. La cible est 30–60 i/s réels, pas une promesse de 50 i/s.

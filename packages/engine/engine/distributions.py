@@ -12,7 +12,7 @@ from functools import lru_cache
 
 import numpy as np
 
-from .scenario import DistributionSpec, Hypothesis
+from .schema import DistributionSpec, Hypothesis
 
 POISSON_EXACT_MAX = 50_000
 """Au-delà de ce ``lambda``, la table de CDF exacte serait trop volumineuse.

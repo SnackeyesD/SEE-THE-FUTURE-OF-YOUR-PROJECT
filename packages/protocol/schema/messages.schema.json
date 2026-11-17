@@ -3,7 +3,7 @@
   "$id": "https://seethefuture.local/protocol/messages.schema.json",
   "title": "See The Future IPC protocol",
   "description": "Source unique des messages JSON-RPC 2.0 échangés entre le shell Tauri et le sidecar Python.",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "$defs": {
     "RequestId": {
       "description": "Identifiant de requête JSON-RPC (entier ou chaîne).",
@@ -212,12 +212,39 @@
         "provenance": { "$ref": "#/$defs/BenchmarkProvenance" }
       }
     },
+    "ScenarioEvent": {
+      "description": "Événement daté et probabiliste qui modifie une cible mensuelle du modèle.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "startMonth", "durationMonths", "target", "magnitude"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$" },
+        "type": {
+          "enum": [
+            "supplier_price_rise",
+            "supply_disruption",
+            "competitor_entry",
+            "power_outage",
+            "fx_shock",
+            "demand_peak",
+            "key_customer_loss"
+          ]
+        },
+        "startMonth": { "type": "integer", "minimum": 1, "maximum": 120 },
+        "durationMonths": { "type": "integer", "minimum": 1, "maximum": 120 },
+        "target": { "type": "string" },
+        "mode": { "enum": ["multiplicative", "additive"] },
+        "magnitude": { "$ref": "#/$defs/DistributionSpec" },
+        "probability": { "type": "number", "minimum": 0, "maximum": 1 },
+        "enabled": { "type": "boolean" }
+      }
+    },
     "Scenario": {
       "type": "object",
       "additionalProperties": false,
       "required": ["name"],
       "properties": {
-        "schemaVersion": { "const": "1.0.0" },
+        "schemaVersion": { "enum": ["1.0.0", "1.1.0"] },
         "name": { "type": "string" },
         "model": { "enum": ["retail_depot"] },
         "currency": { "type": "string" },
@@ -225,6 +252,10 @@
         "assumptions": {
           "type": "object",
           "additionalProperties": { "$ref": "#/$defs/Hypothesis" }
+        },
+        "events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ScenarioEvent" }
         },
         "seasonality": {
           "anyOf": [
