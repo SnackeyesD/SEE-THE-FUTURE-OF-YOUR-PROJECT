@@ -2,7 +2,7 @@
 
 Spécification pour Claude Code. À placer à la racine du dépôt, à côté de `ARCHITECTURE-DESKTOP.md`, `PLAN-IMPLEMENTATION.md` et `CLAUDE.md`.
 
-> **Objectif** : transformer l'espace où apparaissent les données simulées en **cockpit interactif** où l'utilisateur pilote la simulation en direct (« je bouge, ça réagit »), avec des vues avancées dont une **prévisualisation 3D**, et rendre l'application prête pour un **lancement début janvier 2027**.
+> **Objectif** : transformer l'espace où apparaissent les données simulées en **cockpit interactif** où l'utilisateur pilote la simulation en direct (« je bouge, ça réagit »), avec des vues avancées dont une **prévisualisation 3D**, et rendre l'application prête pour un **lancement début janvier 2027** (date engageante : **15 janvier 2027**, D1).
 
 ---
 

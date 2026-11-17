@@ -88,7 +88,7 @@
 
 ### Lot E — E2E et non-régression
 
-- [ ] Playwright en mode web (`npm run dev:web`) avec shim IPC déterministe :
+- [ ] Playwright en mode web (`npm run dev:web`) avec shim IPC déterministe (D5 : **introduit ici uniquement**, aucun nouvel outil de test avant cette phase ; taux d'échec < 2 %, aucun test flaky toléré) :
   - parcours : projet → hypothèses → simulation → cockpit ;
   - glissement de curseur → draft/final ;
   - ajout d'événement ;

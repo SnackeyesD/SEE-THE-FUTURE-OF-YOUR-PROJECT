@@ -42,7 +42,8 @@ La spec V3 a été écrite sans audit du code. Plusieurs affirmations sont fauss
 - [x] `docs/perf/machine-reference.md` + `docs/perf/baseline.md`.
 - [x] `npm run bench` opérationnel (script racine + rapport JSON/Markdown).
 - [x] `CLAUDE.md` complété par les règles V3 (reprises de la spec §11, corrigées).
-- [x] Dossier de signature Windows ouvert (`signature-windows.md`, décision et plan B à finaliser par le produit).
+- [x] Dossier de signature Windows ouvert (`signature-windows.md`, décision et plan B tranchés le 2026-11-17).
+- [x] Décisions de lancement tranchées (`decisions-lancement.md`, D1–D5, accepté le 2026-11-17).
 
 ## 4. Tâches détaillées
 
@@ -80,9 +81,9 @@ La spec V3 a été écrite sans audit du code. Plusieurs affirmations sont fauss
 
 ### Lot D — Cadrage produit et lancement
 
-- [ ] Figer la liste des fonctionnalités janvier et l'ordre de sacrifice (reprendre le §7 du plan maître).
-- [ ] Valider le secteur du projet d'exemple (phase 15) et lancer le sourcing des benchmarks.
-- [x] Ouvrir la démarche de signature Windows (Certificate Authority, EV ou standard, délais).
+- [x] Figer la liste des fonctionnalités janvier et l'ordre de sacrifice (D2 de `decisions-lancement.md`).
+- [x] Valider le secteur du projet d'exemple (Brazzaville, CG, XAF) et lancer le sourcing des benchmarks (D3).
+- [x] Ouvrir la démarche de signature Windows : OV sur token USB, AC classique, plan B (D4).
 - [x] Mettre à jour `CLAUDE.md` : règles V3, commandes `npm run bench`, interdiction d'interpolation de chiffres, définition de « run final ».
 - [x] Écrire le protocole de test utilisateurs (jalons A/B/D).
 
@@ -131,11 +132,11 @@ La spec V3 a été écrite sans audit du code. Plusieurs affirmations sont fauss
 ## 8. Critères d'acceptation
 
 - [x] Aucune zone d'ombre sur les métriques : les formules sont écrites et relues.
-- [ ] Le propriétaire du protocole est nommé et les bumps sont planifiés.
+- [ ] Le propriétaire du protocole est nommé et les bumps sont planifiés. *(encore ouvert au 2026-11-17 : à nommer avant la phase 06)*
 - [x] La pile de dataviz est tranchée et justifiée par écrit.
 - [x] Le budget de la phase 11 est cohérent avec la mesure (pas de 3 s irréaliste).
-- [ ] Le calendrier et les effectifs sont validés par l'équipe.
-- [x] La signature Windows est lancée ou un plan B est documenté.
+- [x] Le calendrier et les effectifs sont validés par l'équipe (D1 : 3 devs + 0,5 produit, lancement le 15 janvier 2027).
+- [x] La signature Windows est lancée ou un plan B est documenté (D4, `signature-windows.md` §8).
 
 ## 9. Risques
 
@@ -150,9 +151,9 @@ La spec V3 a été écrite sans audit du code. Plusieurs affirmations sont fauss
 
 - [x] `audit.md`, 7 ADR, baseline perf, `npm run bench` et `CLAUDE.md` à jour.
 - [x] Les contrats d'entrée des phases 02 et 06 sont figés.
-- [ ] Le périmètre janvier et l'ordre de sacrifice sont signés par le produit.
+- [x] Le périmètre janvier et l'ordre de sacrifice sont signés par le produit (D2).
 
-## 11. Statut d'exécution — 2026-11-14
+## 11. Statut d'exécution — 2026-11-17
 
 **Fait**
 
@@ -161,15 +162,18 @@ La spec V3 a été écrite sans audit du code. Plusieurs affirmations sont fauss
 - Baseline mesurée sur la machine de référence modeste et consignée dans [`docs/perf/baseline.md`](../../perf/baseline.md).
 - `npm run bench`, `bench:engine`, `bench:sidecar`, `bench:ui` opérationnels.
 - `CLAUDE.md` complété par les règles V3.
-- Dossier de signature Windows ouvert, plan B documenté.
+- Décisions de lancement D1–D5 tranchées et acceptées le 2026-11-17 dans [`decisions-lancement.md`](decisions-lancement.md) :
+  - **D1** : 3 devs + 0,5 produit, lancement le **15 janvier 2027** ;
+  - **D2** : ordre de sacrifice signé (phase 14 entière, puis mode pitch, puis phase 11 réduite) ;
+  - **D3** : projet d'exemple **Brazzaville (CG), XAF**, pack `cg-brazzaville-retail-2026.1` à sourcer et re-signer ;
+  - **D4** : signature **OV** sur token USB via AC classique, Azure écarté, plan B validé ;
+  - **D5** : Vitest + Testing Library maintenant, Playwright uniquement en phase 16.
+- Dossier de signature Windows complété : [`signature-windows.md`](signature-windows.md) §8 tranché le 2026-11-17.
 
-**Reste à décider (non bloquant pour la phase 02)**
+**Reste à décider ou à faire (non bloquant pour la phase 02)**
 
-1. **Propriétaire du protocole** : nommer une personne avant la phase 06.
-2. **Calendrier et effectifs** : valider le scénario 3 / 2 / 1 personne et la date de janvier.
-3. **Périmètre janvier** : signer l'ordre de sacrifice du plan §7 (3D et mode pitch en premier).
-4. **Projet d'exemple** : valider le secteur (Bangui ou Brazzaville) et le sourcing des benchmarks avant la phase 15.
-5. **Signature Windows** : choisir OV / EV / Azure et lancer la vérification d'identité (phase 01–02), même si la signature est appliquée en phase 16.
-6. **Mesure UI** : Vitest + Testing Library ont été outillés au durcissement de la phase 03 ; Playwright reste en phase 16.
+1. **Propriétaire du protocole** : nommer une personne avant la phase 06. C'est le seul critère d'acceptation de la phase 01 encore ouvert.
+2. **Signature Windows — gouvernance** : nommer le responsable signature et son suppléant, choisir l'AC après devis ferme, préciser l'entité signataire et le pays de dépôt. La vérification d'identité doit démarrer en phase 01–02.
+3. **Sourcing du pack CG** : remplacer les valeurs `estimate` par des sources publiques, bumper le pack en `2026.2` et le re-signer (avant la phase 15, voir D3).
 
-Aucune modification de comportement fonctionnel n'a été faite : `engine:test` (52 tests) et `protocol:check` sont verts, le moteur et le protocole sont inchangés.
+La mesure UI est résolue par D5 : Vitest + Testing Library maintenant, Playwright en phase 16, aucun nouvel outil avant.

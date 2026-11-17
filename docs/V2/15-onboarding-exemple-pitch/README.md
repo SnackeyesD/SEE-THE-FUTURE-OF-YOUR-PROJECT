@@ -2,7 +2,7 @@
 
 > **Objectif** : un inconnu ouvre l'application et obtient un premier résultat crédible en moins de deux minutes, puis peut exporter un dossier propre pour présenter son projet.
 
-**Références** : `V3-COCKPIT.md` §10 (D1, D2), §13 ; plan maître §7.
+**Références** : `V3-COCKPIT.md` §10 (D1, D2), §13 ; plan maître §7 ; [`decisions-lancement.md` D3](../01-audit-et-decisions/decisions-lancement.md).
 **Dépend de** : phases 09 (cockpit), 11 (analyse), 12 (explication), 13 (versions).
 **Débloque** : 16 (lancement).
 **Profil** : produit + intermédiaire UI ; 7–8 jours.
@@ -21,7 +21,7 @@ La v2 n'a pas de parcours d'accueil ni de projet d'exemple complet. `export_repo
 
 **Inclus**
 
-- Projet d'exemple « dépôt de revente » basé sur `retail_depot` et un pack de benchmarks existant.
+- Projet d'exemple « dépôt de revente » basé sur `retail_depot`, le pack **`cg-brazzaville-retail-2026.1`** (Congo, XAF) et ses valeurs à sourcer.
 - Import du modèle depuis l'accueil, avec données pré-remplies.
 - Parcours guidé en 4–5 étapes, skippable, sans IA obligatoire.
 - Mode pitch : rapport structuré (Markdown, PDF si possible).
@@ -36,7 +36,7 @@ La v2 n'a pas de parcours d'accueil ni de projet d'exemple complet. `export_repo
 
 ## 3. Livrables
 
-- [ ] `data/examples/retail-depot-bangui/` (scénario, brief, événements, seed, notes).
+- [ ] `data/examples/retail-depot-brazzaville/` (scénario, brief, événements, seed, notes).
 - [ ] Commande/import « Créer le projet d'exemple ».
 - [ ] `components/onboarding/GuidedTour.tsx` + étapes.
 - [ ] `packages/reporting/` ou service `report.build` déterministe.
@@ -48,15 +48,18 @@ La v2 n'a pas de parcours d'accueil ni de projet d'exemple complet. `export_repo
 
 ### Lot A — Projet d'exemple
 
-- [ ] Choisir un pack existant (`cf-bangui-retail-2026.1` ou `cg-brazzaville-retail-2026.1`) et vérifier sa signature/validité.
+- [ ] Utiliser le pack **`cg-brazzaville-retail-2026.1`** (retenu par D3) et vérifier sa signature/validité avec `tools/verify_pack.py`.
+- [ ] Remplacer les valeurs `estimate` du pack CG (`unit_cost`, `gross_margin`, `demand_mean_monthly`, `demand_cv`, `loss_rate`) par des sources publiques (WFP/HDX, Numbeo Brazzaville, annonces/enquêtes sectorielles), avec `source`/`sourceUrl`/`sourceDate`/`reliability` renseignés.
+- [ ] Bumper le pack en `2026.2` et le re-signer en Ed25519 (`tools/sign_pack.py`), puis vérifier les deux packs embarqués.
 - [ ] Construire un scénario 36 mois avec :
+  - **devise `XAF`** (zone CEMAC ; ne pas conserver le défaut `XOF` du moteur) ;
   - hypothèses réalistes et **sourcées** (provenance benchmark) ;
   - fourchettes prudentes ;
   - 2–3 événements de démonstration ;
   - graine 42 ;
   - une version nommée « Scénario de départ » et une branche « Prix -10 % ».
 - [ ] Vérifier que les résultats sont pédagogiques : point mort atteignable, trésorerie tendue mais pas absurde, probabilité de perte non nulle.
-- [ ] Documenter les choix et les limites dans `data/examples/retail-depot-bangui/README.md`.
+- [ ] Documenter les choix et les limites dans `data/examples/retail-depot-brazzaville/README.md`.
 - [ ] Import : `project.createFromTemplate` ou équivalent, avec IDs neufs.
 - [ ] Ne pas embarquer de données personnelles ni de secret.
 - [ ] Test : import sur profil vierge, offline, < 2 s.

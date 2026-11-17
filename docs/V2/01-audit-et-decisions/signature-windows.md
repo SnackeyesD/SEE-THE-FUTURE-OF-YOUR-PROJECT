@@ -100,11 +100,14 @@ Le plan B ne doit **jamais** être présenté comme équivalent à une signature
 | Azure Trusted Signing non éligible | Retard | Alternative AC classique |
 | Clé exposée en CI | Compromission | Token/HSM, secrets, accès restreint, audit |
 
-## 8. Décision de phase 01
+## 8. Décision de phase 01 — tranchée le 2026-11-17
 
-- [ ] Type de certificat retenu : OV / EV / Azure (à compléter).
-- [ ] AC retenue et devis : (à compléter).
-- [ ] Responsable signature nommé : (à compléter).
-- [ ] Plan B validé si le certificat arrive après la phase 16 : OV / ZIP + empreinte.
+- [x] Type de certificat retenu : **OV** sur token matériel USB, avec horodatage RFC 3161. EV reste une option si le budget le permet et si la réputation SmartScreen au lancement est critique ; **Azure Trusted Signing écarté** (éligibilité : 3 ans d'ancienneté vérifiable + compte Azure, dépendance cloud pour la CI).
+- [x] AC retenue et devis : **AC classique reconnue (DigiCert, Sectigo ou GlobalSign)** — devis avec délai ferme à demander en phase 01 (ordre de grandeur 250–500 €/an, 1–3 semaines).
+- [ ] Responsable signature nommé : **à nommer par la direction d'ici la fin de la phase 01**, avec un suppléant ; token conservé au coffre, procédure de réémission documentée.
+- [x] Plan B validé si le certificat arrive après la phase 16 : **OV** ; sinon archive ZIP portable + empreinte SHA-256 publiée (beta interne uniquement). Jamais de binaire public non signé, jamais de certificat auto-signé pour le public.
+- [x] Vérification d'identité lancée en phase 01–02 (pièces prêtes : registre de commerce, pièce d'identité, justificatif d'adresse, domaine, téléphone), même si la signature n'est appliquée qu'en phase 16.
+
+Décision consignée dans [`decisions-lancement.md`](decisions-lancement.md) (D4).
 
 > Ce document est un dossier de travail, pas un avis juridique. Les exigences des AC et de Microsoft évoluent ; vérifier les conditions au moment de l'achat.

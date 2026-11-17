@@ -204,20 +204,17 @@ Notes :
 
 ---
 
-## 7. Priorités et ordre de sacrifice
+## 7. Priorités et ordre de sacrifice (signé le 2026-11-17)
 
-Du plus essentiel au plus facultatif (on coupe par le bas) :
+Ordre de coupe figé (D2 de [`decisions-lancement.md`](01-audit-et-decisions/decisions-lancement.md)), du premier au dernier :
 
-1. **Moteur réactif + cockpit 2D** (02–09) — indispensable.
-2. **Lancement** (16) + onboarding/projet d'exemple (15) + transparence — indispensable pour janvier.
-3. **Événements, objectif, provenance** (05, 10, 11, 12).
-4. **Temps, tornado, heatmap** (10, 11).
-5. **Branches & comparaison** (13).
-6. **Mode pitch** (15, partie D2).
-7. **Vue 3D** (14) — première coupe.
-8. **Nuage 3D** — seconde coupe.
+1. **Phase 14 entière** (vue 3D + nuage 3D) — première coupe ; le **repli heatmap 2D reste obligatoire** et livré.
+2. **Mode pitch** (phase 15, partie D2) — l'onboarding et le projet d'exemple sont conservés.
+3. **Phase 11 réduite** à la heatmap 2D + objectif mono-levier.
 
-Si le jalon A glisse de plus de 5 jours : couper 14 immédiatement, puis réduire 11 à la seule heatmap 2D + objectif mono-levier. Ne jamais couper les tests de reproductibilité ni la phase 16.
+**Jamais coupés** : phases 02–09 (moteur réactif + cockpit 2D), tests de reproductibilité/CRN/golden, phase 16 (durcissement & lancement).
+
+Règle de dérive : si le jalon A glisse de plus de **5 jours**, cet ordre s'applique sans re-débat. Les phases 10, 12 et 13 restent dans le périmètre tant que les jalons tiennent.
 
 ---
 
@@ -225,11 +222,17 @@ Si le jalon A glisse de plus de 5 jours : couper 14 immédiatement, puis réduir
 
 | Effectif | Durée | Remarque |
 |---|---|---|
-| 3 devs + 0,5 produit | 7–8 semaines | Cible « début janvier 2027 ». |
-| 2 devs | 10–12 semaines | Livraison février 2027 réaliste. |
-| 1 dev | 17–21 semaines | La 3D et le mode pitch sont à couper. |
+| 3 devs + 0,5 produit | 7–8 semaines | **Engagé** : lancement le **15 janvier 2027** (jalon D). |
+| 2 devs | 10–12 semaines | Fallback annoncé si l'effectif baisse : février 2027. |
+| 1 dev | 17–21 semaines | Janvier abandonné d'office ; 3D et mode pitch coupés : mars 2027. |
 
-Le calendrier de janvier 2027 inclut les fêtes : prévoir **20 % de marge** et démarrer la signature Windows **en phase 01**, pas en phase 16.
+Le calendrier inclut les fêtes : la marge de **20 %** est intégrée dans la date du 15 janvier (démarrage mi-novembre 2026, phases 01–03 déjà réalisées).
+
+- **Jalon A** (cockpit 2D, phase 09) : ≈ 12 décembre 2026.
+- **Jalon B** (analyse interactive, phase 11) : ≈ 26 décembre 2026.
+- **Jalon D** (lancement, phase 16) : **15 janvier 2027**.
+
+La signature Windows est engagée dès la phase 01 (D4), pas en phase 16.
 
 ---
 
