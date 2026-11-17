@@ -37,7 +37,7 @@ Ordre de coupe figé, du premier au dernier :
 - **Secteur retenu : Brazzaville, Congo (CG)** — pack `cg-brazzaville-retail-2026.1` préféré à `cf-bangui-retail-2026.1` : sources plus fraîches (WFP/HDX avril 2026 et annonce de loyer Moungali novembre 2026 = `fresh`, contre des sources d'août 2025 = `aging` pour Bangui, règle ADR 0009).
 - Livrable renommé : `data/examples/retail-depot-brazzaville/` (au lieu de `retail-depot-bangui/` dans le README de la phase 15).
 - **Devise : XAF conservé** — Brazzaville est en zone CEMAC (XAF), pas XOF. Le projet d'exemple pose `currency: "XAF"` explicitement ; le défaut `XOF` du moteur ne couvre pas la cible CEMAC et reste documenté comme tel.
-- **Sourcing avant la phase 15** : remplacer les valeurs `estimate` auto-référentielles du pack CG (`unit_cost`, `gross_margin`, `demand_mean_monthly`, `demand_cv`, `loss_rate` — source « Estimation de cadrage See The Future ») par des sources publiques (WFP/HDX, Numbeo Brazzaville, annonces/enquêtes sectorielles), avec `source`/`sourceUrl`/`sourceDate`/`reliability` renseignés, puis bump du pack en `2026.2` et **re-signature Ed25519** (`tools/sign_pack.py`) + vérification (`tools/verify_pack.py`). Vérifier dès maintenant la signature des deux packs embarqués.
+- **Sourcing avant la phase 15** : le brouillon `2026.2` est prêt ([`sourcing-pack-cg.md`](../15-onboarding-exemple-pitch/sourcing-pack-cg.md)) : `unit_price` recalculé sur WFP/HDX, panier ramené aux cinq produits réellement suivis, autres `estimate` documentés et datés. Restent la **re-signature Ed25519** (`tools/sign_pack.py`) et le déplacement vers `packs/`, bloqués par la clé privée absente de la machine de développement. Les deux packs embarqués ont été vérifiés le 2026-11-17 (`keyId=seefuture-benchmark-2026`).
 
 ## D4 — Signature Windows : OV + AC classique + token USB, vérification d'identité lancée maintenant
 
@@ -45,7 +45,7 @@ Ordre de coupe figé, du premier au dernier :
 - **EV** : option uniquement si le budget le permet et si la réputation SmartScreen au lancement est jugée critique (400–900 €/an, 2–5 semaines).
 - **Azure Trusted Signing écarté** pour l'instant : éligibilité incertaine (3 ans d'ancienneté vérifiable + compte Azure) et dépendance cloud pour la CI de signature.
 - **Vérification d'identité lancée en phase 01–02** (même si la signature n'est appliquée qu'en phase 16) : pièces prêtes — registre de commerce, pièce d'identité, justificatif d'adresse, domaine, téléphone ; **devis avec délai ferme demandé en phase 01**.
-- **Responsable signature + suppléant à nommer par la direction d'ici la fin de la phase 01** ; token au coffre, procédure de réémission documentée.
+- **Responsable signature : porteur du projet** (décision du 2026-11-17) ; suppléant, entité signataire et pays de dépôt encore à préciser. Token au coffre, procédure de réémission documentée.
 - Intégration CI (accès token/HSM sans exposer la clé) et test sur **VM Windows propre** restent en phase 16.
 - **Plan B** : si le certificat n'est pas prêt en phase 16, beta interne non signée avec empreinte SHA-256 publiée, ou ZIP portable + empreinte ; **jamais de binaire public non signé**, jamais de certificat auto-signé pour le public.
 - La checklist §8 de [`signature-windows.md`](signature-windows.md) est remplie en conséquence.
@@ -64,6 +64,6 @@ Ordre de coupe figé, du premier au dernier :
 |---|---|---|
 | D1 calendrier | ce document | jalon A le 2026-12-12 |
 | D2 sacrifice | ce document + plan §7 | appliquer si jalon A glisse > 5 j |
-| D3 exemple CG/XAF | ce document + README phase 15 à mettre à jour | sprint de sourcing du pack CG avant phase 15 |
-| D4 signature | ce document + `signature-windows.md` §8 | devis + vérification d'identité (phase 01–02) |
+| D3 exemple CG/XAF | ce document + [`sourcing-pack-cg.md`](../15-onboarding-exemple-pitch/sourcing-pack-cg.md) | brouillon 2026.2 prêt ; signature et déplacement avant phase 15 |
+| D4 signature | ce document + `signature-windows.md` §8 | responsable = porteur du projet ; suppléant/entité/pays puis devis et vérification d'identité |
 | D5 tests UI | ce document + README phase 16 | aucun changement d'outil avant phase 16 |

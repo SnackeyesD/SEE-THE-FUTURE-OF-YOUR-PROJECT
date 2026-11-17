@@ -132,7 +132,7 @@ La spec V3 a été écrite sans audit du code. Plusieurs affirmations sont fauss
 ## 8. Critères d'acceptation
 
 - [x] Aucune zone d'ombre sur les métriques : les formules sont écrites et relues.
-- [ ] Le propriétaire du protocole est nommé et les bumps sont planifiés. *(encore ouvert au 2026-11-17 : à nommer avant la phase 06)*
+- [ ] Le propriétaire du protocole est nommé et les bumps sont planifiés. *(encore ouvert au 2026-11-17 ; décision : à nommer avant la phase 06, bloquant pour son entrée)*
 - [x] La pile de dataviz est tranchée et justifiée par écrit.
 - [x] Le budget de la phase 11 est cohérent avec la mesure (pas de 3 s irréaliste).
 - [x] Le calendrier et les effectifs sont validés par l'équipe (D1 : 3 devs + 0,5 produit, lancement le 15 janvier 2027).
@@ -173,7 +173,7 @@ La spec V3 a été écrite sans audit du code. Plusieurs affirmations sont fauss
 **Reste à décider ou à faire (non bloquant pour la phase 02)**
 
 1. **Propriétaire du protocole** : nommer une personne avant la phase 06. C'est le seul critère d'acceptation de la phase 01 encore ouvert.
-2. **Signature Windows — gouvernance** : nommer le responsable signature et son suppléant, choisir l'AC après devis ferme, préciser l'entité signataire et le pays de dépôt. La vérification d'identité doit démarrer en phase 01–02.
-3. **Sourcing du pack CG** : remplacer les valeurs `estimate` par des sources publiques, bumper le pack en `2026.2` et le re-signer (avant la phase 15, voir D3).
+2. **Signature Windows — gouvernance** : le responsable signature est le **porteur du projet** (2026-11-17) ; restent à préciser le suppléant, l'entité signataire et le pays de dépôt, puis le devis ferme. La vérification d'identité doit démarrer en phase 01–02.
+3. **Sourcing du pack CG** : le brouillon `2026.2` et le dossier de sourcing sont prêts ([`sourcing-pack-cg.md`](../15-onboarding-exemple-pitch/sourcing-pack-cg.md)). Reste à le faire signer par le porteur de clé et à le déplacer dans `packs/` avant la phase 15.
 
 La mesure UI est résolue par D5 : Vitest + Testing Library maintenant, Playwright en phase 16, aucun nouvel outil avant.
