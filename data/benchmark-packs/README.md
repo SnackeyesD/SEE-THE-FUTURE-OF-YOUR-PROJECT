@@ -4,7 +4,8 @@ Référentiels locaux versionnés et signés (phase 08).
 
 ## Contenu
 
-- `packs/` : packs JSON et signatures détachées `.sig`.
+- `packs/` : packs JSON et signatures détachées `.sig` (seuls chargés par le sidecar).
+- `drafts/` : brouillons non signés, jamais chargés par l'application ; ils passent dans `packs/` après signature et vérification.
 - `keys/public.json` : clés publiques Ed25519 autorisées. La clé privée reste hors du dépôt.
 - `schema/benchmark-pack.schema.json` : schéma JSON généré depuis `see_benchmarks`.
 - `tools/` : génération de clés, validation, signature et vérification.

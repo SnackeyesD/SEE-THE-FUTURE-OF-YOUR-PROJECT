@@ -49,8 +49,8 @@ La v2 n'a pas de parcours d'accueil ni de projet d'exemple complet. `export_repo
 ### Lot A — Projet d'exemple
 
 - [ ] Utiliser le pack **`cg-brazzaville-retail-2026.1`** (retenu par D3) et vérifier sa signature/validité avec `tools/verify_pack.py`.
-- [ ] Remplacer les valeurs `estimate` du pack CG (`unit_cost`, `gross_margin`, `demand_mean_monthly`, `demand_cv`, `loss_rate`) par des sources publiques (WFP/HDX, Numbeo Brazzaville, annonces/enquêtes sectorielles), avec `source`/`sourceUrl`/`sourceDate`/`reliability` renseignés.
-- [ ] Bumper le pack en `2026.2` et le re-signer en Ed25519 (`tools/sign_pack.py`), puis vérifier les deux packs embarqués.
+- [x] Sourcing du pack CG audité : `unit_price` recalculé sur WFP/HDX, les autres `estimate` documentés et datés ; brouillon `2026.2` prêt dans `data/benchmark-packs/drafts/`. Détail : [`sourcing-pack-cg.md`](sourcing-pack-cg.md).
+- [ ] Bumper le pack en `2026.2` et le re-signer en Ed25519 (`tools/sign_pack.py`), puis vérifier les deux packs embarqués. *(brouillon prêt ; signature en attente du porteur de clé)*
 - [ ] Construire un scénario 36 mois avec :
   - **devise `XAF`** (zone CEMAC ; ne pas conserver le défaut `XOF` du moteur) ;
   - hypothèses réalistes et **sourcées** (provenance benchmark) ;
