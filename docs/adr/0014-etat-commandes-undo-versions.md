@@ -63,6 +63,50 @@
 - Persistance `localStorage` par projet (`sf-cockpit-layout:<projectId>`), validation au chargement, repli sur le preset par défaut.
 - La disposition n'entre pas dans l'historique des hypothèses.
 
+### Mise en œuvre phase 08
+
+- **Zustand 5.1** (`createStore` vanilla) et non le binding React global : la fabrique
+  `createCockpitStore({ projectId, scenario, seed, config, layout })` rend chaque test
+  indépendant. `CockpitProvider` crée un store par projet ; changer de projet remonte le
+  provider avec `key={projectId}`.
+- Slices effectives : `session` (scénario, graine, config, qualité, statut, run actif),
+  `runs` (partiels, finaux, statut, `seq`, `stale`), `pinned`, `selection`, `layout`.
+  Les sélecteurs (`selectActiveRun`, `selectPinnedRuns`, `selectRun`) sont des fonctions
+  pures utilisables via `useCockpit(store, selector)`.
+- **Invariant résultats** : aucun résultat n'entre dans une commande. Une modification
+  d'entrée marque les runs terminés non épinglés comme `stale` (`staleRuns`) ; un run
+  épinglé n'est jamais invalidé.
+- **Deux `CommandStack` distinctes** (`inputs`, `layout`) créées par le provider : le
+  layout a son propre historique local et ne consomme pas une entrée d'undo des
+  hypothèses. Les deux sont bornées à 100 et non persistées.
+- **Coalescence** par `coalesceKey` sur 400 ms (`now` injectable pour les tests) : la
+  commande fusionnée conserve le `before` de la première occurrence et le `redo` de la
+  dernière. Un `dispatch` vide la pile de redo ; `undo`/`redo` remettent le compteur de
+  coalescence à zéro.
+- **Contrôleur** `useLiveSimulation` :
+  - un seul abonnement à `onSimulationEvent` par provider, filtré par `runId` actif ;
+  - `draft` throttlé à 50 ms, `final` différé de 400 ms ou déclenché au relâchement ;
+  - `beginGesture()` suspend tout calcul (y compris le final), `endGesture()` lance
+    immédiatement le `final` ;
+  - avant chaque `start`, le run actif est annulé ; un jeton de génération empêche un
+    `start` périmé d'écraser l'état (le run accepté est alors annulé côté sidecar) ;
+  - les `seq` décroissants et les événements d'un run non actif sont ignorés par le
+    store, pas par le hook ; le démontage annule le run actif et se désabonne.
+- **Hotkeys** : `Ctrl+Z` / `Ctrl+Y` / `Cmd+Shift+Z` sur `window`, ignorées dans
+  `INPUT`, `TEXTAREA`, `SELECT` et `contentEditable` pour préserver l'undo natif des
+  champs. Toute commande (dispatch, undo, redo) notifie `onInputsChanged`, que l'écran
+  branche sur `invalidate()`.
+- **Disposition** : bornes `[0.15, 0.7]`, somme à `1 ± 0.01`, `clampFraction` réserve
+  toujours la fraction minimale du panneau principal. Un preset stocké réimpose ses
+  fractions ; seul `custom` conserve des fractions libres. `PanelGrid` expose des
+  poignées `separator` clavier (flèches, `Shift` pour un pas rapide) et pointeur, ainsi
+  qu'un plein écran `main`/`secondary` accessible.
+- Les écrans existants (`App.tsx`, `SimulationScreen`, `ResultsScreen`) restent
+  inchangés : la phase 09 branchera le store et le `PanelGrid` sur le rendu pour éviter
+  deux sources de vérité pendant la transition.
+- Le protocole IPC n'évolue pas (toujours `1.10.0`) : la phase 08 consomme les messages
+  `simulation.*` de la phase 06.
+
 ## Contexte et raisons
 
 - L'état actuel est dispersé dans `App.tsx` (`useState` locaux, `App.tsx:147-164`) et passé par props ; il n'y a ni historique ni contrôleur de calcul.

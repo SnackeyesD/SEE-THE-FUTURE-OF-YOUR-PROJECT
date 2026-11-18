@@ -26,7 +26,8 @@ Ce dossier contient la spécification de la V3 et son découpage d'implémentati
 | 05 — Événements & chocs | **terminée** (2026-11-17) | [`05-moteur-evenements/README.md`](05-moteur-evenements/README.md), protocole `1.9.0`, catalogue `EVENT_CATALOG`, modificateurs par bloc, tests/golden |
 | 06 — IPC de flux & concurrence | **terminée** (2026-11-18), revue senior en attente | [`06-ipc-flux-concurrence/README.md`](06-ipc-flux-concurrence/README.md), protocole `1.10.0`, `simulation.start`/`cancel`, writer sérialisé, dispatcher Rust non bloquant, [`docs/perf/ipc.md`](../perf/ipc.md) |
 | 07 — Persistance, versions & branches | **terminée** (2026-11-18), revue senior en attente | [`07-persistance-runs-versions/README.md`](07-persistance-runs-versions/README.md), migration `0006`, branches/versions, runs épinglés, purge 200 runs / 15 MiB, `.simproj` v6 + lecture v5 |
-| 08 à 16 | à démarrer | voir le plan maître |
+| 08 — Session UI & commandes | **terminée** (2026-11-18), revue senior en attente | [`08-ui-session-commandes/README.md`](08-ui-session-commandes/README.md), Zustand 5.1, store/slices, `CommandStack` (undo/redo, coalescence 400 ms), `useLiveSimulation` (draft 50 ms / final 400 ms), `PanelGrid` + presets persistés, 46 tests |
+| 09 à 16 | à démarrer | voir le plan maître |
 
 ## Règle d'or
 

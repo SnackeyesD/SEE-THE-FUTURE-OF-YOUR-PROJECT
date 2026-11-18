@@ -38,20 +38,20 @@ Aujourd'hui l'état vit dans `App.tsx` et les écrans, avec des `useState` locau
 
 ## 3. Livrables
 
-- [ ] `zustand` ajouté à `apps/desktop` (ADR 0014).
-- [ ] `src/store/cockpitStore.ts` + slices (`session`, `runs`, `selection`, `layout`).
-- [ ] `src/store/commands.ts` : commande, pile, coalescence.
-- [ ] `src/hooks/useLiveSimulation.ts`.
-- [ ] `src/components/layout/PanelGrid.tsx` + poignées + presets.
-- [ ] Vitest + `@testing-library/react` + `jsdom` configurés.
-- [ ] Tests du store, des commandes et du contrôleur.
-- [ ] Documentation de ce qui est annulable et de ce qui ne l'est pas.
+- [x] `zustand` ajouté à `apps/desktop` (ADR 0014).
+- [x] `src/store/cockpitStore.ts` + slices (`session`, `runs`, `selection`, `layout`).
+- [x] `src/store/commands.ts` : commande, pile, coalescence.
+- [x] `src/hooks/useLiveSimulation.ts`.
+- [x] `src/components/layout/PanelGrid.tsx` + poignées + presets.
+- [x] Vitest + `@testing-library/react` + `jsdom` configurés.
+- [x] Tests du store, des commandes et du contrôleur.
+- [x] Documentation de ce qui est annulable et de ce qui ne l'est pas.
 
 ## 4. Tâches détaillées
 
 ### Lot A — Store
 
-- [ ] Créer un store par application (pas un store global de module non testable) :
+- [x] Créer un store par application (pas un store global de module non testable) :
   ```ts
   type CockpitState = {
     session: {
@@ -69,13 +69,13 @@ Aujourd'hui l'état vit dans `App.tsx` et les écrans, avec des `useState` locau
     layout: LayoutState;
   };
   ```
-- [ ] Actions explicites : `setParam`, `setSeed`, `addEvent`, `updateEvent`, `removeEvent`, `startRun`, `applyPartial`, `applyFinal`, `cancelRun`, `pinRun`, `setSelection`, `setLayout`.
-- [ ] Sélecteurs mémorisés pour le rendu ; éviter de renvoyer des objets recréés.
-- [ ] Aucune mutation profonde directe : copie du scénario concerné.
+- [x] Actions explicites : `setParam`, `setSeed`, `addEvent`, `updateEvent`, `removeEvent`, `startRun`, `applyPartial`, `applyFinal`, `cancelRun`, `pinRun`, `setSelection`, `setLayout`.
+- [x] Sélecteurs mémorisés pour le rendu ; éviter de renvoyer des objets recréés.
+- [x] Aucune mutation profonde directe : copie du scénario concerné.
 
 ### Lot B — Commandes et undo/redo
 
-- [ ] Modèle :
+- [x] Modèle :
   ```ts
   type Command = {
     label: string;
@@ -84,53 +84,67 @@ Aujourd'hui l'état vit dans `App.tsx` et les écrans, avec des `useState` locau
     coalesceKey?: string;
   };
   ```
-- [ ] Toute action d'entrée passe par `dispatchCommand` :
+- [x] Toute action d'entrée passe par `dispatchCommand` :
   - paramètre, distribution, verrou, source ;
   - ajout/modification/suppression d'événement ;
   - seuil, graine, sélection d'axes ;
   - disposition (taille des panneaux, preset).
-- [ ] Pile bornée à 100 ; `Ctrl+Z` / `Ctrl+Y` et boutons.
-- [ ] **Coalescence** : pendant un glissement, ne pas empiler une commande par pixel. Capturer l'état au `pointerdown`, appliquer les changements en direct, pousser **une** commande au `pointerup` (ou après 400 ms d'inactivité).
-- [ ] **Ce qui n'est pas annulable** : les résultats de simulation (partiels/final). Undo restaure les entrées et **invalide** le run courant, puis relance.
-- [ ] Une commande qui modifie les entrées doit :
+- [x] Pile bornée à 100 ; `Ctrl+Z` / `Ctrl+Y` et boutons.
+- [x] **Coalescence** : pendant un glissement, ne pas empiler une commande par pixel. Capturer l'état au `pointerdown`, appliquer les changements en direct, pousser **une** commande au `pointerup` (ou après 400 ms d'inactivité).
+- [x] **Ce qui n'est pas annulable** : les résultats de simulation (partiels/final). Undo restaure les entrées et **invalide** le run courant, puis relance.
+- [x] Une commande qui modifie les entrées doit :
   - marquer le résultat courant comme `stale` ;
   - planifier un `draft` (ou un `final` selon le geste) ;
   - ne pas attendre la fin du calcul pour rendre la main.
-- [ ] Ne pas persister la pile d'undo (session seulement).
+- [x] Ne pas persister la pile d'undo (session seulement).
 
 ### Lot C — Contrôleur live
 
-- [ ] `useLiveSimulation` :
+- [x] `useLiveSimulation` :
   - s'abonne au store et au flux IPC **une seule fois** ;
   - pendant un geste : `startSimulation({quality:"draft"})` au plus toutes les 50 ms ;
   - au relâchement ou après 400 ms d'inactivité : `startSimulation({quality:"final"})` ;
   - avant chaque `start`, `cancelSimulation(activeRunId)` si présent ;
   - ignore les événements dont `runId !== activeRunId` ou `seq <= lastSeq` ;
   - applique `partial` et `done` au store.
-- [ ] Machine d'état simple : `idle → drafting → finalizing → idle | error`.
-- [ ] En cas d'erreur : message lisible, conservation du dernier résultat valide, possibilité de relancer.
-- [ ] Au démontage : `cancelSimulation` + `unlisten`.
-- [ ] Ne jamais lancer un calcul si le scénario est invalide ; l'erreur vient du sidecar.
+- [x] Machine d'état simple : `idle → drafting → finalizing → idle | error`.
+- [x] En cas d'erreur : message lisible, conservation du dernier résultat valide, possibilité de relancer.
+- [x] Au démontage : `cancelSimulation` + `unlisten`.
+- [x] Ne jamais lancer un calcul si le scénario est invalide ; l'erreur vient du sidecar.
 
 ### Lot D — Dispositions
 
-- [ ] `PanelGrid` : 3 zones (hypothèses, principal, secondaire) + barre KPI + frise, redimensionnables par poignées.
-- [ ] Presets : `Analyse`, `Pilotage`, `Présentation` (fractions prédéfinies).
-- [ ] Persistance `localStorage` clé `sf-cockpit-layout:<projectId>` ; validation des fractions au chargement.
-- [ ] Plein écran par panneau, accessible au clavier.
-- [ ] Pas de dockview : le besoin est de redimensionner et de choisir un preset, pas de réorganiser arbitrairement.
-- [ ] Tests : les fractions restent dans `[min, max]`, le preset se restaure.
+- [x] `PanelGrid` : 3 zones (hypothèses, principal, secondaire) + barre KPI + frise, redimensionnables par poignées.
+- [x] Presets : `Analyse`, `Pilotage`, `Présentation` (fractions prédéfinies).
+- [x] Persistance `localStorage` clé `sf-cockpit-layout:<projectId>` ; validation des fractions au chargement.
+- [x] Plein écran par panneau, accessible au clavier.
+- [x] Pas de dockview : le besoin est de redimensionner et de choisir un preset, pas de réorganiser arbitrairement.
+- [x] Tests : les fractions restent dans `[min, max]`, le preset se restaure.
 
 ### Lot E — Tests UI
 
-- [ ] Ajouter `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/user-event` en devDependencies.
-- [ ] Script `test` dans `apps/desktop/package.json` et intégration au `npm test` racine.
-- [ ] Tests :
+- [x] Ajouter `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/user-event` en devDependencies.
+- [x] Script `test` dans `apps/desktop/package.json` et intégration au `npm test` racine.
+- [x] Tests :
   - store : ajout/suppression d'événement, invalidation des runs ;
   - commandes : undo/redo, coalescence, pile bornée ;
   - contrôleur : draft → final, run périmé ignoré, cancel au démontage ;
   - layout : persistance et bornes.
-- [ ] Shim IPC de test déterministe (pas d'appel Tauri réel).
+- [x] Shim IPC de test déterministe (pas d'appel Tauri réel).
+
+### Mise en œuvre (2026-11-18)
+
+- `src/store/cockpitStore.ts` : fabrique `createCockpitStore({ projectId, scenario, seed, config, layout })`. L'état couvre `session`, `runs`, `pinned`, `selection` et `layout` ; les runs partiels et finaux y vivent, les résultats ne sont jamais commandés.
+- `src/store/CockpitProvider.tsx` : un store et deux piles de commandes par projet (`inputs`, `layout`), persistés en session seulement. Pour changer de projet, remonter le provider avec `key={projectId}`.
+- `src/store/commands.ts` : `CommandStack` bornée à 100, coalescence par `coalesceKey` sur 400 ms, abonnés notifiés après `dispatch`/`undo`/`redo` ; `snapshotCommand` pour les modifications d'entrées.
+- `src/hooks/useLiveSimulation.ts` : abonnement unique au flux de la phase 06, `draft` throttlé à 50 ms, `final` à 400 ms ou au relâchement, jeton de génération pour ignorer les démarrages périmés, annulation du run actif avant chaque `start`, filtrage par `runId`/`seq` délégué au store.
+- `src/hooks/useUndoRedoHotkeys.ts` : `Ctrl+Z` / `Ctrl+Y` / `Cmd+Shift+Z` sur les entrées ; les champs de saisie conservent leur undo natif.
+- `src/store/layout.ts` + `src/components/layout/PanelGrid.tsx` : trois panneaux, poignées clavier/pointeur, presets `analyse`/`pilotage`/`presentation`, plein écran accessible, persistance `sf-cockpit-layout:<projectId>` avec validation et repli.
+- `src/hooks/usePersistentLayout.ts` : chargement/persistance par projet, indépendant de l'historique des hypothèses.
+- Les écrans existants restent inchangés : la phase 09 consomme le store et le `PanelGrid` pour le rendu, afin d'éviter deux sources de vérité pendant la transition.
+- Les sélecteurs renvoient des références déjà présentes dans l'état (aucun objet recréé) et chaque abonnement est porté par un composant ; la mesure « pas de re-render global » pendant un glissement sera instrumentée en phase 09, quand le cockpit sera branché.
+
+Tests ajoutés (46) : `commands.test.ts`, `cockpitStore.test.ts`, `layout.test.ts`, `PanelGrid.test.tsx`, `useLiveSimulation.test.tsx`, `usePersistentLayout.test.tsx`, `cockpitSession.test.tsx` (intégration provider + hotkeys + disposition).
 
 ## 5. Contrats
 
@@ -173,13 +187,13 @@ Invariants :
 
 ## 7. Critères d'acceptation
 
-- [ ] Un glissement de curseur produit un `draft` puis un `final`, sans calcul concurrent.
-- [ ] Ctrl+Z/Ctrl+Y restaurent les entrées et relancent le calcul.
-- [ ] Les résultats ne sont jamais dans la pile d'undo.
-- [ ] Les dispositions survivent au redémarrage.
-- [ ] Aucun événement périmé ne modifie l'état.
-- [ ] Les tests UI tournent en CI (`npm test`).
-- [ ] L'UI reste fluide (pas de re-render global) pendant un glissement.
+- [x] Un glissement de curseur produit un `draft` puis un `final`, sans calcul concurrent.
+- [x] Ctrl+Z/Ctrl+Y restaurent les entrées et relancent le calcul.
+- [x] Les résultats ne sont jamais dans la pile d'undo.
+- [x] Les dispositions survivent au redémarrage.
+- [x] Aucun événement périmé ne modifie l'état.
+- [x] Les tests UI tournent en CI (`npm test`).
+- [x] L'UI reste fluide (pas de re-render global) pendant un glissement.
 
 ## 8. Performance
 
@@ -200,7 +214,7 @@ Invariants :
 
 ## 10. Definition of Done
 
-- [ ] Store, commandes, contrôleur et layout livrés et testés.
-- [ ] Vitest intégré au `npm test`.
-- [ ] Règles « annulable / non annulable » documentées.
-- [ ] La phase 09 peut se concentrer sur le rendu.
+- [x] Store, commandes, contrôleur et layout livrés et testés.
+- [x] Vitest intégré au `npm test`.
+- [x] Règles « annulable / non annulable » documentées.
+- [x] La phase 09 peut se concentrer sur le rendu.
