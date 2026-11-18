@@ -44,6 +44,7 @@ import {
 import { BriefScreen } from "./screens/BriefScreen";
 import { TokenBoard } from "./components/TokenBoard";
 import { ComponentsShowcase } from "./components/ComponentsShowcase";
+import { CockpitScreen } from "./screens/CockpitScreen";
 import { HypothesesScreen } from "./screens/HypothesesScreen";
 import { InterviewScreen } from "./screens/InterviewScreen";
 import { ProjectsScreen } from "./screens/ProjectsScreen";
@@ -79,6 +80,7 @@ type View =
   | "hypotheses"
   | "simulation"
   | "results"
+  | "cockpit"
   | "settings";
 
 const NAV: Array<{ id: View; fr: string; en: string }> = [
@@ -88,6 +90,7 @@ const NAV: Array<{ id: View; fr: string; en: string }> = [
   { id: "hypotheses", fr: "Hypothèses", en: "Assumptions" },
   { id: "simulation", fr: "Simulation", en: "Simulation" },
   { id: "results", fr: "Résultats", en: "Results" },
+  { id: "cockpit", fr: "Cockpit", en: "Cockpit" },
   { id: "settings", fr: "Réglages", en: "Settings" },
 ];
 
@@ -717,6 +720,16 @@ export function App() {
           error={error}
           onNarrate={handleNarrate}
           onBack={() => navigate("simulation")}
+        />
+      ) : null}
+
+      {view === "cockpit" && activeProject ? (
+        <CockpitScreen
+          project={activeProject}
+          scenario={data?.scenario ?? null}
+          run={data?.run ?? null}
+          onBack={() => navigate("results")}
+          onOpenHypotheses={() => navigate("hypotheses")}
         />
       ) : null}
 

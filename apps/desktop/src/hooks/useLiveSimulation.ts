@@ -72,8 +72,8 @@ export function useLiveSimulation(options: LiveSimulationOptions): LiveSimulatio
   const finalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastDraftAt = useRef(Number.NEGATIVE_INFINITY);
   const gesture = useRef(false);
-  /** Des entrées ont changé depuis le dernier calcul lancé. */
-  const pending = useRef(false);
+  /** Le geste courant a modifié au moins une entrée. */
+  const gestureDirty = useRef(false);
   const generation = useRef(0);
 
   const clearDraft = useCallback(() => {
@@ -101,7 +101,6 @@ export function useLiveSimulation(options: LiveSimulationOptions): LiveSimulatio
         void depsRef.current.cancel(previousRunId).catch(() => undefined);
       }
       const token = ++generation.current;
-      pending.current = false;
       if (quality === "draft") lastDraftAt.current = Date.now();
       try {
         const result = await depsRef.current.start({
@@ -148,15 +147,17 @@ export function useLiveSimulation(options: LiveSimulationOptions): LiveSimulatio
 
   const invalidate = useCallback(() => {
     if (!enabledRef.current) return;
-    pending.current = true;
+    if (gesture.current) gestureDirty.current = true;
     store.getState().markStale();
-    if (gesture.current) return;
+    // Pendant un geste : drafts throttlés pour un aperçu vivant, pas de final
+    // avant le relâchement. Hors geste : draft puis final automatique.
     scheduleDraft();
-    scheduleFinal();
+    if (!gesture.current) scheduleFinal();
   }, [scheduleDraft, scheduleFinal, store]);
 
   const beginGesture = useCallback(() => {
     gesture.current = true;
+    gestureDirty.current = false;
     clearFinal();
   }, [clearFinal]);
 
@@ -164,13 +165,14 @@ export function useLiveSimulation(options: LiveSimulationOptions): LiveSimulatio
     gesture.current = false;
     clearDraft();
     clearFinal();
-    if (!pending.current) return;
+    if (!gestureDirty.current) return;
+    gestureDirty.current = false;
     void start("final");
   }, [clearDraft, clearFinal, start]);
 
   const runFinal = useCallback(() => {
     gesture.current = false;
-    pending.current = false;
+    gestureDirty.current = false;
     clearDraft();
     clearFinal();
     void start("final");
@@ -181,6 +183,7 @@ export function useLiveSimulation(options: LiveSimulationOptions): LiveSimulatio
     clearDraft();
     clearFinal();
     gesture.current = false;
+    gestureDirty.current = false;
     const activeRunId = store.getState().session.activeRunId;
     if (!activeRunId) return;
     void depsRef.current.cancel(activeRunId).catch(() => undefined);

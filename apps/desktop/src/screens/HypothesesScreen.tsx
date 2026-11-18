@@ -18,6 +18,7 @@ import {
   SelectField,
 } from "@see/ui";
 import { useEffect, useMemo, useState } from "react";
+import { ASSUMPTION_SPECS as SPECS } from "../lib/assumptions";
 import { formatDateTime } from "../lib/format";
 import { benchmarkLookup, ipcAvailable } from "../lib/ipc";
 
@@ -31,31 +32,6 @@ interface Props {
   onNext: () => void;
   onBack: () => void;
 }
-
-interface AssumptionSpec {
-  key: string;
-  label: string;
-  unit: string;
-  defaultValue: number;
-  required: boolean;
-  min?: number;
-  max?: number;
-}
-
-const SPECS: AssumptionSpec[] = [
-  { key: "initial_cash", label: "Trésorerie initiale", unit: "FCFA", defaultValue: 500_000, required: true, min: 0 },
-  { key: "unit_price", label: "Prix de vente unitaire", unit: "FCFA/unité", defaultValue: 5_000, required: true, min: 0 },
-  { key: "unit_cost", label: "Coût d'achat unitaire", unit: "FCFA/unité", defaultValue: 3_000, required: true, min: 0 },
-  { key: "fixed_costs_monthly", label: "Coûts fixes mensuels", unit: "FCFA/mois", defaultValue: 300_000, required: true, min: 0 },
-  { key: "demand_mean_monthly", label: "Demande moyenne mensuelle", unit: "unités/mois", defaultValue: 200, required: true, min: 0 },
-  { key: "demand_cv", label: "Variation de la demande", unit: "coefficient", defaultValue: 0.2, required: false, min: 0, max: 5 },
-  { key: "loss_rate", label: "Taux de perte mensuel", unit: "fraction", defaultValue: 0.02, required: false, min: 0, max: 1 },
-  { key: "logistics_cost_per_unit", label: "Coût logistique unitaire", unit: "FCFA/unité", defaultValue: 0, required: false, min: 0 },
-  { key: "target_stock_months", label: "Stock cible", unit: "mois de demande", defaultValue: 1, required: false, min: 0, max: 24 },
-  { key: "reorder_lead_time_months", label: "Délai de réapprovisionnement", unit: "mois", defaultValue: 1, required: false, min: 0, max: 24 },
-  { key: "initial_stock", label: "Stock initial", unit: "unités", defaultValue: 0, required: false, min: 0 },
-  { key: "tax_rate", label: "Taux d'imposition", unit: "fraction", defaultValue: 0, required: false, min: 0, max: 1 },
-];
 
 const DISTRIBUTIONS = [
   ["none", "Valeur fixe"],

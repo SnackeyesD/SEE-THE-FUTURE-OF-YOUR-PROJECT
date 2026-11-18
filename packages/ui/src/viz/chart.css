@@ -227,3 +227,132 @@
   stroke: var(--chart-ring);
   stroke-width: 1;
 }
+
+/* ------------------------------------------------------------
+ * Éventail P10–P90 (phase 09)
+ * ------------------------------------------------------------ */
+.viz__fan-nav:focus-visible {
+  outline: var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
+.viz__fan-band {
+  fill: var(--series-1-fill);
+  stroke: none;
+}
+
+.viz__fan-median {
+  fill: none;
+  stroke: var(--series-1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.viz__fan-ghost {
+  fill: none;
+  stroke: var(--serie-color);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.75;
+}
+
+.viz__fan-hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.viz__threshold {
+  stroke: var(--chart-label);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.viz__threshold-hit {
+  stroke: transparent;
+  stroke-width: 14;
+  cursor: ns-resize;
+}
+
+.viz__threshold-hit:focus-visible {
+  outline: var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
+.viz__threshold-label {
+  fill: var(--text-1);
+  font-family: var(--font-data);
+  font-size: var(--fs-10);
+  font-variant-numeric: tabular-nums;
+}
+
+.viz__crosshair {
+  stroke: var(--chart-axis);
+  stroke-width: 1;
+}
+
+.viz__fan-dot {
+  fill: var(--series-1);
+  stroke: var(--chart-ring);
+  stroke-width: 1.5;
+}
+
+.viz__fan-dot--ref {
+  fill: var(--text);
+}
+
+.viz__fan-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-2);
+  font-size: var(--fs-12);
+}
+
+.viz__fan-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.viz__fan-readout {
+  margin: 0;
+  color: var(--text-1);
+  font-family: var(--font-data);
+  font-size: var(--fs-12);
+  font-variant-numeric: tabular-nums;
+}
+
+.viz__table {
+  color: var(--text-2);
+  font-size: var(--fs-12);
+}
+
+.viz__table summary {
+  cursor: pointer;
+}
+
+.viz__table table {
+  width: 100%;
+  margin-top: var(--sp-2);
+  border-collapse: collapse;
+}
+
+.viz__table th,
+.viz__table td {
+  padding: var(--sp-1) var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.viz__table thead th,
+.viz__table tbody th {
+  text-align: left;
+}

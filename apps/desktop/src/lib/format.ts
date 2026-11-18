@@ -28,6 +28,21 @@ export function formatPercent(value: number, digits = 1): string {
   }).format(value);
 }
 
+/**
+ * Probabilité issue du moteur. Une borne empirique n'est jamais présentée
+ * comme certaine : au-delà de 99,9 % (ou en dessous de 0,1 %) on affiche une
+ * borne, pas « 100 % ».
+ */
+export function formatProbability(value: number | null | undefined, digits = 1): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "non disponible";
+  }
+  if (value >= 0.999) return "≥ 99,9 %";
+  if (value > 0 && value <= 0.001) return "≤ 0,1 %";
+  if (value <= 0) return "0 %";
+  return formatPercent(value, digits);
+}
+
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
   const date = new Date(value);

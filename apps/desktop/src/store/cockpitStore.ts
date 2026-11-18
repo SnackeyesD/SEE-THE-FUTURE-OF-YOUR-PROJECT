@@ -78,6 +78,8 @@ export interface CockpitState {
   addEvent: (event: ScenarioEvent) => void;
   updateEvent: (eventId: string, patch: Partial<ScenarioEvent>) => void;
   removeEvent: (eventId: string) => void;
+  /** Injecte un résultat déjà calculé (ouverture d'un run persisté). */
+  hydrateRun: (result: SimulationResult) => void;
   startRun: (input: StartRunInput) => void;
   applyPartial: (input: ApplyPartialInput) => void;
   applyFinal: (input: ApplyFinalInput) => void;
@@ -104,7 +106,11 @@ export interface CockpitStoreOptions {
 
 export type CockpitStore = StoreApi<CockpitState>;
 
-const DEFAULT_CONFIG: SimulationConfig = { runs: 10_000, histogramBins: 40 };
+/**
+ * La taille du calcul est pilotée par la qualité (`draft` 500, `final` 5 000).
+ * Ne pas renseigner `runs` ici : un champ explicite écraserait le profil.
+ */
+const DEFAULT_CONFIG: SimulationConfig = { histogramBins: 40 };
 const DEFAULT_SEED = 42;
 
 function cloneValue<T>(value: T): T {
@@ -223,6 +229,24 @@ export function createCockpitStore(options: CockpitStoreOptions): CockpitStore {
           },
         },
         runs: staleRuns(state.runs, state.pinned),
+      })),
+
+    hydrateRun: (result) =>
+      set((state) => ({
+        runs: {
+          ...state.runs,
+          [result.runId]: {
+            runId: result.runId,
+            quality: result.quality ?? "final",
+            status: "done",
+            aggregates: null,
+            result,
+            seq: 0,
+            seed: result.seed,
+            engineVersion: result.engineVersion,
+            stale: false,
+          },
+        },
       })),
 
     startRun: ({ runId, quality, seed }) =>
@@ -368,6 +392,21 @@ export function createCockpitStore(options: CockpitStoreOptions): CockpitStore {
 export function selectActiveRun(state: CockpitState): RunState | null {
   if (!state.session.activeRunId) return null;
   return state.runs[state.session.activeRunId] ?? null;
+}
+
+/**
+ * Run affiché par le cockpit : le run actif, sinon le dernier run terminé
+ * (ordre d'insertion). Aucune donnée n'est recalculée ici.
+ */
+export function selectLatestRun(state: CockpitState): RunState | null {
+  const active = selectActiveRun(state);
+  if (active) return active;
+  const ids = Object.keys(state.runs);
+  for (let index = ids.length - 1; index >= 0; index -= 1) {
+    const run = state.runs[ids[index]];
+    if (run?.result) return run;
+  }
+  return null;
 }
 
 export function selectPinnedRuns(state: CockpitState): RunState[] {

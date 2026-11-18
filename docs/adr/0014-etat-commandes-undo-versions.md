@@ -85,11 +85,15 @@
   coalescence à zéro.
 - **Contrôleur** `useLiveSimulation` :
   - un seul abonnement à `onSimulationEvent` par provider, filtré par `runId` actif ;
-  - `draft` throttlé à 50 ms, `final` différé de 400 ms ou déclenché au relâchement ;
-  - `beginGesture()` suspend tout calcul (y compris le final), `endGesture()` lance
-    immédiatement le `final` ;
-  - avant chaque `start`, le run actif est annulé ; un jeton de génération empêche un
-    `start` périmé d'écraser l'état (le run accepté est alors annulé côté sidecar) ;
+  - `draft` throttlé à 50 ms, `final` différé de 400 ms hors geste ;
+  - **pendant un geste** (`beginGesture()` … `endGesture()`) : les `invalidate()`
+    continuent de programmer des **drafts throttlés** — l'aperçu reste vivant — mais
+    aucun `final` n'est armé. `endGesture()` ne lance le `final` que si le geste a
+    réellement modifié une entrée (`gestureDirty`), ce qui évite un calcul final sur un
+    simple clic sans mouvement ;
+  - avant chaque `start`, le run actif est annulé (statut local `cancelled` inclus) ; un
+    jeton de génération empêche un `start` périmé d'écraser l'état (le run accepté est
+    alors annulé côté sidecar) ;
   - les `seq` décroissants et les événements d'un run non actif sont ignorés par le
     store, pas par le hook ; le démontage annule le run actif et se désabonne.
 - **Hotkeys** : `Ctrl+Z` / `Ctrl+Y` / `Cmd+Shift+Z` sur `window`, ignorées dans
@@ -101,11 +105,52 @@
   fractions ; seul `custom` conserve des fractions libres. `PanelGrid` expose des
   poignées `separator` clavier (flèches, `Shift` pour un pas rapide) et pointeur, ainsi
   qu'un plein écran `main`/`secondary` accessible.
-- Les écrans existants (`App.tsx`, `SimulationScreen`, `ResultsScreen`) restent
-  inchangés : la phase 09 branchera le store et le `PanelGrid` sur le rendu pour éviter
-  deux sources de vérité pendant la transition.
+- Les écrans existants (`App.tsx`, `SimulationScreen`, `ResultsScreen`) restent branchés :
+  le cockpit est ajouté en phase 09 comme une route supplémentaire, sans remplacer
+  `ResultsScreen`.
 - Le protocole IPC n'évolue pas (toujours `1.10.0`) : la phase 08 consomme les messages
   `simulation.*` de la phase 06.
+
+### Mise en œuvre phase 09
+
+- **Route `cockpit`** ajoutée à `App.tsx` entre Résultats et Réglages. `ResultsScreen`
+  reste intact ; `suggestedView` continue de pointer sur `results` à l'ouverture d'un
+  projet, pour ne pas changer le parcours existant ni les tests d'App.
+- `CockpitScreen` monte un `CockpitProvider` **par couple projet/scénario**
+  (`key={projectId:scenarioId}`) et réhydrate le run persisté via `hydrateRun(result)`.
+  La graine initiale vient du run (`result.seed ?? run.seed ?? 42`).
+- **Aucun calcul métier dans React** : KPI, bandes et CDF sont lus dans `Metrics`,
+  `MonthlyAverages`, `Histogram` et `ConvergenceState` (finaux) ou dans
+  `PartialAggregates` (drafts). Le seuil de trésorerie ne fait qu'interroger
+  `cdfProbabilityAt` (interpolation linéaire de la CDF `minCashCdf` fournie) ; sans CDF,
+  l'interface affiche « non disponible ».
+- **Contrat `metrics`** : `KpiBar` affiche `breakEvenProbability` par mois (sélecteur
+  6/12/18/horizon, probabilité cumulée), `financingNeedP50/P90`, `cashNegativeProbability`
+  et `p50`/`p10`/`p90`. Les probabilités passent par `formatProbability` : une décimale,
+  bornée « ≥ 99,9 % » / « ≤ 0,1 % », jamais « 100 % ».
+- **Configuration** : `DEFAULT_CONFIG` ne contient plus `runs` (seulement
+  `histogramBins: 40`). Sinon un run explicite écraserait le profil de qualité du
+  moteur (`draft` 500, `final` 5 000).
+- **Éventail** : `packages/ui/src/viz/fan.ts` (géométrie pure, CDF, mois le plus proche,
+  pas de seuil) et `FanChart.tsx` (surface P10–P90, médiane, 3 fantômes maximum, seuil
+  `role="slider"`, navigation clavier par mois, tableau alternatif repliable). Le composant
+  reçoit des bandes déjà agrégées et n'interpole jamais une valeur.
+- **Hypothèses** : spécifications extraites dans `src/lib/assumptions.ts` (partagées avec
+  `HypothesesScreen`) ; `TriHandleSlider` applique `min ≤ mode ≤ max` pendant le geste,
+  expose trois `slider` clavier, une saisie numérique au double-clic et un aperçu SVG.
+  Le verrou est un **état UI local** : le moteur et le protocole n'ont pas de notion de
+  paramètre verrouillé.
+- **Commandes** : chaque geste d'hypothèse pousse une commande coalescée (`param:<clé>`)
+  et appelle `beginGesture`/`endGesture` du contrôleur ; le changement de graine et le
+  retour au benchmark passent aussi par la pile `inputs`. Le layout reste sur sa pile.
+- **Fantômes** : runs épinglés du store (maximum 3 dessinés), légende avec graine et état
+  « périmé », avertissement si une graine diffère de la graine courante. L'épinglage
+  n'est **pas persisté** : le protocole `1.10.0` n'expose ni `run.list` ni `run.pin`
+  (phase 13). Un rechargement de l'application perd donc les fantômes.
+- **États** : vide sans scénario, erreur (`session.error`), résultat périmé (`stale`),
+  progression (partiel `completedRuns/totalRuns`), convergence et qualité (`draft`/
+  `final`) toujours visibles.
+- Le protocole IPC reste `1.10.0` ; aucun message n'est ajouté.
 
 ## Contexte et raisons
 

@@ -109,22 +109,34 @@ describe("useLiveSimulation", () => {
     expect(ctx.params(1).quality).toBe("draft");
   });
 
-  it("ne lance rien pendant un geste puis un seul final au relâchement", async () => {
+  it("lance des drafts throttlés pendant un geste et un seul final au relâchement", async () => {
     const ctx = setup();
     await flush();
 
     act(() => ctx.hook.result.current.beginGesture());
     act(() => ctx.hook.result.current.invalidate());
+    await flush();
+    expect(ctx.start).toHaveBeenCalledTimes(1);
+    expect(ctx.params(0).quality).toBe("draft");
+
+    act(() => ctx.hook.result.current.invalidate());
     await act(async () => {
       await vi.advanceTimersByTimeAsync(250);
     });
-    expect(ctx.start).not.toHaveBeenCalled();
+    expect(ctx.start).toHaveBeenCalledTimes(2);
+    expect(ctx.params(1).quality).toBe("draft");
+    // Aucun final automatique tant que le geste n'est pas relâché.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    expect(ctx.start).toHaveBeenCalledTimes(2);
 
     act(() => ctx.hook.result.current.endGesture());
     await flush();
 
-    expect(ctx.start).toHaveBeenCalledTimes(1);
-    expect(ctx.params(0).quality).toBe("final");
+    expect(ctx.start).toHaveBeenCalledTimes(3);
+    expect(ctx.params(2).quality).toBe("final");
+    expect(ctx.store.getState().runs["run-2"].status).toBe("cancelled");
   });
 
   it("ne relance pas un geste qui n'a rien changé", async () => {
