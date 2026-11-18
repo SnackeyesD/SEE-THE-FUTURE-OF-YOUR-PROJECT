@@ -22,7 +22,10 @@ Ce dossier contient la spécification de la V3 et son découpage d'implémentati
 | 01 — Audit, décisions & banc d'essai | **terminée** (2026-11-14), décisions externes en attente | [`audit.md`](01-audit-et-decisions/audit.md), ADR 0010–0016, [`docs/perf/baseline.md`](../perf/baseline.md), `npm run bench` |
 | 02 — Métriques cockpit | **terminée** (2026-11-14), relecture produit en attente | [`02-moteur-metriques-v3/README.md`](02-moteur-metriques-v3/README.md), protocole `1.8.0`, métriques/bandes/CDF/histogrammes, tests V3 |
 | 03 — Tirages communs & préfixe | **terminée** (2026-11-14), revue senior en attente | [`03-moteur-crn-prefixe/README.md`](03-moteur-crn-prefixe/README.md), `DrawBank`, transformations `U`/`Z`, tests de préfixe/invariance, moteur `0.2.0` |
-| 04 à 16 | à démarrer | voir le plan maître |
+| 04 — Calcul progressif & annulation | **terminée** (2026-11-15) | [`04-moteur-progressif-annulation/README.md`](04-moteur-progressif-annulation/README.md), `quality`, partiels throttlés, `CancelToken`, moteur `0.3.0` |
+| 05 — Événements & chocs | **terminée** (2026-11-17) | [`05-moteur-evenements/README.md`](05-moteur-evenements/README.md), protocole `1.9.0`, catalogue `EVENT_CATALOG`, modificateurs par bloc, tests/golden |
+| 06 — IPC de flux & concurrence | **terminée** (2026-11-18), revue senior en attente | [`06-ipc-flux-concurrence/README.md`](06-ipc-flux-concurrence/README.md), protocole `1.10.0`, `simulation.start`/`cancel`, writer sérialisé, dispatcher Rust non bloquant, [`docs/perf/ipc.md`](../perf/ipc.md) |
+| 07 à 16 | à démarrer | voir le plan maître |
 
 ## Règle d'or
 

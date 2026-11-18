@@ -7,6 +7,7 @@ import queue
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -138,7 +139,7 @@ def test_health_exposes_versions(sidecar: SidecarProcess) -> None:
     response = sidecar.call("health")
     result = response["result"]
     assert result["status"] == "ok"
-    assert result["protocolVersion"] == "1.9.0"
+    assert result["protocolVersion"] == "1.10.0"
     assert isinstance(result["pid"], int)
     assert result["sidecarVersion"]
 
@@ -918,3 +919,430 @@ def test_sandbox_analysis_audit_and_export(sidecar: SidecarProcess, tmp_path: Pa
     )
     assert refused["error"]["code"] == -32602
 
+
+
+# ---------------------------------------------------------------------------
+# Phase 06 — flux, ordre, concurrence et annulation
+# ---------------------------------------------------------------------------
+
+SLOW_CONFIG: dict[str, Any] = {"runs": 120_000, "batchSize": 512}
+
+
+def _create_project(sidecar: SidecarProcess, name: str = "Phase 06") -> str:
+    created = sidecar.call("project.create", {"name": name}, request_id=900)
+    return created["result"]["project"]["id"]
+
+
+def _is_terminal(message: dict[str, Any]) -> bool:
+    return message.get("method") in {
+        "simulation.done",
+        "simulation.cancelled",
+        "simulation.error",
+    }
+
+
+def _read_until(
+    sidecar: SidecarProcess,
+    predicate: Any,
+    *,
+    timeout: float = 30.0,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    messages: list[dict[str, Any]] = []
+    deadline = time.monotonic() + timeout
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise AssertionError("événement attendu non reçu")
+        message = sidecar.read_json(timeout=remaining)
+        if message.get("method") is not None:
+            messages.append(message)
+            if predicate(message):
+                return messages, message
+
+
+def _drain(sidecar: SidecarProcess, duration: float = 0.3) -> list[dict[str, Any]]:
+    messages: list[dict[str, Any]] = []
+    deadline = time.monotonic() + duration
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return messages
+        try:
+            messages.append(sidecar.read_json(timeout=remaining))
+        except queue.Empty:
+            return messages
+
+
+def test_start_is_fast_partials_are_ordered_and_draft_is_not_persisted(
+    sidecar: SidecarProcess,
+) -> None:
+    project_id = _create_project(sidecar)
+    started = time.monotonic()
+    response = sidecar.call(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "draft",
+            "seed": 7,
+            "config": {"runs": 80, "batchSize": 10},
+        },
+        request_id=910,
+    )
+    elapsed = time.monotonic() - started
+    assert response["result"]["accepted"] is True
+    assert elapsed < 0.1, f"réponse simulation.start trop lente: {elapsed:.3f}s"
+    run_id = response["result"]["runId"]
+
+    messages, terminal = _read_until(sidecar, _is_terminal)
+    events = [message for message in messages if message["params"].get("runId") == run_id]
+    assert terminal["method"] == "simulation.done"
+    assert terminal["params"]["persisted"] is False
+    assert terminal["params"]["result"]["runId"] == run_id
+
+    partials = [event for event in events if event["method"] == "simulation.partial"]
+    seqs = [event["params"]["seq"] for event in partials]
+    assert seqs == sorted(seqs)
+    assert seqs == list(range(1, len(seqs) + 1))
+    assert events[-1]["method"] == "simulation.done"
+    assert all(
+        event["method"] != "simulation.partial"
+        for event in events[events.index(terminal) + 1 :]
+    )
+    for event in partials:
+        aggregates = event["params"]["aggregates"]
+        assert "trajectories" not in aggregates
+        assert aggregates["completedRuns"] <= aggregates["totalRuns"]
+
+    data = sidecar.call("project.data", {"projectId": project_id}, request_id=911)
+    assert data["result"]["run"] is None
+
+
+def test_final_is_persisted_once_with_its_seed(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Final")
+    response = sidecar.call(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "final",
+            "seed": 5,
+            "config": {"runs": 60, "batchSize": 10},
+        },
+        request_id=920,
+    )
+    run_id = response["result"]["runId"]
+    messages, terminal = _read_until(
+        sidecar, lambda message: _is_terminal(message) and message["params"].get("runId") == run_id
+    )
+    assert messages[-1] is terminal
+    assert terminal["method"] == "simulation.done"
+    assert terminal["params"]["persisted"] is True
+    assert terminal["params"]["result"]["seed"] == 5
+
+    data = sidecar.call("project.data", {"projectId": project_id}, request_id=921)
+    run = data["result"]["run"]
+    assert run is not None
+    assert run["id"] == run_id
+    assert run["seed"] == 5
+    assert run["runs"] == 60
+    assert data["result"]["run"]["id"] == run_id
+
+    # Le draft suivant ne doit pas créer une seconde ligne de run.
+    sidecar.call(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "draft",
+            "seed": 6,
+            "config": {"runs": 30, "batchSize": 10},
+        },
+        request_id=922,
+    )
+    _read_until(sidecar, lambda message: _is_terminal(message))
+    data = sidecar.call("project.data", {"projectId": project_id}, request_id=923)
+    assert data["result"]["run"]["id"] == run_id
+
+
+def test_new_start_supersedes_the_previous_run(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Supersede")
+    first = sidecar.call(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "final",
+            "seed": 1,
+            "config": SLOW_CONFIG,
+        },
+        request_id=930,
+    )
+    first_id = first["result"]["runId"]
+    notifications, second = sidecar.collect(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "final",
+            "seed": 2,
+            "config": SLOW_CONFIG,
+        },
+        request_id=931,
+    )
+    second_id = second["result"]["runId"]
+    assert second["result"]["replacedRunId"] == first_id
+
+    events = list(notifications)
+    terminals: dict[str, dict[str, Any]] = {}
+    deadline = time.monotonic() + 60
+    while len(terminals) < 2:
+        remaining = deadline - time.monotonic()
+        assert remaining > 0
+        message = sidecar.read_json(timeout=remaining)
+        if message.get("method") is None:
+            continue
+        run_id = message["params"].get("runId")
+        if run_id not in (first_id, second_id):
+            continue
+        events.append(message)
+        if _is_terminal(message):
+            terminals[run_id] = message
+
+    assert terminals[first_id]["method"] == "simulation.cancelled"
+    assert terminals[first_id]["params"]["reason"] == "simulation_superseded"
+    assert terminals[second_id]["method"] == "simulation.done"
+
+    first_partials = [
+        event
+        for event in events
+        if event["method"] == "simulation.partial"
+        and event["params"].get("runId") == first_id
+    ]
+    assert first_partials == [] or events.index(first_partials[-1]) < events.index(
+        terminals[first_id]
+    )
+    second_partials = [
+        event
+        for event in events
+        if event["method"] == "simulation.partial"
+        and event["params"].get("runId") == second_id
+    ]
+    assert second_partials
+
+
+def test_cancel_is_fast_and_stops_the_stream(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Cancel")
+    response = sidecar.call(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "final",
+            "seed": 3,
+            "config": SLOW_CONFIG,
+        },
+        request_id=940,
+    )
+    run_id = response["result"]["runId"]
+
+    _read_until(
+        sidecar,
+        lambda message: message["method"] == "simulation.partial"
+        and message["params"].get("runId") == run_id,
+    )
+
+    started = time.monotonic()
+    _, cancelled = sidecar.collect(
+        "simulation.cancel", {"runId": run_id}, request_id=941
+    )
+    assert cancelled["result"]["cancelled"] is True
+    _, terminal = _read_until(
+        sidecar,
+        lambda message: message["method"] == "simulation.cancelled"
+        and message["params"].get("runId") == run_id,
+    )
+    elapsed = time.monotonic() - started
+    assert terminal["params"]["reason"] == "simulation_cancelled"
+    assert elapsed < 0.15, f"annulation trop lente: {elapsed:.3f}s"
+
+    late = _drain(sidecar)
+    assert all(
+        not (
+            message.get("method") == "simulation.partial"
+            and message["params"].get("runId") == run_id
+        )
+        for message in late
+    )
+
+
+def test_ping_answers_during_a_final(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Ping")
+    response = sidecar.call(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "final",
+            "seed": 4,
+            "config": SLOW_CONFIG,
+        },
+        request_id=950,
+    )
+    run_id = response["result"]["runId"]
+
+    started = time.monotonic()
+    _, ping = sidecar.collect("ping", {"echo": "during-final"}, request_id=951)
+    elapsed = time.monotonic() - started
+    assert ping["result"]["pong"] is True
+    assert ping["result"]["echo"] == "during-final"
+    assert elapsed < 0.5, f"ping bloqué pendant le calcul: {elapsed:.3f}s"
+
+    sidecar.collect("simulation.cancel", {"runId": run_id}, request_id=952)
+    _read_until(
+        sidecar,
+        lambda message: message["method"] == "simulation.cancelled"
+        and message["params"].get("runId") == run_id,
+    )
+
+
+def test_simulation_rejects_invalid_params_and_unknown_runs(
+    sidecar: SidecarProcess,
+) -> None:
+    project_id = _create_project(sidecar, "Erreurs")
+    invalid = sidecar.call(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "turbo",
+            "seed": 1,
+        },
+        request_id=960,
+    )
+    assert invalid["error"]["code"] == -32006
+    assert invalid["error"]["data"]["code"] == "simulation_invalid"
+
+    missing_seed = sidecar.call(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "draft",
+        },
+        request_id=961,
+    )
+    assert missing_seed["error"]["data"]["code"] == "simulation_invalid"
+
+    unknown = sidecar.call(
+        "simulation.cancel", {"runId": "inconnu"}, request_id=962
+    )
+    assert unknown["error"]["code"] == -32001
+    assert unknown["error"]["data"]["code"] == "run_not_found"
+
+    health = sidecar.call("health", request_id=963)
+    assert isinstance(health["result"]["droppedMessages"], int)
+
+
+def test_outbound_writer_drops_partials_but_never_terminal_messages() -> None:
+    from sidecar import simulation_service
+
+    class BlockingStream:
+        def __init__(self) -> None:
+            self.release = threading.Event()
+            self.lines: list[bytes] = []
+            self.lock = threading.Lock()
+
+        def write(self, data: bytes) -> None:
+            self.release.wait(timeout=5)
+            with self.lock:
+                self.lines.append(data)
+
+        def flush(self) -> None:
+            return None
+
+    stream = BlockingStream()
+    writer = simulation_service.OutboundWriter(stream, max_queue=2)
+    writer.start()
+    for seq in range(100):
+        writer.send(
+            {"jsonrpc": "2.0", "method": "simulation.partial", "params": {"seq": seq}},
+            droppable=True,
+        )
+    sender = threading.Thread(
+        target=lambda: writer.send(
+            {"jsonrpc": "2.0", "method": "simulation.done", "params": {"seq": 6}},
+            droppable=False,
+        )
+    )
+    sender.start()
+    time.sleep(0.05)
+    stream.release.set()
+    sender.join(timeout=2)
+    writer.close(drain=True, timeout=2)
+
+    payloads = [json.loads(line) for line in stream.lines]
+    assert any(payload["method"] == "simulation.done" for payload in payloads)
+    assert writer.dropped >= 1
+
+
+def test_ten_rapid_starts_keep_one_active_run(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Charge")
+    started_ids: list[str] = []
+    replaced: list[str | None] = []
+    events: list[dict[str, Any]] = []
+    for index in range(10):
+        notifications, response = sidecar.collect(
+            "simulation.start",
+            {
+                "projectId": project_id,
+                "scenario": SIMULATION_SCENARIO,
+                "quality": "final",
+                "seed": index,
+                "config": SLOW_CONFIG,
+            },
+            request_id=970 + index,
+        )
+        events.extend(notifications)
+        started_ids.append(response["result"]["runId"])
+        replaced.append(response["result"].get("replacedRunId"))
+
+    # Chaque nouveau start remplace un run antérieur, sans accumulation.
+    assert replaced[0] is None
+    assert all(
+        previous in started_ids[:index]
+        for index, previous in enumerate(replaced)
+        if previous is not None
+    )
+    assert replaced[-1] is not None
+
+    terminals: dict[str, dict[str, Any]] = {}
+
+    def record(message: dict[str, Any]) -> None:
+        run_id = message["params"].get("runId")
+        if run_id not in started_ids or not _is_terminal(message):
+            return
+        assert run_id not in terminals, f"deux terminaux pour {run_id}"
+        terminals[run_id] = message
+
+    for message in events:
+        record(message)
+
+    deadline = time.monotonic() + 90
+    while len(terminals) < len(started_ids):
+        remaining = deadline - time.monotonic()
+        assert remaining > 0, f"terminaux manquants: {terminals.keys()}"
+        message = sidecar.read_json(timeout=remaining)
+        if message.get("method") is None:
+            continue
+        record(message)
+
+    for run_id in started_ids[:-1]:
+        assert terminals[run_id]["method"] == "simulation.cancelled"
+        assert terminals[run_id]["params"]["reason"] == "simulation_superseded"
+    assert terminals[started_ids[-1]]["method"] == "simulation.done"
+
+    _, data = sidecar.collect(
+        "project.data", {"projectId": project_id}, request_id=999
+    )
+    assert data["result"]["run"]["id"] == started_ids[-1]

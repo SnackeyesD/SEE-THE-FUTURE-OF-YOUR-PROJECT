@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from agent_core import JOURNEY_STATES, BriefDraft, role_for_state
-from engine import EngineError, Scenario, SimulationConfig
+from engine import EngineError, Scenario, SimulationConfig, SimulationResult
 from engine import simulate as run_simulation
 from pydantic import ValidationError
 from see_storage import (
@@ -203,14 +203,65 @@ def simulate(
     except (EngineError, ValueError) as exc:
         raise StorageValidationError(f"simulation impossible: {exc}") from exc
 
+    run, record = _persist_result(
+        store,
+        project_id,
+        scenario,
+        result,
+        create_scenario=True if raw_scenario is not None else None,
+    )
+    return {
+        "run": _run_payload(store, run),
+        "scenario": _scenario_payload(record),
+        "result": result.to_dict(),
+    }
+
+
+def persist_result(
+    store: ProjectStore,
+    project_id: str,
+    scenario: Scenario,
+    result: SimulationResult,
+) -> dict[str, Any]:
+    """Persiste un résultat déjà calculé, sur le thread principal.
+
+    Utilisé par ``simulation.start`` en qualité ``final`` : le worker calcule,
+    puis le thread principal écrit une seule fois le run en base. Le scénario
+    existant est réutilisé s'il est identique ; sinon une nouvelle version est
+    enregistrée.
+    """
+
+    run, record = _persist_result(
+        store, project_id, scenario, result, create_scenario=None
+    )
+    return {
+        "run": _run_payload(store, run),
+        "scenario": _scenario_payload(record),
+    }
+
+
+def _persist_result(
+    store: ProjectStore,
+    project_id: str,
+    scenario: Scenario,
+    result: SimulationResult,
+    *,
+    create_scenario: bool | None,
+) -> tuple[Any, Any]:
+    store.projects.require(project_id)
+    scenario_payload = scenario.model_dump(by_alias=True, mode="json")
     scenarios = store.scenarios.list(project_id, limit=1)
     record = scenarios[0] if scenarios else None
-    if raw_scenario is not None or record is None:
+    if (
+        record is None
+        or create_scenario is True
+        or (create_scenario is None and record.scenario != scenario_payload)
+    ):
         record = store.scenarios.add(
             project_id,
             scenario.name,
             scenario.model,
-            scenario.model_dump(by_alias=True, mode="json"),
+            scenario_payload,
         )
     run = store.runs.add(
         project_id,
@@ -224,11 +275,7 @@ def simulate(
         run_id=result.run_id,
     )
     _advance(store, project_id, "results_ready")
-    return {
-        "run": _run_payload(store, run),
-        "scenario": _scenario_payload(record),
-        "result": result.to_dict(),
-    }
+    return run, record
 
 
-__all__ = ["data", "save_brief", "save_scenario", "simulate"]
+__all__ = ["data", "persist_result", "save_brief", "save_scenario", "simulate"]

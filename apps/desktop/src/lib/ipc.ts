@@ -53,6 +53,14 @@ import type {
   SandboxAuditRecordParams,
   SandboxAuditRecordResult,
   SidecarStatus,
+  SimulationCancelled,
+  SimulationDone,
+  SimulationError,
+  SimulationPartial,
+  SimulationProgress,
+  SimulationResult,
+  SimulationStartParams,
+  SimulationStartResult,
 } from "@see/protocol";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -116,6 +124,239 @@ export function onSimulationProgress(
   return listen<{ progress: number }>("simulation:progress", (event) =>
     handler(event.payload.progress),
   );
+}
+
+export type SimulationEvent =
+  | { method: "simulation.progress"; params: SimulationProgress }
+  | { method: "simulation.partial"; params: SimulationPartial }
+  | { method: "simulation.done"; params: SimulationDone }
+  | { method: "simulation.cancelled"; params: SimulationCancelled }
+  | { method: "simulation.error"; params: SimulationError };
+
+type SimulationHandler = (event: SimulationEvent) => void;
+
+const simulationHandlers = new Set<SimulationHandler>();
+let simulationUnlisten: Promise<UnlistenFn> | null = null;
+let activeSimulationRun: string | null = null;
+let lastSimulationSeq = 0;
+let pendingPartial: Extract<SimulationEvent, { method: "simulation.partial" }> | null =
+  null;
+let partialFrame: number | null = null;
+let webRunCounter = 0;
+let webTimers: ReturnType<typeof setTimeout>[] = [];
+
+function publishSimulation(event: SimulationEvent): void {
+  for (const handler of [...simulationHandlers]) handler(event);
+}
+
+function cancelScheduledPartial(): void {
+  if (partialFrame === null) return;
+  if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(partialFrame);
+  partialFrame = null;
+}
+
+function flushPartial(): void {
+  if (pendingPartial === null) return;
+  const event = pendingPartial;
+  pendingPartial = null;
+  publishSimulation(event);
+}
+
+function schedulePartial(
+  event: Extract<SimulationEvent, { method: "simulation.partial" }>,
+): void {
+  pendingPartial = event;
+  if (partialFrame !== null) return;
+  if (typeof requestAnimationFrame === "function") {
+    partialFrame = requestAnimationFrame(() => {
+      partialFrame = null;
+      flushPartial();
+    });
+    return;
+  }
+  partialFrame = 0;
+  queueMicrotask(() => {
+    partialFrame = null;
+    flushPartial();
+  });
+}
+
+function terminalSimulation(event: SimulationEvent): void {
+  cancelScheduledPartial();
+  flushPartial();
+  publishSimulation(event);
+  activeSimulationRun = null;
+}
+
+function dispatchSimulationEvent(event: SimulationEvent): void {
+  const { runId } = event.params;
+  if (activeSimulationRun === null || runId !== activeSimulationRun) return;
+
+  if (event.method === "simulation.progress") {
+    publishSimulation(event);
+    return;
+  }
+
+  if (event.method === "simulation.partial") {
+    if (event.params.seq <= lastSimulationSeq) return;
+    lastSimulationSeq = event.params.seq;
+    schedulePartial(event);
+    return;
+  }
+
+  if (event.method === "simulation.done") {
+    if (event.params.seq < lastSimulationSeq) return;
+    lastSimulationSeq = Math.max(lastSimulationSeq, event.params.seq);
+  }
+
+  terminalSimulation(event);
+}
+
+/**
+ * Démarre un calcul asynchrone. La promesse ne dure que le temps de
+ * l'accusé de réception : les résultats arrivent via `onSimulationEvent`.
+ */
+export function startSimulation(
+  params: SimulationStartParams,
+): Promise<SimulationStartResult> {
+  if (!ipcAvailable) return Promise.resolve(startWebSimulation(params));
+  return invoke<SimulationStartResult>("simulation_start", { params }).then((result) => {
+    activeSimulationRun = result.runId;
+    lastSimulationSeq = 0;
+    pendingPartial = null;
+    cancelScheduledPartial();
+    return result;
+  });
+}
+
+export function cancelSimulation(runId: string): Promise<void> {
+  if (!ipcAvailable) {
+    cancelWebSimulation(runId);
+    return Promise.resolve();
+  }
+  return invoke<unknown>("simulation_cancel", { runId }).then(() => undefined);
+}
+
+/**
+ * Abonnement unique au flux de simulation. Le premier appel crée le listener
+ * Tauri ; les suivants partagent le même. Le filtrage par run et par `seq`
+ * vit ici, pas dans les composants.
+ */
+export function onSimulationEvent(
+  handler: SimulationHandler,
+): Promise<UnlistenFn> {
+  simulationHandlers.add(handler);
+  if (ipcAvailable && simulationUnlisten === null) {
+    simulationUnlisten = listen<SimulationEvent>("simulation:event", (event) =>
+      dispatchSimulationEvent(event.payload),
+    ).catch((error) => {
+      simulationUnlisten = null;
+      throw error;
+    });
+  }
+  return Promise.resolve(() => {
+    simulationHandlers.delete(handler);
+    if (simulationHandlers.size === 0 && simulationUnlisten !== null) {
+      const stop = simulationUnlisten;
+      simulationUnlisten = null;
+      stop.then((unlisten) => unlisten()).catch(() => undefined);
+    }
+  });
+}
+
+function zeroConvergence() {
+  return {
+    converged: false,
+    stability: 0,
+    maxRelativeChange: 0,
+    stableBlocks: 0,
+  };
+}
+
+function clearWebTimers(): void {
+  for (const timer of webTimers) clearTimeout(timer);
+  webTimers = [];
+}
+
+function startWebSimulation(params: SimulationStartParams): SimulationStartResult {
+  clearWebTimers();
+  const runId = `web-${++webRunCounter}`;
+  activeSimulationRun = runId;
+  lastSimulationSeq = 0;
+  const totalRuns = params.quality === "draft" ? 500 : 5_000;
+  const convergence = zeroConvergence();
+  const result = {
+    runId,
+    engineVersion: "web-shim",
+    scenarioName: params.scenario.name,
+    model: params.scenario.model ?? "retail_depot",
+    currency: params.scenario.currency ?? "XOF",
+    horizonMonths: params.scenario.horizonMonths ?? 36,
+    runs: totalRuns,
+    seed: params.seed,
+    durationMs: 0,
+    metrics: {},
+    histogram: {},
+    monthly: {},
+    sensitivity: [],
+    breakEven: {},
+  } as unknown as SimulationResult;
+  const aggregates = {
+    completedRuns: totalRuns,
+    totalRuns,
+    metrics: {},
+    histogram: {},
+    monthly: {},
+    convergence,
+  } as unknown as SimulationPartial["aggregates"];
+
+  webTimers.push(
+    setTimeout(
+      () =>
+        dispatchSimulationEvent({
+          method: "simulation.progress",
+          params: {
+            runId,
+            completedRuns: 0,
+            totalRuns,
+            fraction: 0,
+            block: 0,
+            convergence,
+          },
+        }),
+      0,
+    ),
+  );
+  webTimers.push(
+    setTimeout(
+      () =>
+        dispatchSimulationEvent({
+          method: "simulation.partial",
+          params: { runId, seq: 1, aggregates },
+        }),
+      10,
+    ),
+  );
+  webTimers.push(
+    setTimeout(
+      () =>
+        dispatchSimulationEvent({
+          method: "simulation.done",
+          params: { runId, seq: 1, result, persisted: false },
+        }),
+      20,
+    ),
+  );
+  return { runId, accepted: true };
+}
+
+function cancelWebSimulation(runId: string): void {
+  if (activeSimulationRun !== runId) return;
+  clearWebTimers();
+  dispatchSimulationEvent({
+    method: "simulation.cancelled",
+    params: { runId, reason: "simulation_cancelled" },
+  });
 }
 
 function providerCall<T>(method: string, params: Record<string, unknown>): Promise<T> {

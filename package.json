@@ -45,6 +45,7 @@
     "bench": "node scripts/perf/run-bench.mjs",
     "bench:engine": "uv run --project packages/engine python packages/engine/bench/bench_engine.py --json-out docs/perf/engine.json",
     "bench:sidecar": "uv run --project apps/desktop/src-tauri/sidecar python scripts/perf/bench_sidecar.py --json-out docs/perf/sidecar.json",
+    "bench:ipc": "uv run --project apps/desktop/src-tauri/sidecar python scripts/perf/bench_ipc.py --json-out docs/perf/ipc.json",
     "bench:ui": "node scripts/perf/bench_ui.mjs --json-out docs/perf/ui.json",
     "icons": "powershell -ExecutionPolicy Bypass -File infra/scripts/generate-icons.ps1"
   },

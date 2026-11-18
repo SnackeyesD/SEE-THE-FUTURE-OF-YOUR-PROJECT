@@ -3,7 +3,7 @@
   "$id": "https://seethefuture.local/protocol/messages.schema.json",
   "title": "See The Future IPC protocol",
   "description": "Source unique des messages JSON-RPC 2.0 échangés entre le shell Tauri et le sidecar Python.",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "$defs": {
     "RequestId": {
       "description": "Identifiant de requête JSON-RPC (entier ou chaîne).",
@@ -68,6 +68,8 @@
         "project.brief.save",
         "project.scenario.save",
         "project.simulate",
+        "simulation.start",
+        "simulation.cancel",
         "integrity.check",
         "storage.backup",
         "provider.catalog",
@@ -103,7 +105,12 @@
     "NotificationName": {
       "description": "Notifications JSON-RPC 2.0 envoyées par le sidecar sans identifiant de requête. Elles ne doivent jamais être appelées comme méthodes.",
       "enum": [
-        "simulate.progress"
+        "simulate.progress",
+        "simulation.progress",
+        "simulation.partial",
+        "simulation.done",
+        "simulation.cancelled",
+        "simulation.error"
       ]
     },
     "PingParams": {
@@ -132,7 +139,8 @@
         "sidecarVersion": { "type": "string" },
         "protocolVersion": { "type": "string" },
         "pid": { "type": "integer" },
-        "python": { "type": "string" }
+        "python": { "type": "string" },
+        "droppedMessages": { "type": "integer" }
       }
     },
     "LogParams": {
@@ -865,6 +873,141 @@
         "run": { "$ref": "#/$defs/SimulationRunRecord" },
         "scenario": { "$ref": "#/$defs/ScenarioRecord" },
         "result": { "$ref": "#/$defs/SimulationResult" }
+      }
+    },
+    "SimulationQuality": {
+      "description": "Profil de calcul : draft pour l'aperçu interactif, final pour le résultat persisté.",
+      "enum": ["draft", "final"]
+    },
+    "SimulationStartParams": {
+      "description": "Démarre un calcul asynchrone. La réponse ne dépend pas de la durée du calcul.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "scenario", "quality", "seed"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "scenario": { "$ref": "#/$defs/Scenario" },
+        "config": { "$ref": "#/$defs/SimulationConfig" },
+        "quality": { "$ref": "#/$defs/SimulationQuality" },
+        "seed": { "type": "integer" },
+        "runToken": { "type": "string" }
+      }
+    },
+    "SimulationStartResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "accepted"],
+      "properties": {
+        "runId": { "type": "string" },
+        "accepted": { "type": "boolean" },
+        "replacedRunId": { "type": "string" }
+      }
+    },
+    "SimulationCancelParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId"],
+      "properties": {
+        "runId": { "type": "string" }
+      }
+    },
+    "SimulationCancelResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cancelled"],
+      "properties": {
+        "cancelled": { "type": "boolean" }
+      }
+    },
+    "PartialAggregates": {
+      "description": "Agrégats publiables pendant un calcul. Aucune trajectoire ni paramètre par run.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "completedRuns",
+        "totalRuns",
+        "metrics",
+        "histogram",
+        "monthly",
+        "convergence"
+      ],
+      "properties": {
+        "completedRuns": { "type": "integer" },
+        "totalRuns": { "type": "integer" },
+        "metrics": { "$ref": "#/$defs/Metrics" },
+        "histogram": { "$ref": "#/$defs/Histogram" },
+        "monthly": { "$ref": "#/$defs/MonthlyAverages" },
+        "convergence": { "$ref": "#/$defs/ConvergenceState" }
+      }
+    },
+    "SimulationProgress": {
+      "description": "Notification de progression. Ne porte pas de seq : elle n'est pas un agrégat ordonné.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "completedRuns", "totalRuns", "fraction", "block", "convergence"],
+      "properties": {
+        "runId": { "type": "string" },
+        "completedRuns": { "type": "integer" },
+        "totalRuns": { "type": "integer" },
+        "fraction": { "type": "number" },
+        "block": { "type": "integer" },
+        "convergence": { "$ref": "#/$defs/ConvergenceState" }
+      }
+    },
+    "SimulationPartial": {
+      "description": "Agrégats intermédiaires. seq est strictement croissant par runId et commence à 1.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "seq", "aggregates"],
+      "properties": {
+        "runId": { "type": "string" },
+        "seq": { "type": "integer", "minimum": 1 },
+        "aggregates": { "$ref": "#/$defs/PartialAggregates" }
+      }
+    },
+    "SimulationDone": {
+      "description": "Résultat terminal d'un run. seq est le dernier numéro émis pour ce runId (0 si aucun partiel).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "seq", "result", "persisted"],
+      "properties": {
+        "runId": { "type": "string" },
+        "seq": { "type": "integer", "minimum": 0 },
+        "result": { "$ref": "#/$defs/SimulationResult" },
+        "persisted": { "type": "boolean" }
+      }
+    },
+    "SimulationCancelled": {
+      "description": "Fin d'un run sans résultat. reason vaut simulation_cancelled, simulation_superseded ou shutdown.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "reason"],
+      "properties": {
+        "runId": { "type": "string" },
+        "reason": {
+          "enum": ["simulation_cancelled", "simulation_superseded", "shutdown"]
+        }
+      }
+    },
+    "SimulationError": {
+      "description": "Échec terminal d'un run. Le code est stable et destiné à l'UI.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "code", "message", "retryable"],
+      "properties": {
+        "runId": { "type": "string" },
+        "code": {
+          "enum": [
+            "simulation_invalid",
+            "simulation_busy",
+            "simulation_cancelled",
+            "simulation_superseded",
+            "simulation_failed",
+            "run_not_found"
+          ]
+        },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" }
       }
     },
     "BackupParams": {

@@ -1,0 +1,59 @@
+{
+  "sidecar": {
+    "protocolVersion": "1.10.0",
+    "sidecarVersion": "0.1.0",
+    "python": "3.14.9"
+  },
+  "measurements": {
+    "simulationStart": {
+      "unit": "ms",
+      "repeats": 10,
+      "samples": [
+        2.02,
+        1.933,
+        1.933,
+        1.256,
+        1.336,
+        1.302,
+        1.253,
+        1.258,
+        1.31,
+        1.282
+      ],
+      "median": 1.306,
+      "max": 2.02
+    },
+    "pingDuringFinal": {
+      "unit": "ms",
+      "pingDuringFinal": 1.228
+    },
+    "cancel": {
+      "unit": "ms",
+      "endToEnd": 3.151,
+      "reason": "simulation_cancelled"
+    },
+    "stream": {
+      "terminal": "simulation.done",
+      "partials": 5,
+      "seqStrictlyIncreasing": true,
+      "maxPartialBytes": 16051,
+      "partialAfterTerminal": 0,
+      "doneSeq": 5,
+      "lastPartialSeq": 5
+    },
+    "supersede": {
+      "replacedRunId": "6a3b025886dc4f24bcfb19e06811c102",
+      "firstTerminal": "simulation.cancelled",
+      "secondTerminal": "simulation.done"
+    }
+  },
+  "memory": {
+    "rssBeforeMb": 66.6,
+    "rssAfterMb": 98.8,
+    "unit": "Mo (VmRSS du processus sidecar)"
+  },
+  "environment": {
+    "machine": "Linux x86_64 (machine de développement)",
+    "note": "mesures ponctuelles, non comparables à un CI chargé"
+  }
+}

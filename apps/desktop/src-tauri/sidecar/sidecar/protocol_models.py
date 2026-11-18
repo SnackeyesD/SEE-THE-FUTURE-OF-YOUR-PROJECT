@@ -1,6 +1,6 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 # Source: packages/protocol/schema/messages.schema.json
-# Protocol version: 1.9.0
+# Protocol version: 1.10.0
 # Regenerate with: npm run protocol:generate
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-PROTOCOL_VERSION = "1.9.0"
+PROTOCOL_VERSION = "1.10.0"
 
 RequestId = int | str
 
@@ -62,6 +62,8 @@ MethodName = Literal[
     "project.brief.save",
     "project.scenario.save",
     "project.simulate",
+    "simulation.start",
+    "simulation.cancel",
     "integrity.check",
     "storage.backup",
     "provider.catalog",
@@ -97,6 +99,11 @@ MethodName = Literal[
 
 NotificationName = Literal[
     "simulate.progress",
+    "simulation.progress",
+    "simulation.partial",
+    "simulation.done",
+    "simulation.cancelled",
+    "simulation.error",
 ]
 
 
@@ -122,6 +129,7 @@ class HealthResult(BaseModel):
     protocolVersion: str
     pid: int
     python: str
+    droppedMessages: int | None = None
 
 
 class LogParams(BaseModel):
@@ -579,6 +587,105 @@ class ProjectSimulateResult(BaseModel):
     run: SimulationRunRecord
     scenario: ScenarioRecord
     result: SimulationResult
+
+
+SimulationQuality = Literal[
+    "draft",
+    "final",
+]
+
+
+class SimulationStartParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenario: Scenario
+    config: SimulationConfig | None = None
+    quality: SimulationQuality
+    seed: int
+    runToken: str | None = None
+
+
+class SimulationStartResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    accepted: bool
+    replacedRunId: str | None = None
+
+
+class SimulationCancelParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+
+
+class SimulationCancelResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cancelled: bool
+
+
+class PartialAggregates(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    completedRuns: int
+    totalRuns: int
+    metrics: Metrics
+    histogram: Histogram
+    monthly: MonthlyAverages
+    convergence: ConvergenceState
+
+
+class SimulationProgress(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    completedRuns: int
+    totalRuns: int
+    fraction: float
+    block: int
+    convergence: ConvergenceState
+
+
+class SimulationPartial(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    seq: int
+    aggregates: PartialAggregates
+
+
+class SimulationDone(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    seq: int
+    result: SimulationResult
+    persisted: bool
+
+
+class SimulationCancelled(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    reason: Literal["simulation_cancelled", "simulation_superseded", "shutdown"]
+
+
+class SimulationError(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    code: Literal[
+        "simulation_invalid",
+        "simulation_busy",
+        "simulation_cancelled",
+        "simulation_superseded",
+        "simulation_failed",
+        "run_not_found",
+    ]
+    message: str
+    retryable: bool
 
 
 class BackupParams(BaseModel):

@@ -4,7 +4,9 @@ import json
 import logging
 import os
 import platform
+import queue
 import sys
+import threading
 import traceback
 from collections.abc import Callable, Iterator, Mapping
 from datetime import UTC, datetime
@@ -25,6 +27,7 @@ from . import (
     project_service,
     provider_service,
     sandbox_service,
+    simulation_service,
 )
 from .protocol_models import PROTOCOL_VERSION, JSONRPCRequest
 from .storage_service import close_store, get_store
@@ -43,6 +46,7 @@ STORAGE_ERROR = -32002
 PROVIDER_ERROR = -32003
 BUDGET_ERROR = -32004
 AGENT_ERROR = -32005
+SIMULATION_ERROR = -32006
 
 
 class RpcError(Exception):
@@ -54,11 +58,22 @@ class RpcError(Exception):
 
 
 class RequestContext:
-    def __init__(self, notifier: Callable[[str, dict[str, Any]], None]) -> None:
+    def __init__(
+        self,
+        notifier: Callable[[str, dict[str, Any]], None],
+        *,
+        service: simulation_service.SimulationService | None = None,
+        diagnostics: Callable[[], dict[str, Any]] | None = None,
+    ) -> None:
         self._notifier = notifier
+        self.service = service
+        self._diagnostics = diagnostics
 
     def notify(self, method: str, params: dict[str, Any]) -> None:
         self._notifier(method, params)
+
+    def diagnostics(self) -> dict[str, Any]:
+        return self._diagnostics() if self._diagnostics is not None else {}
 
 
 Handler = Callable[[dict[str, Any], RequestContext], dict[str, Any]]
@@ -68,14 +83,16 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def health(_: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
-    return {
+def health(_: dict[str, Any], context: RequestContext) -> dict[str, Any]:
+    payload: dict[str, Any] = {
         "status": "ok",
         "sidecarVersion": __version__,
         "protocolVersion": PROTOCOL_VERSION,
         "pid": os.getpid(),
         "python": platform.python_version(),
     }
+    payload.update(context.diagnostics())
+    return payload
 
 
 def ping(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
@@ -127,6 +144,66 @@ def simulate(params: dict[str, Any], context: RequestContext) -> dict[str, Any]:
         ) from exc
 
     return result.to_dict()
+
+
+def _simulation_service(context: RequestContext) -> simulation_service.SimulationService:
+    service = context.service
+    if service is None:
+        raise RpcError(
+            INTERNAL_ERROR,
+            "service de simulation indisponible",
+        )
+    return service
+
+
+def simulation_start(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    service = _simulation_service(context)
+    project_id = params.get("projectId")
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise RpcError(
+            SIMULATION_ERROR,
+            "projectId doit être une chaîne non vide",
+            {"code": "simulation_invalid"},
+        )
+    try:
+        get_store().projects.require(project_id.strip())
+    except ProjectNotFound as exc:
+        raise RpcError(NOT_FOUND, str(exc)) from exc
+    except StorageValidationError as exc:
+        raise RpcError(INVALID_PARAMS, str(exc)) from exc
+
+    try:
+        return service.start(params, context.notify)
+    except simulation_service.SimulationServiceError as exc:
+        raise RpcError(
+            SIMULATION_ERROR,
+            exc.message,
+            {"code": exc.code, "retryable": exc.retryable},
+        ) from exc
+
+
+def simulation_cancel(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    service = _simulation_service(context)
+    run_id = params.get("runId")
+    if not isinstance(run_id, str) or not run_id.strip():
+        raise RpcError(
+            SIMULATION_ERROR,
+            "runId doit être une chaîne non vide",
+            {"code": "simulation_invalid"},
+        )
+    try:
+        return service.cancel(run_id.strip())
+    except simulation_service.SimulationServiceError as exc:
+        code = NOT_FOUND if exc.code == "run_not_found" else SIMULATION_ERROR
+        raise RpcError(
+            code,
+            exc.message,
+            {"code": exc.code, "retryable": exc.retryable},
+        ) from exc
 
 
 def _storage_handler(handler: Handler) -> Handler:
@@ -561,6 +638,8 @@ def default_handlers() -> dict[str, Handler]:
         "project.brief.save": project_brief_save,
         "project.scenario.save": project_scenario_save,
         "project.simulate": project_simulate,
+        "simulation.start": simulation_start,
+        "simulation.cancel": simulation_cancel,
         "integrity.check": integrity_check,
         "storage.backup": storage_backup,
         "provider.catalog": provider_catalog,
@@ -603,32 +682,104 @@ class RpcServer:
         self,
         handlers: Mapping[str, Handler] | None = None,
         max_message_bytes: int = MAX_MESSAGE_BYTES,
+        *,
+        writer: simulation_service.OutboundWriter | None = None,
+        simulation: simulation_service.SimulationService | None = None,
     ) -> None:
         self.handlers = dict(handlers or default_handlers())
         self.max_message_bytes = max_message_bytes
         self._shutdown = False
+        self._writer = writer or simulation_service.OutboundWriter()
+        self._inbound: queue.Queue[bytes | None] = queue.Queue()
+        self.simulation = simulation or simulation_service.SimulationService(
+            persist=self._persist_result
+        )
+
+    def _persist_result(
+        self,
+        job: simulation_service.Job,
+        result: Any,
+    ) -> None:
+        """Persistance ``final`` : exécutée uniquement sur le thread principal."""
+
+        project_service.persist_result(
+            get_store(), job.project_id, job.scenario, result
+        )
 
     def serve(self) -> int:
         logger.info("sidecar ready (pid=%s)", os.getpid())
-        for raw in self._read_lines():
-            if self._shutdown:
-                break
-            self._handle_line(raw)
+        self._writer.start()
+        reader = threading.Thread(
+            target=self._read_loop, name="sidecar-reader", daemon=True
+        )
+        reader.start()
+        try:
+            while not self._shutdown:
+                try:
+                    raw = self._inbound.get(timeout=0.01)
+                except queue.Empty:
+                    self.simulation.process_completed()
+                    continue
+                if raw is None:
+                    break
+                self._handle_line(raw)
+                self.simulation.process_completed()
+        finally:
+            # Les ``final`` déjà calculés sont persistés avant l'arrêt ; les
+            # runs encore actifs sont annulés par le service.
+            self.simulation.process_completed()
+            self.simulation.shutdown()
+            self._writer.close(drain=True, timeout=2.0)
         logger.info("sidecar stopped")
         return 0
 
+    def _read_loop(self) -> None:
+        try:
+            for raw in self._read_lines():
+                self._inbound.put(raw)
+        finally:
+            self._inbound.put(None)
+
     def _read_lines(self) -> Iterator[bytes]:
-        stream = sys.stdin.buffer
+        """Lit stdin par ``os.read`` pour ne pas bloquer la finalisation.
+
+        Un ``BufferedReader.readline`` exécuté dans un thread daemon retient le
+        verrou du buffer au moment où l'interpréteur se ferme : Python 3.14
+        avorte alors le processus. La lecture brute du descripteur évite ce
+        piège tout en gardant le thread principal libre pour la persistance.
+        """
+
+        fd = sys.stdin.buffer.fileno()
+        pending = b""
+        discarding = False
         while not self._shutdown:
-            line = stream.readline()
-            if not line:
+            try:
+                chunk = os.read(fd, 65_536)
+            except (OSError, ValueError):
                 return
-            if len(line) > self.max_message_bytes:
-                self._write_error(None, INVALID_REQUEST, "message too large")
-                continue
-            stripped = line.strip()
-            if stripped:
-                yield stripped
+            if not chunk:
+                if pending.strip():
+                    yield pending.strip()
+                return
+            pending += chunk
+            while True:
+                newline = pending.find(b"\n")
+                if newline < 0:
+                    if not discarding and len(pending) > self.max_message_bytes:
+                        self._write_error(None, INVALID_REQUEST, "message too large")
+                        pending = b""
+                        discarding = True
+                    break
+                line, pending = pending[:newline], pending[newline + 1 :]
+                if discarding:
+                    discarding = False
+                    continue
+                if len(line) > self.max_message_bytes:
+                    self._write_error(None, INVALID_REQUEST, "message too large")
+                    continue
+                stripped = line.strip()
+                if stripped:
+                    yield stripped
 
     def _handle_line(self, raw: bytes) -> None:
         try:
@@ -672,7 +823,11 @@ class RpcServer:
                 )
             return
 
-        context = RequestContext(self._notify)
+        context = RequestContext(
+            self._notify,
+            service=self.simulation,
+            diagnostics=lambda: {"droppedMessages": self._writer.dropped},
+        )
 
         try:
             result = handler(request.params or {}, context)
@@ -692,6 +847,10 @@ class RpcServer:
 
         if not is_notification:
             self._write({"jsonrpc": "2.0", "id": request.id, "result": result})
+            if request.method == "simulation.start":
+                # La réponse est déjà en file du writer : le premier événement
+                # du run ne peut pas la précéder.
+                self.simulation.activate()
 
     def _notify(self, method: str, params: dict[str, Any]) -> None:
         self._write({"jsonrpc": "2.0", "method": method, "params": params})
@@ -709,9 +868,11 @@ class RpcServer:
         self._write({"jsonrpc": "2.0", "id": request_id, "error": error})
 
     def _write(self, payload: dict[str, Any]) -> None:
-        line = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-        sys.stdout.buffer.write(line.encode("utf-8") + b"\n")
-        sys.stdout.buffer.flush()
+        method = payload.get("method")
+        droppable = isinstance(method, str) and (
+            method in simulation_service.DROP_NOTIFICATIONS
+        )
+        self._writer.send(payload, droppable=droppable)
 
 
 def main() -> int:

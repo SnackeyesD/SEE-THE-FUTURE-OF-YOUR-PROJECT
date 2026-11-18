@@ -1,9 +1,9 @@
 // AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 // Source: packages/protocol/schema/messages.schema.json
-// Protocol version: 1.9.0
+// Protocol version: 1.10.0
 // Regenerate with: npm run protocol:generate
 
-export const PROTOCOL_VERSION = "1.9.0";
+export const PROTOCOL_VERSION = "1.10.0";
 
 export type RequestId = number | string;
 
@@ -27,9 +27,9 @@ export interface JSONRPCResponse {
   error?: JSONRPCErrorObject;
 }
 
-export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "project.list" | "project.create" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.simulate" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools" | "benchmark.lookup" | "benchmark.pack.list" | "benchmark.pack.import";
+export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "project.list" | "project.create" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.simulate" | "simulation.start" | "simulation.cancel" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools" | "benchmark.lookup" | "benchmark.pack.list" | "benchmark.pack.import";
 
-export type NotificationName = "simulate.progress";
+export type NotificationName = "simulate.progress" | "simulation.progress" | "simulation.partial" | "simulation.done" | "simulation.cancelled" | "simulation.error";
 
 export interface PingParams {
   echo?: string;
@@ -47,6 +47,7 @@ export interface HealthResult {
   protocolVersion: string;
   pid: number;
   python: string;
+  droppedMessages?: number;
 }
 
 export interface LogParams {
@@ -404,6 +405,74 @@ export interface ProjectSimulateResult {
   run: SimulationRunRecord;
   scenario: ScenarioRecord;
   result: SimulationResult;
+}
+
+export type SimulationQuality = "draft" | "final";
+
+export interface SimulationStartParams {
+  projectId: string;
+  scenario: Scenario;
+  config?: SimulationConfig;
+  quality: SimulationQuality;
+  seed: number;
+  runToken?: string;
+}
+
+export interface SimulationStartResult {
+  runId: string;
+  accepted: boolean;
+  replacedRunId?: string;
+}
+
+export interface SimulationCancelParams {
+  runId: string;
+}
+
+export interface SimulationCancelResult {
+  cancelled: boolean;
+}
+
+export interface PartialAggregates {
+  completedRuns: number;
+  totalRuns: number;
+  metrics: Metrics;
+  histogram: Histogram;
+  monthly: MonthlyAverages;
+  convergence: ConvergenceState;
+}
+
+export interface SimulationProgress {
+  runId: string;
+  completedRuns: number;
+  totalRuns: number;
+  fraction: number;
+  block: number;
+  convergence: ConvergenceState;
+}
+
+export interface SimulationPartial {
+  runId: string;
+  seq: number;
+  aggregates: PartialAggregates;
+}
+
+export interface SimulationDone {
+  runId: string;
+  seq: number;
+  result: SimulationResult;
+  persisted: boolean;
+}
+
+export interface SimulationCancelled {
+  runId: string;
+  reason: "simulation_cancelled" | "simulation_superseded" | "shutdown";
+}
+
+export interface SimulationError {
+  runId: string;
+  code: "simulation_invalid" | "simulation_busy" | "simulation_cancelled" | "simulation_superseded" | "simulation_failed" | "run_not_found";
+  message: string;
+  retryable: boolean;
 }
 
 export interface BackupParams {

@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use serde_json::{json, Value};
 use sidecar::{SidecarManager, SidecarStatus};
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 
 static SHUTTING_DOWN: AtomicBool = AtomicBool::new(false);
 
@@ -20,7 +20,7 @@ fn start_supervisor(handle: tauri::AppHandle) {
 
         let state = handle.state::<Mutex<SidecarManager>>();
         let locked = state.lock();
-        if let Ok(mut manager) = locked {
+        if let Ok(manager) = locked {
             if manager.supervision_enabled() && !manager.status().running {
                 if let Err(error) = manager.ensure_running() {
                     eprintln!("[sidecar] redémarrage automatique impossible: {error}");
@@ -32,14 +32,14 @@ fn start_supervisor(handle: tauri::AppHandle) {
 
 #[tauri::command]
 fn sidecar_status(state: tauri::State<'_, Mutex<SidecarManager>>) -> Result<SidecarStatus, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    Ok(manager.status())
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    Ok(handle.status())
 }
 
 #[tauri::command]
 fn sidecar_health(state: tauri::State<'_, Mutex<SidecarManager>>) -> Result<Value, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request("health", json!({}))
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("health", json!({}))
 }
 
 #[tauri::command]
@@ -47,12 +47,12 @@ fn sidecar_ping(
     state: tauri::State<'_, Mutex<SidecarManager>>,
     echo: Option<String>,
 ) -> Result<Value, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
     let params = match echo {
         Some(echo) => json!({ "echo": echo }),
         None => json!({}),
     };
-    manager.request("ping", params)
+    handle.request("ping", params)
 }
 
 fn inject_api_key(params: Value) -> Result<Value, String> {
@@ -116,8 +116,8 @@ fn project_list(
     state: tauri::State<'_, Mutex<SidecarManager>>,
     include_archived: Option<bool>,
 ) -> Result<Value, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request(
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request(
         "project.list",
         json!({ "includeArchived": include_archived.unwrap_or(false) }),
     )
@@ -130,8 +130,8 @@ fn project_create(
     description: Option<String>,
     currency: Option<String>,
 ) -> Result<Value, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request(
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request(
         "project.create",
         json!({
             "name": name,
@@ -146,8 +146,8 @@ fn project_data(
     state: tauri::State<'_, Mutex<SidecarManager>>,
     params: Value,
 ) -> Result<Value, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request("project.data", params)
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("project.data", params)
 }
 
 #[tauri::command]
@@ -155,8 +155,8 @@ fn project_brief_save(
     state: tauri::State<'_, Mutex<SidecarManager>>,
     params: Value,
 ) -> Result<Value, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request("project.brief.save", params)
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("project.brief.save", params)
 }
 
 #[tauri::command]
@@ -164,23 +164,35 @@ fn project_scenario_save(
     state: tauri::State<'_, Mutex<SidecarManager>>,
     params: Value,
 ) -> Result<Value, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request("project.scenario.save", params)
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("project.scenario.save", params)
 }
 
 #[tauri::command]
 fn project_simulate(
-    app: tauri::AppHandle,
     state: tauri::State<'_, Mutex<SidecarManager>>,
     params: Value,
 ) -> Result<Value, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request_with("project.simulate", params, |message| {
-        if message.get("method").and_then(Value::as_str) == Some("simulate.progress") {
-            let payload = message.get("params").cloned().unwrap_or_else(|| json!({}));
-            let _ = app.emit("simulation:progress", payload);
-        }
-    })
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("project.simulate", params)
+}
+
+#[tauri::command]
+fn simulation_start(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.start", params)
+}
+
+#[tauri::command]
+fn simulation_cancel(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    run_id: String,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.cancel", json!({ "runId": run_id }))
 }
 
 #[tauri::command]
@@ -192,8 +204,8 @@ fn provider_call(
     if !PROVIDER_METHODS.contains(&method.as_str()) {
         return Err(format!("méthode fournisseur non autorisée: {method}"));
     }
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request(&method, params)
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request(&method, params)
 }
 
 #[tauri::command]
@@ -205,8 +217,8 @@ fn agent_call(
     if !AGENT_METHODS.contains(&method.as_str()) {
         return Err(format!("méthode agent non autorisée: {method}"));
     }
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request(&method, params)
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request(&method, params)
 }
 
 #[tauri::command]
@@ -223,8 +235,8 @@ fn agent_turn(
         prepare["role"] = role.clone();
     }
 
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    let prepared = manager.request("agent.prepare", prepare)?;
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    let prepared = handle.request("agent.prepare", prepare)?;
     let mut object = params
         .as_object()
         .cloned()
@@ -240,7 +252,7 @@ fn agent_turn(
     object.insert("profile".into(), profile);
     object.insert("role".into(), role);
     let params = inject_api_key(Value::Object(object))?;
-    manager.request("agent.turn", params)
+    handle.request("agent.turn", params)
 }
 
 #[tauri::command]
@@ -252,8 +264,8 @@ fn sandbox_call(
     if !SANDBOX_METHODS.contains(&method.as_str()) {
         return Err(format!("méthode sandbox non autorisée: {method}"));
     }
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request(&method, params)
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request(&method, params)
 }
 
 #[tauri::command]
@@ -265,8 +277,8 @@ fn benchmark_call(
     if !BENCHMARK_METHODS.contains(&method.as_str()) {
         return Err(format!("méthode benchmark non autorisée: {method}"));
     }
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request(&method, params)
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request(&method, params)
 }
 
 #[tauri::command]
@@ -289,8 +301,8 @@ fn provider_profile_save(
     state: tauri::State<'_, Mutex<SidecarManager>>,
     params: Value,
 ) -> Result<Value, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request("provider.profile.save", params)
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("provider.profile.save", params)
 }
 
 #[tauri::command]
@@ -299,8 +311,8 @@ fn provider_profile_delete(
     project_id: String,
     profile_id: String,
 ) -> Result<Value, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    let listing = manager.request("provider.profile.list", json!({ "projectId": project_id }))?;
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    let listing = handle.request("provider.profile.list", json!({ "projectId": project_id }))?;
     if let Some(reference) = listing
         .get("profiles")
         .and_then(Value::as_array)
@@ -314,7 +326,7 @@ fn provider_profile_delete(
     {
         keychain::delete_secret(reference)?;
     }
-    manager.request(
+    handle.request(
         "provider.profile.delete",
         json!({ "profileId": profile_id }),
     )
@@ -326,8 +338,8 @@ fn provider_test(
     params: Value,
 ) -> Result<Value, String> {
     let params = inject_api_key(params)?;
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request("provider.test", params)
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("provider.test", params)
 }
 
 #[tauri::command]
@@ -336,8 +348,8 @@ fn provider_models(
     params: Value,
 ) -> Result<Value, String> {
     let params = inject_api_key(params)?;
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request("provider.models", params)
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("provider.models", params)
 }
 
 #[tauri::command]
@@ -346,21 +358,21 @@ fn provider_chat(
     params: Value,
 ) -> Result<Value, String> {
     let params = inject_api_key(params)?;
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
-    manager.request("provider.chat", params)
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("provider.chat", params)
 }
 
 #[tauri::command]
 fn sidecar_restart(
     state: tauri::State<'_, Mutex<SidecarManager>>,
 ) -> Result<SidecarStatus, String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
+    let manager = state.lock().map_err(|error| error.to_string())?;
     Ok(manager.restart())
 }
 
 #[tauri::command]
 fn sidecar_shutdown(state: tauri::State<'_, Mutex<SidecarManager>>) -> Result<(), String> {
-    let mut manager = state.lock().map_err(|error| error.to_string())?;
+    let manager = state.lock().map_err(|error| error.to_string())?;
     manager.shutdown();
     Ok(())
 }
@@ -370,7 +382,8 @@ pub fn run() {
         .manage(Mutex::new(SidecarManager::new()))
         .setup(|app| {
             let state = app.state::<Mutex<SidecarManager>>();
-            if let Ok(mut manager) = state.lock() {
+            if let Ok(manager) = state.lock() {
+                manager.attach_app(app.handle().clone());
                 match app.path().app_data_dir() {
                     Ok(data_dir) => manager.set_data_dir(data_dir),
                     Err(error) => {
@@ -402,6 +415,8 @@ pub fn run() {
             project_brief_save,
             project_scenario_save,
             project_simulate,
+            simulation_start,
+            simulation_cancel,
             agent_call,
             agent_turn,
             sandbox_call,
@@ -426,7 +441,7 @@ pub fn run() {
                 SHUTTING_DOWN.store(true, Ordering::SeqCst);
                 let state = app_handle.state::<Mutex<SidecarManager>>();
                 let locked = state.lock();
-                if let Ok(mut manager) = locked {
+                if let Ok(manager) = locked {
                     manager.shutdown();
                 }
             }
