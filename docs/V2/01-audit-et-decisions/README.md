@@ -132,7 +132,7 @@ La spec V3 a été écrite sans audit du code. Plusieurs affirmations sont fauss
 ## 8. Critères d'acceptation
 
 - [x] Aucune zone d'ombre sur les métriques : les formules sont écrites et relues.
-- [ ] Le propriétaire du protocole est nommé et les bumps sont planifiés. *(encore ouvert au 2026-11-17 ; décision : à nommer avant la phase 06, bloquant pour son entrée)*
+- [x] Le propriétaire du protocole est nommé et les bumps sont planifiés. *(SAYI Gloire Messia, [@SnackeyesD](https://github.com/SnackeyesD), nommé le 2026-11-18 ; bumps planifiés dans le plan maître)*
 - [x] La pile de dataviz est tranchée et justifiée par écrit.
 - [x] Le budget de la phase 11 est cohérent avec la mesure (pas de 3 s irréaliste).
 - [x] Le calendrier et les effectifs sont validés par l'équipe (D1 : 3 devs + 0,5 produit, lancement le 15 janvier 2027).

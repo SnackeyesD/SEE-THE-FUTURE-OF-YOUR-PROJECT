@@ -1,6 +1,7 @@
-# `see-storage` — persistance locale (phase 03)
+# `see-storage` — persistance locale (phase 07)
 
-SQLite en WAL, repositories typés, cycle de vie des projets et archives `.simproj`.
+SQLite en WAL, repositories typés, cycle de vie des projets, branches/versions et archives
+`.simproj`.
 
 ## Utilisation
 
@@ -29,6 +30,49 @@ L'import refuse les archives inconnues, les schémas plus récents, les chemins 
 les empreintes invalides et les fichiers non déclarés.
 
 Aucune clé API n'est persistée : `provider_profiles.keychain_ref` référence le trousseau OS.
+
+## Schéma v6 — branches, versions et runs
+
+- `scenarios.parent_id` / `branch_label` : une branche est un scénario rattaché à un parent.
+- `scenarios.version` : compteur d'édition structurelle de la branche.
+- `scenario_versions` : snapshots **immuables** d'un scénario, avec `seed` et
+  `engine_version`. Supprimer un scénario ne supprime pas ses versions
+  (`ON DELETE SET NULL`).
+- `simulation_runs.quality` : `final` uniquement en base ; les `draft` sont refusés par le
+  repository.
+- `simulation_runs.scenario_version_id` : version de référence éventuelle du run.
+- `simulation_runs.pinned` : run conservé pour comparaison (fantôme).
+- `simulation_runs.status` : `complete`, `failed` ou `cancelled`.
+
+Sémantique :
+
+- **Branche** : évolue, porte un `parent_id` et un `branch_label`.
+- **Version nommée** : snapshot immuable ; `restore()` crée toujours une nouvelle branche,
+  jamais de destruction.
+- **Épinglage** : un run `pinned` n'est jamais purgé.
+- **Restauration** : `store.versions.restore(version_id, label=...)`.
+- **Idempotence** : un run final est écrit une seule fois ; un même `run_id` est retourné
+  tel quel.
+
+## Rétention
+
+- Par défaut : **200 runs** par projet (`DEFAULT_KEEP_LAST_RUNS`).
+- Les runs épinglés et ceux liés à une `scenario_version` ne sont jamais supprimés.
+- Les 200 runs les plus récents comptent dans la fenêtre ; les protégés plus anciens
+  survivent en plus.
+- Un résultat sérialisé de plus de **15 MiB** (`MAX_INLINE_RESULT_BYTES`) est écrit hors
+  base dans `results/<projectId>/<runId>.json.gz` et référencé par `result_path`.
+- `store.prune_runs(project_id, keep_last=200)` purge un projet ;
+  `store.prune_all(keep_last=200)` purge tous les projets. Le sidecar appelle `prune_all()`
+  au premier accès au store et journalise le nombre supprimé.
+
+## Compatibilité `.simproj`
+
+- L'export écrit `schemaVersion = 6` et inclut branches, versions et runs épinglés.
+- L'import accepte les archives v5 : la base extraite est migrée en v6 avant clonage.
+- Les archives v7+ sont refusées avec `SchemaTooNewError`.
+- Tous les IDs sont remappés à l'import et à la duplication de projet ; les références
+  `parent_id`, `scenario_id` et `scenario_version_id` suivent ce remappage.
 
 ## Commandes
 

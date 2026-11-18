@@ -15,6 +15,7 @@ from typing import Any
 from .cloning import clone_project
 from .database import Database
 from .errors import IntegrityError, PortableError, SchemaTooNewError
+from .integrity import check_integrity
 from .migrations import LATEST_SCHEMA_VERSION
 from .models import Project
 from .repositories import ProjectRepository
@@ -237,6 +238,9 @@ def import_project(
 
         snapshot = Database(root / "project.db", journal_mode="DELETE")
         try:
+            ok, message = check_integrity(snapshot)
+            if not ok:
+                raise PortableError(f"archive incohérente: {message}")
             snapshot_project = ProjectRepository(snapshot.conn).get(manifest["projectId"])
             if snapshot_project is None:
                 raise PortableError("projet déclaré absent de la base exportée")
@@ -275,6 +279,11 @@ def import_project(
                         (staging / old_path).unlink(missing_ok=True)
                     if not target.is_file():
                         raise IntegrityError(f"résultat non copié: {new_path}")
+                violations = conn.execute("PRAGMA foreign_key_check").fetchall()
+                if violations:
+                    raise PortableError(
+                        "import incohérent: clés étrangères invalides"
+                    )
                 if own_transaction:
                     conn.commit()
             except Exception:

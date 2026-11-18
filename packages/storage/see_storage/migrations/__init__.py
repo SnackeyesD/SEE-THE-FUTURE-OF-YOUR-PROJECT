@@ -247,12 +247,44 @@ CREATE INDEX IF NOT EXISTS idx_benchmark_pack_events_created
     ON benchmark_pack_events(created_at DESC, id DESC);
 """
 
+MIGRATION_0006 = """
+CREATE TABLE IF NOT EXISTS scenario_versions (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    scenario_id TEXT REFERENCES scenarios(id) ON DELETE SET NULL,
+    label TEXT NOT NULL,
+    scenario_json TEXT NOT NULL,
+    seed INTEGER,
+    engine_version TEXT,
+    created_at TEXT NOT NULL
+);
+
+ALTER TABLE scenarios ADD COLUMN parent_id TEXT
+    REFERENCES scenarios(id) ON DELETE SET NULL;
+ALTER TABLE scenarios ADD COLUMN branch_label TEXT;
+ALTER TABLE scenarios ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
+
+ALTER TABLE simulation_runs ADD COLUMN quality TEXT NOT NULL DEFAULT 'final'
+    CHECK (quality IN ('draft', 'final'));
+ALTER TABLE simulation_runs ADD COLUMN scenario_version_id TEXT
+    REFERENCES scenario_versions(id) ON DELETE SET NULL;
+ALTER TABLE simulation_runs ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE simulation_runs ADD COLUMN status TEXT NOT NULL DEFAULT 'complete'
+    CHECK (status IN ('complete', 'failed', 'cancelled'));
+
+CREATE INDEX IF NOT EXISTS idx_versions_project
+    ON scenario_versions(project_id, created_at DESC, id);
+CREATE INDEX IF NOT EXISTS idx_scenarios_parent
+    ON scenarios(parent_id);
+"""
+
 MIGRATIONS: tuple[tuple[int, str], ...] = (
     (1, MIGRATION_0001),
     (2, MIGRATION_0002),
     (3, MIGRATION_0003),
     (4, MIGRATION_0004),
     (5, MIGRATION_0005),
+    (6, MIGRATION_0006),
 )
 
 LATEST_SCHEMA_VERSION = max(version for version, _ in MIGRATIONS)

@@ -40,14 +40,14 @@ La V3 doit rendre les expérimentations **réversibles et comparables** sans tra
 
 ## 3. Livrables
 
-- [ ] `MIGRATION_0006` et `LATEST_SCHEMA_VERSION = 6`.
-- [ ] `scenario_versions` + colonnes `scenarios.parent_id`, `scenarios.branch_label`, `scenarios.version`.
-- [ ] `simulation_runs.quality`, `scenario_version_id`, `pinned`, `status`.
-- [ ] `ScenarioVersionRepository` (create/list/get/delete).
-- [ ] `RunRepository.prune()` et compteur de taille.
-- [ ] Export/import v6, lecture v5.
-- [ ] Tests de migration et d'export.
-- [ ] Documentation du format et de la sémantique.
+- [x] `MIGRATION_0006` et `LATEST_SCHEMA_VERSION = 6`.
+- [x] `scenario_versions` + colonnes `scenarios.parent_id`, `scenarios.branch_label`, `scenarios.version`.
+- [x] `simulation_runs.quality`, `scenario_version_id`, `pinned`, `status`.
+- [x] `ScenarioVersionRepository` (create/list/get/delete).
+- [x] `RunRepository.prune()` et compteur de taille.
+- [x] Export/import v6, lecture v5.
+- [x] Tests de migration et d'export.
+- [x] Documentation du format et de la sémantique.
 
 ## 4. Tâches détaillées
 
@@ -82,45 +82,45 @@ CREATE INDEX IF NOT EXISTS idx_runs_project_created ON simulation_runs(project_i
 CREATE INDEX IF NOT EXISTS idx_scenarios_parent ON scenarios(parent_id);
 ```
 
-- [ ] Vérifier que la migration s'applique sur une base v5 réelle (fixture) et qu'elle est idempotente via le mécanisme existant.
-- [ ] Sauvegarde automatique avant migration déjà fournie : vérifier qu'elle couvre la v6.
-- [ ] Refuser explicitement un `quality='draft'` à l'insertion (défense en profondeur).
+- [x] Vérifier que la migration s'applique sur une base v5 réelle (fixture) et qu'elle est idempotente via le mécanisme existant.
+- [x] Sauvegarde automatique avant migration déjà fournie : vérifier qu'elle couvre la v6.
+- [x] Refuser explicitement un `quality='draft'` à l'insertion (défense en profondeur).
 
 ### Lot B — Repositories
 
-- [ ] `ScenarioRepository.duplicate(scenario_id, label)` : crée une nouvelle ligne avec `parent_id`, `branch_label`, `version=1`.
-- [ ] `ScenarioRepository.update` : incrémente `version` à chaque modification structurelle.
-- [ ] `ScenarioVersionRepository.create(project_id, scenario_id, label, scenario, seed)` : snapshot immuable.
-- [ ] `ScenarioVersionRepository.list(project_id)` trié par date.
-- [ ] `RunRepository.add(..., quality="final", scenario_version_id=None, pinned=False)`.
-- [ ] `RunRepository.set_pinned(run_id, pinned)`.
-- [ ] `RunRepository.prune(project_id, keep_last=200)` : supprime les runs non épinglés au-delà de la fenêtre, jamais ceux référencés par une version.
-- [ ] `ProjectStore` expose les nouveaux repositories.
+- [x] `ScenarioRepository.duplicate(scenario_id, label)` : crée une nouvelle ligne avec `parent_id`, `branch_label`, `version=1`.
+- [x] `ScenarioRepository.update` : incrémente `version` à chaque modification structurelle.
+- [x] `ScenarioVersionRepository.create(project_id, scenario_id, label, scenario, seed)` : snapshot immuable.
+- [x] `ScenarioVersionRepository.list(project_id)` trié par date.
+- [x] `RunRepository.add(..., quality="final", scenario_version_id=None, pinned=False)`.
+- [x] `RunRepository.set_pinned(run_id, pinned)`.
+- [x] `RunRepository.prune(project_id, keep_last=200)` : supprime les runs non épinglés au-delà de la fenêtre, jamais ceux référencés par une version.
+- [x] `ProjectStore` expose les nouveaux repositories.
 
 ### Lot C — Sémantique
 
-- [ ] **Version nommée** = snapshot immuable d'un scénario + graine. Restaurer une version **crée une nouvelle branche** (non destructif) ; l'ancienne reste intacte.
-- [ ] **Branche** = scénario avec `parent_id` ; le nom affiché est `branch_label` ou `name`.
-- [ ] **Épinglage** = run final conservé pour comparaison (fantôme) ; un run épinglé n'est jamais purgé.
-- [ ] Une comparaison exige la même graine : le repository renvoie la graine du run, l'UI (phase 13) refuse un mélange.
-- [ ] Le `draft` n'entre jamais en base ; le `final` est écrit une seule fois (idempotence par `run_id`).
+- [x] **Version nommée** = snapshot immuable d'un scénario + graine. Restaurer une version **crée une nouvelle branche** (non destructif) ; l'ancienne reste intacte.
+- [x] **Branche** = scénario avec `parent_id` ; le nom affiché est `branch_label` ou `name`.
+- [x] **Épinglage** = run final conservé pour comparaison (fantôme) ; un run épinglé n'est jamais purgé.
+- [x] Une comparaison exige la même graine : le repository renvoie la graine du run, l'UI (phase 13) refuse un mélange.
+- [x] Le `draft` n'entre jamais en base ; le `final` est écrit une seule fois (idempotence par `run_id`).
 
 ### Lot D — Export/import `.simproj`
 
-- [ ] Inclure `scenario_versions` et les nouvelles colonnes dans le manifeste.
-- [ ] Bump `schemaVersion` de l'archive à 6 ; écrire `LATEST_SCHEMA_VERSION`.
-- [ ] Importer v5 → v6 : colonnes par défaut, aucune perte.
-- [ ] Refuser une archive v7+ avec un message clair.
-- [ ] Remapper les IDs lors d'un import dans un projet existant ou d'une duplication de projet (collisions).
-- [ ] Vérifier l'intégrité (FK, orphelins, checksums) après import.
-- [ ] Test aller-retour : projet avec versions + branches + runs épinglés → export → import → égalité fonctionnelle.
+- [x] Inclure `scenario_versions` et les nouvelles colonnes dans le manifeste.
+- [x] Bump `schemaVersion` de l'archive à 6 ; écrire `LATEST_SCHEMA_VERSION`.
+- [x] Importer v5 → v6 : colonnes par défaut, aucune perte.
+- [x] Refuser une archive v7+ avec un message clair.
+- [x] Remapper les IDs lors d'un import dans un projet existant ou d'une duplication de projet (collisions).
+- [x] Vérifier l'intégrité (FK, orphelins, checksums) après import.
+- [x] Test aller-retour : projet avec versions + branches + runs épinglés → export → import → égalité fonctionnelle.
 
 ### Lot E — Rétention et intégrité
 
-- [ ] Politique par défaut : 200 runs finaux par projet, 15 Mo par run maximum (sinon `result_path` externe).
-- [ ] Purge au démarrage ou à la demande, avec log du nombre supprimé.
-- [ ] `integrity.check` couvre les nouvelles tables et les références.
-- [ ] `storage.backup` inclut les versions.
+- [x] Politique par défaut : 200 runs finaux par projet, 15 Mo par run maximum (sinon `result_path` externe).
+- [x] Purge au démarrage ou à la demande, avec log du nombre supprimé.
+- [x] `integrity.check` couvre les nouvelles tables et les références.
+- [x] `storage.backup` inclut les versions.
 
 ## 5. Contrats
 
@@ -160,26 +160,26 @@ Règles d'API :
 
 ## 7. Tests
 
-- [ ] Migration v5 → v6 sur fixture, données conservées.
-- [ ] Colonnes par défaut correctes (`quality='final'`, `pinned=0`, `status='complete'`).
-- [ ] Insertion `draft` refusée.
-- [ ] Duplication : parent, label, version.
-- [ ] Snapshot immuable : modifier le scénario après création ne change pas la version.
-- [ ] Restauration : crée une branche, ne détruit rien.
-- [ ] Export/import v6 : égalité fonctionnelle.
-- [ ] Import v5 : succès.
-- [ ] Import v7 : refus explicite.
-- [ ] Purge : conserve épinglés et versions.
-- [ ] Intégrité après suppression de scénario.
+- [x] Migration v5 → v6 sur fixture, données conservées.
+- [x] Colonnes par défaut correctes (`quality='final'`, `pinned=0`, `status='complete'`).
+- [x] Insertion `draft` refusée.
+- [x] Duplication : parent, label, version.
+- [x] Snapshot immuable : modifier le scénario après création ne change pas la version.
+- [x] Restauration : crée une branche, ne détruit rien.
+- [x] Export/import v6 : égalité fonctionnelle.
+- [x] Import v5 : succès.
+- [x] Import v7 : refus explicite.
+- [x] Purge : conserve épinglés et versions.
+- [x] Intégrité après suppression de scénario.
 
 ## 8. Critères d'acceptation
 
-- [ ] Une base v2 migre sans perte.
-- [ ] Un projet avec branches/versions s'exporte et se réimporte à l'identique.
-- [ ] Les drafts ne sont jamais persistés.
-- [ ] Les runs épinglés survivent à la purge.
-- [ ] Les tests d'intégrité couvrent les nouvelles tables.
-- [ ] La phase 13 peut construire le diff et la comparaison sur ces données.
+- [x] Une base v2 migre sans perte.
+- [x] Un projet avec branches/versions s'exporte et se réimporte à l'identique.
+- [x] Les drafts ne sont jamais persistés.
+- [x] Les runs épinglés survivent à la purge.
+- [x] Les tests d'intégrité couvrent les nouvelles tables.
+- [x] La phase 13 peut construire le diff et la comparaison sur ces données.
 
 ## 9. Performance
 
@@ -198,8 +198,8 @@ Règles d'API :
 
 ## 11. Definition of Done
 
-- [ ] Migration 0006 appliquée et testée.
-- [ ] Repositories et sémantique documentés.
-- [ ] Export/import v6 et compatibilité v5.
-- [ ] Politique de rétention en place.
-- [ ] ADR 0014 complété avec le modèle retenu.
+- [x] Migration 0006 appliquée et testée.
+- [x] Repositories et sémantique documentés.
+- [x] Export/import v6 et compatibilité v5.
+- [x] Politique de rétention en place.
+- [x] ADR 0014 complété avec le modèle retenu.

@@ -39,6 +39,24 @@
 - Les résultats sont épinglables (`pinned=1`) ; un run épinglé n'est jamais purgé.
 - Sémantique persistée par la migration `0006` (phase 07).
 
+### Mise en œuvre phase 07
+
+- `scenarios.parent_id` référence la branche source (`ON DELETE SET NULL`) ;
+  `scenarios.branch_label` porte le nom affiché ; `scenarios.version` est un compteur
+  d'édition structurelle (changement de `scenario` ou de `model`).
+- `scenario_versions` stocke un snapshot immuable (`scenario_json`, `seed`,
+  `engine_version`). Supprimer un scénario laisse ses versions intactes.
+- `simulation_runs` porte `quality` (`final` seulement en base), `scenario_version_id`,
+  `pinned` et `status` (`complete`, `failed`, `cancelled`).
+- `RunRepository.prune(keep_last=200)` conserve les 200 runs les plus récents, puis ne
+  supprime jamais un run épinglé ou lié à une version. `ProjectStore.prune_all()` applique
+  cette politique à tous les projets ; le sidecar l'exécute au premier accès au store.
+- Un résultat sérialisé de plus de `MAX_INLINE_RESULT_BYTES` (15 MiB) est externalisé dans
+  `results/<projectId>/<runId>.json.gz`.
+- Les archives `.simproj` passent en `schemaVersion = 6` ; les archives v5 sont migrées à
+  l'import. Les champs et commandes IPC correspondants sont exposés en phase 13, pas en
+  phase 07.
+
 ### Dispositions
 
 - `PanelGrid` : trois fractions (`left`, `main`, `right`) dans des bornes, presets `analyse`, `pilotage`, `presentation`, `custom`.

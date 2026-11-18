@@ -99,6 +99,9 @@ class ScenarioRecord(Model):
     name: str
     model: str
     scenario: dict[str, Any]
+    parent_id: str | None
+    branch_label: str | None
+    version: int
     created_at: str
     updated_at: str
 
@@ -110,8 +113,36 @@ class ScenarioRecord(Model):
             name=row["name"],
             model=row["model"],
             scenario=json_loads(row["scenario_json"], {}),
+            parent_id=row["parent_id"],
+            branch_label=row["branch_label"],
+            version=int(row["version"]),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioVersion(Model):
+    id: str
+    project_id: str
+    scenario_id: str | None
+    label: str
+    scenario: dict[str, Any]
+    seed: int | None
+    engine_version: str | None
+    created_at: str
+
+    @classmethod
+    def from_row(cls, row: Any) -> ScenarioVersion:
+        return cls(
+            id=row["id"],
+            project_id=row["project_id"],
+            scenario_id=row["scenario_id"],
+            label=row["label"],
+            scenario=json_loads(row["scenario_json"], {}),
+            seed=row["seed"],
+            engine_version=row["engine_version"],
+            created_at=row["created_at"],
         )
 
 
@@ -127,6 +158,10 @@ class SimulationRun(Model):
     summary: dict[str, Any]
     result: dict[str, Any] | None
     result_path: str | None
+    quality: str
+    scenario_version_id: str | None
+    pinned: bool
+    status: str
     created_at: str
 
     @classmethod
@@ -142,6 +177,10 @@ class SimulationRun(Model):
             summary=json_loads(row["summary_json"], {}),
             result=json_loads(row["result_json"], None),
             result_path=row["result_path"],
+            quality=row["quality"],
+            scenario_version_id=row["scenario_version_id"],
+            pinned=bool(row["pinned"]),
+            status=row["status"],
             created_at=row["created_at"],
         )
 

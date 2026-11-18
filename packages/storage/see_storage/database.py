@@ -125,7 +125,15 @@ class Database:
         rows = self.conn.execute("PRAGMA integrity_check").fetchall()
         messages = [str(row[0]) for row in rows]
         ok = len(messages) == 1 and messages[0].lower() == "ok"
-        return ok, "; ".join(messages)
+        if not ok:
+            return False, "; ".join(messages)
+        violations = self.conn.execute("PRAGMA foreign_key_check").fetchall()
+        if violations:
+            details = "; ".join(
+                f"{row[0]} row {row[1]} -> {row[2]} (fk {row[3]})" for row in violations
+            )
+            return False, f"clés étrangères invalides: {details}"
+        return True, "ok"
 
     def file_size(self) -> int:
         if self.path is None or not self.path.exists():

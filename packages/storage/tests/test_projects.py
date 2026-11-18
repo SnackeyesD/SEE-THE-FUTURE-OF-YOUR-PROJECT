@@ -67,6 +67,53 @@ def test_duplicate_copies_children_and_results(store: ProjectStore) -> None:
     assert (store.results_dir / duplicate.id / detailed[0].result_path).read_bytes() == b"result"
 
 
+def test_duplicate_copies_versions_and_pins(store: ProjectStore) -> None:
+    project = store.create_project("Versions")
+    source = store.scenarios.add(
+        project.id,
+        "Base",
+        "retail_depot",
+        {"model": "retail_depot", "runs": 10},
+    )
+    branch = store.scenarios.duplicate(source.id, "Variante")
+    version = store.versions.create(
+        project.id,
+        branch.id,
+        "Référence",
+        branch.scenario,
+        seed=7,
+        engine_version="0.3.0",
+    )
+    store.runs.add(
+        project.id,
+        "0.3.0",
+        10,
+        {"mean": 1.0},
+        scenario_id=branch.id,
+        seed=7,
+        scenario_version_id=version.id,
+        pinned=True,
+    )
+
+    duplicate = store.duplicate_project(project.id)
+
+    scenarios = store.scenarios.list(duplicate.id)
+    assert len(scenarios) == 2
+    copied_branch = next(item for item in scenarios if item.branch_label == "Variante")
+    copied_source = next(item for item in scenarios if item.id != copied_branch.id)
+    assert copied_branch.parent_id == copied_source.id
+
+    versions = store.versions.list(duplicate.id)
+    assert len(versions) == 1
+    assert versions[0].scenario_id == copied_branch.id
+    assert versions[0].seed == 7
+
+    run = store.runs.list(duplicate.id)[0]
+    assert run.scenario_id == copied_branch.id
+    assert run.scenario_version_id == versions[0].id
+    assert run.pinned is True
+
+
 def test_delete_removes_project_results(store: ProjectStore) -> None:
     project = store.create_project("À supprimer")
     directory = store.results_dir / project.id
@@ -143,7 +190,7 @@ def test_prune_runs_removes_detailed_results(store: ProjectStore) -> None:
             created_at=f"2026-01-01T00:00:{index:02d}+00:00",
         )
         (directory / result).write_bytes(b"detail")
-    assert store.prune_runs(project.id, keep=1) == 2
+    assert store.prune_runs(project.id, keep_last=1) == 2
     assert sorted(path.name for path in directory.iterdir()) == ["run-2.json.gz"]
 
 

@@ -12,7 +12,7 @@ from .errors import IntegrityError, StorageValidationError
 from .integrity import backup as backup_database
 from .integrity import check_integrity as check_database_integrity
 from .locking import InstanceLock
-from .models import Project
+from .models import Project, SimulationRun
 from .portable import ExportInfo, export_project, import_project
 from .repositories import (
     AgentSessionRepository,
@@ -30,9 +30,19 @@ from .repositories import (
     RunRepository,
     SandboxAuditRepository,
     ScenarioRepository,
+    ScenarioVersionRepository,
     UsageRepository,
 )
 from .utils import ensure_text, new_id, safe_relative_path, utc_now
+
+MAX_INLINE_RESULT_BYTES = 15 * 1024 * 1024
+DEFAULT_KEEP_LAST_RUNS = 200
+
+
+def _json_size(value: Any) -> int:
+    return len(
+        json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    )
 
 
 class ProjectStore:
@@ -65,6 +75,7 @@ class ProjectStore:
             self.messages = MessageRepository(database.conn)
             self.briefs = BriefRepository(database.conn)
             self.scenarios = ScenarioRepository(database.conn)
+            self.versions = ScenarioVersionRepository(database.conn)
             self.runs = RunRepository(database.conn)
             self.provider_profiles = ProviderProfileRepository(database.conn)
             self.usage = UsageRepository(database.conn)
@@ -224,6 +235,43 @@ class ProjectStore:
             raise
         return relative
 
+    def save_run(
+        self,
+        project_id: str,
+        engine_version: str,
+        runs: int,
+        summary: dict[str, Any],
+        *,
+        result: dict[str, Any] | None = None,
+        max_inline_bytes: int = MAX_INLINE_RESULT_BYTES,
+        **options: Any,
+    ) -> SimulationRun:
+        if max_inline_bytes < 0:
+            raise StorageValidationError("max_inline_bytes doit être positif ou nul")
+        run_id = options.get("run_id")
+        if isinstance(run_id, str):
+            existing = self.runs.get(run_id)
+            if existing is not None:
+                if existing.project_id != project_id:
+                    raise StorageValidationError("run_id déjà utilisé par un autre projet")
+                return existing
+        if result is not None and _json_size(result) > max_inline_bytes:
+            run = self.runs.add(
+                project_id, engine_version, runs, summary, result=None, **options
+            )
+            try:
+                self.save_run_detail(project_id, run.id, result)
+            except Exception:
+                with self.db.transaction(immediate=True):
+                    self.db.conn.execute(
+                        "DELETE FROM simulation_runs WHERE id = ?", (run.id,)
+                    )
+                raise
+            return self.runs.get(run.id)  # type: ignore[return-value]
+        return self.runs.add(
+            project_id, engine_version, runs, summary, result=result, **options
+        )
+
     def load_run_detail(self, project_id: str, run_id: str) -> dict[str, Any]:
         run = self.runs.get(run_id)
         if run is None or run.project_id != project_id:
@@ -240,13 +288,26 @@ class ProjectStore:
             raise IntegrityError(f"résultat détaillé invalide: {run.result_path}")
         return value
 
-    def prune_runs(self, project_id: str, *, keep: int = 50) -> int:
+    def prune_runs(
+        self, project_id: str, *, keep_last: int = DEFAULT_KEEP_LAST_RUNS
+    ) -> int:
         self.projects.require(project_id)
-        removed_paths = self.runs.prune(project_id, keep=keep)
-        for path in removed_paths:
+        removed = self.runs.prune(project_id, keep_last=keep_last)
+        for _run_id, path in removed:
+            if path is None:
+                continue
             relative = safe_relative_path(path)
             (self.results_dir / project_id / relative).unlink(missing_ok=True)
-        return len(removed_paths)
+        return len(removed)
+
+    def prune_all(self, *, keep_last: int = DEFAULT_KEEP_LAST_RUNS) -> int:
+        removed = 0
+        projects = self.projects.list(
+            include_archived=True, include_trashed=True, limit=100_000
+        )
+        for project in projects:
+            removed += self.prune_runs(project.id, keep_last=keep_last)
+        return removed
 
     def export_sandbox_audit(self, project_id: str) -> tuple[Path, int]:
         self.projects.require(project_id)
@@ -314,6 +375,13 @@ class ProjectStore:
             (
                 "SELECT COALESCE(SUM(LENGTH(COALESCE(scenario_json, ''))), 0)"
                 " FROM scenarios WHERE project_id = ?",
+                (project_id,),
+            ),
+            (
+                "SELECT COALESCE(SUM(LENGTH(COALESCE(label, ''))"
+                " + LENGTH(COALESCE(scenario_json, ''))"
+                " + LENGTH(COALESCE(engine_version, ''))), 0)"
+                " FROM scenario_versions WHERE project_id = ?",
                 (project_id,),
             ),
             (

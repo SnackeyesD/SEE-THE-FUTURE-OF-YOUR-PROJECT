@@ -113,8 +113,8 @@ def test_runs_and_prune(store: ProjectStore) -> None:
             created_at=f"2026-01-01T00:00:{index:02d}+00:00",
         )
         paths.append(run.result_path)
-    removed = store.runs.prune(project.id, keep=1)
-    assert sorted(removed) == sorted(paths[:2])
+    removed = store.runs.prune(project.id, keep_last=1)
+    assert sorted(path for _identifier, path in removed) == sorted(paths[:2])
     assert store.runs.count(project.id) == 1
     assert store.runs.list(project.id)[0].summary == {"index": 2}
 

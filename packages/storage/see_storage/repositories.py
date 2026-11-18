@@ -21,6 +21,7 @@ from .models import (
     RoleAssignment,
     SandboxAuditRecord,
     ScenarioRecord,
+    ScenarioVersion,
     SimulationRun,
     ToolPermission,
     UsageEntry,
@@ -48,6 +49,8 @@ SANDBOX_DECISIONS = ("approved", "rejected")
 SANDBOX_STATUSES = ("succeeded", "failed", "timeout", "cancelled", "rejected")
 BENCHMARK_STATUSES = ("active", "invalid", "removed")
 BENCHMARK_EVENT_ACTIONS = ("installed", "replaced", "rejected", "removed")
+RUN_QUALITIES = ("draft", "final")
+RUN_STATUSES = ("complete", "failed", "cancelled")
 CODE_HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -379,6 +382,17 @@ class ScenarioRepository:
     def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
+    def _require_parent(self, project_id: str, parent_id: str | None) -> None:
+        if parent_id is None:
+            return
+        row = self.conn.execute(
+            "SELECT project_id FROM scenarios WHERE id = ?", (parent_id,)
+        ).fetchone()
+        if row is None:
+            raise StorageValidationError(f"scénario parent introuvable: {parent_id}")
+        if row["project_id"] != project_id:
+            raise StorageValidationError("le scénario parent appartient à un autre projet")
+
     def add(
         self,
         project_id: str,
@@ -387,20 +401,39 @@ class ScenarioRepository:
         scenario: dict[str, Any],
         *,
         scenario_id: str | None = None,
+        parent_id: str | None = None,
+        branch_label: str | None = None,
+        version: int = 1,
         created_at: str | None = None,
     ) -> ScenarioRecord:
         clean_name = ensure_text(name, "name")
         clean_model = ensure_text(model, "model")
+        clean_label = _optional_text(branch_label, "branchLabel", max_length=200)
+        if version < 1:
+            raise StorageValidationError("version doit être supérieure ou égale à 1")
+        self._require_parent(project_id, parent_id)
         now = created_at or utc_now()
         identifier = scenario_id or new_id()
         with _write(self.conn):
             self.conn.execute(
                 """
                 INSERT INTO scenarios (
-                    id, project_id, name, model, scenario_json, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    id, project_id, name, model, scenario_json, parent_id,
+                    branch_label, version, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (identifier, project_id, clean_name, clean_model, json_dumps(scenario), now, now),
+                (
+                    identifier,
+                    project_id,
+                    clean_name,
+                    clean_model,
+                    json_dumps(scenario),
+                    parent_id,
+                    clean_label,
+                    version,
+                    now,
+                    now,
+                ),
             )
         return self.get(identifier)  # type: ignore[return-value]
 
@@ -427,18 +460,28 @@ class ScenarioRepository:
             raise StorageValidationError(f"champs scénario non modifiables: {sorted(unknown)}")
         if not fields:
             return self.get(scenario_id)  # type: ignore[return-value]
+        current = self.get(scenario_id)
+        if current is None:
+            raise StorageValidationError(f"scénario introuvable: {scenario_id}")
+        structural = False
         assignments: list[str] = []
         params: list[Any] = []
         for key, value in fields.items():
             if key == "scenario":
                 key = "scenario_json"
-                value = json_dumps(value)
+                encoded = json_dumps(value)
+                structural = structural or encoded != json_dumps(current.scenario)
+                value = encoded
             elif key == "name":
                 value = ensure_text(value, "name")
             elif key == "model":
-                value = ensure_text(value, "model")
+                clean_model = ensure_text(value, "model")
+                structural = structural or clean_model != current.model
+                value = clean_model
             assignments.append(f"{key} = ?")
             params.append(value)
+        if structural:
+            assignments.append("version = version + 1")
         assignments.append("updated_at = ?")
         params.extend((utc_now(), scenario_id))
         with _write(self.conn):
@@ -449,10 +492,128 @@ class ScenarioRepository:
             raise StorageValidationError(f"scénario introuvable: {scenario_id}")
         return self.get(scenario_id)  # type: ignore[return-value]
 
+    def duplicate(self, scenario_id: str, label: str) -> ScenarioRecord:
+        source = self.get(scenario_id)
+        if source is None:
+            raise StorageValidationError(f"scénario introuvable: {scenario_id}")
+        clean_label = ensure_text(label, "label", max_length=200)
+        return self.add(
+            source.project_id,
+            source.name,
+            source.model,
+            source.scenario,
+            parent_id=source.id,
+            branch_label=clean_label,
+        )
+
     def delete(self, scenario_id: str) -> bool:
         with _write(self.conn):
             cursor = self.conn.execute("DELETE FROM scenarios WHERE id = ?", (scenario_id,))
         return cursor.rowcount > 0
+
+
+class ScenarioVersionRepository:
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+        self.scenarios = ScenarioRepository(conn)
+
+    def create(
+        self,
+        project_id: str,
+        scenario_id: str | None,
+        label: str,
+        scenario: dict[str, Any],
+        *,
+        seed: int | None = None,
+        engine_version: str | None = None,
+        version_id: str | None = None,
+        created_at: str | None = None,
+    ) -> ScenarioVersion:
+        clean_label = ensure_text(label, "label", max_length=200)
+        if not isinstance(scenario, dict):
+            raise StorageValidationError("scenario doit être un objet")
+        if seed is not None and not isinstance(seed, int):
+            raise StorageValidationError("seed doit être un entier ou null")
+        clean_engine = _optional_text(engine_version, "engineVersion", max_length=100)
+        if scenario_id is not None:
+            row = self.conn.execute(
+                "SELECT project_id FROM scenarios WHERE id = ?", (scenario_id,)
+            ).fetchone()
+            if row is None:
+                raise StorageValidationError(f"scénario introuvable: {scenario_id}")
+            if row["project_id"] != project_id:
+                raise StorageValidationError("le scénario appartient à un autre projet")
+        now = created_at or utc_now()
+        identifier = version_id or new_id()
+        with _write(self.conn):
+            self.conn.execute(
+                """
+                INSERT INTO scenario_versions (
+                    id, project_id, scenario_id, label, scenario_json, seed,
+                    engine_version, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    identifier,
+                    project_id,
+                    scenario_id,
+                    clean_label,
+                    json_dumps(scenario),
+                    seed,
+                    clean_engine,
+                    now,
+                ),
+            )
+        return self.get(identifier)  # type: ignore[return-value]
+
+    def get(self, version_id: str) -> ScenarioVersion | None:
+        row = self.conn.execute(
+            "SELECT * FROM scenario_versions WHERE id = ?", (version_id,)
+        ).fetchone()
+        return ScenarioVersion.from_row(row) if row is not None else None
+
+    def list(self, project_id: str) -> list[ScenarioVersion]:
+        rows = self.conn.execute(
+            """
+            SELECT * FROM scenario_versions WHERE project_id = ?
+            ORDER BY created_at DESC, id DESC
+            """,
+            (project_id,),
+        ).fetchall()
+        return [ScenarioVersion.from_row(row) for row in rows]
+
+    def delete(self, version_id: str) -> bool:
+        with _write(self.conn):
+            cursor = self.conn.execute(
+                "DELETE FROM scenario_versions WHERE id = ?", (version_id,)
+            )
+        return cursor.rowcount > 0
+
+    def restore(self, version_id: str, *, label: str | None = None) -> ScenarioRecord:
+        version = self.get(version_id)
+        if version is None:
+            raise StorageValidationError(f"version introuvable: {version_id}")
+        source = self.scenarios.get(version.scenario_id) if version.scenario_id else None
+        raw_model = version.scenario.get("model")
+        if source is not None:
+            model = source.model
+        elif isinstance(raw_model, str) and raw_model.strip():
+            model = raw_model.strip()
+        else:
+            model = "retail_depot"
+        clean_label = (
+            ensure_text(label, "label", max_length=200)
+            if label is not None
+            else version.label
+        )
+        return self.scenarios.add(
+            version.project_id,
+            version.label,
+            model,
+            version.scenario,
+            parent_id=version.scenario_id,
+            branch_label=clean_label,
+        )
 
 
 class RunRepository:
@@ -472,20 +633,52 @@ class RunRepository:
         result: dict[str, Any] | None = None,
         result_path: str | None = None,
         run_id: str | None = None,
+        quality: str = "final",
+        scenario_version_id: str | None = None,
+        pinned: bool = False,
+        status: str = "complete",
         created_at: str | None = None,
     ) -> SimulationRun:
         clean_engine = ensure_text(engine_version, "engineVersion")
         if runs < 1:
             raise StorageValidationError("runs doit être supérieur ou égal à 1")
+        if quality not in RUN_QUALITIES:
+            raise StorageValidationError(f"qualité de run invalide: {quality}")
+        if quality == "draft":
+            raise StorageValidationError("les runs draft ne sont jamais persistés")
+        if status not in RUN_STATUSES:
+            raise StorageValidationError(f"statut de run invalide: {status}")
+        if scenario_version_id is not None:
+            row = self.conn.execute(
+                "SELECT project_id FROM scenario_versions WHERE id = ?",
+                (scenario_version_id,),
+            ).fetchone()
+            if row is None:
+                raise StorageValidationError(
+                    f"version de scénario introuvable: {scenario_version_id}"
+                )
+            if row["project_id"] != project_id:
+                raise StorageValidationError("la version appartient à un autre projet")
         clean_path = safe_relative_path(result_path) if result_path is not None else None
         identifier = run_id or new_id()
-        with _write(self.conn):
+        with _immediate(self.conn):
+            if run_id is not None:
+                existing = self.conn.execute(
+                    "SELECT project_id FROM simulation_runs WHERE id = ?", (run_id,)
+                ).fetchone()
+                if existing is not None:
+                    if existing["project_id"] != project_id:
+                        raise StorageValidationError(
+                            "run_id déjà utilisé par un autre projet"
+                        )
+                    return self.get(run_id)  # type: ignore[return-value]
             self.conn.execute(
                 """
                 INSERT INTO simulation_runs (
                     id, project_id, scenario_id, engine_version, seed, runs, duration_ms,
-                    summary_json, result_json, result_path, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    summary_json, result_json, result_path, quality, scenario_version_id,
+                    pinned, status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     identifier,
@@ -498,6 +691,10 @@ class RunRepository:
                     json_dumps(summary),
                     json_dumps(result) if result is not None else None,
                     clean_path,
+                    quality,
+                    scenario_version_id,
+                    int(pinned),
+                    status,
                     created_at or utc_now(),
                 ),
             )
@@ -539,25 +736,44 @@ class RunRepository:
             raise StorageValidationError(f"run introuvable: {run_id}")
         return self.get(run_id)  # type: ignore[return-value]
 
-    def prune(self, project_id: str, *, keep: int) -> list[str]:
-        if keep < 0:
-            raise StorageValidationError("keep doit être positif ou nul")
+    def set_pinned(self, run_id: str, pinned: bool = True) -> SimulationRun:
+        with _write(self.conn):
+            cursor = self.conn.execute(
+                "UPDATE simulation_runs SET pinned = ? WHERE id = ?",
+                (int(pinned), run_id),
+            )
+        if cursor.rowcount == 0:
+            raise StorageValidationError(f"run introuvable: {run_id}")
+        return self.get(run_id)  # type: ignore[return-value]
+
+    def prune(self, project_id: str, *, keep_last: int = 200) -> list[tuple[str, str | None]]:
+        if keep_last < 0:
+            raise StorageValidationError("keep_last doit être positif ou nul")
         with _immediate(self.conn):
             rows = self.conn.execute(
                 """
-                SELECT id, result_path FROM simulation_runs WHERE project_id = ?
-                ORDER BY created_at DESC, id DESC LIMIT -1 OFFSET ?
+                SELECT id, result_path, pinned, scenario_version_id
+                FROM simulation_runs WHERE project_id = ?
+                ORDER BY created_at DESC, id DESC
                 """,
-                (project_id, keep),
+                (project_id,),
             ).fetchall()
-            if not rows:
+            kept = {row["id"] for row in rows[:keep_last]}
+            removed = [
+                row
+                for row in rows
+                if row["id"] not in kept
+                and not row["pinned"]
+                and row["scenario_version_id"] is None
+            ]
+            if not removed:
                 return []
-            identifiers = [row["id"] for row in rows]
+            identifiers = [row["id"] for row in removed]
             placeholders = ", ".join("?" for _ in identifiers)
             self.conn.execute(
                 f"DELETE FROM simulation_runs WHERE id IN ({placeholders})", identifiers
             )
-        return [row["result_path"] for row in rows if row["result_path"]]
+        return [(row["id"], row["result_path"]) for row in removed]
 
 
 class ProviderProfileRepository:

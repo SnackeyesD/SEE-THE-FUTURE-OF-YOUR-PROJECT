@@ -25,12 +25,17 @@ from .models import (
     RoleAssignment,
     SandboxAuditRecord,
     ScenarioRecord,
+    ScenarioVersion,
     SimulationRun,
     ToolPermission,
     UsageEntry,
 )
 from .portable import FORMAT, FORMAT_VERSION, ExportInfo, export_project, import_project
-from .project_store import ProjectStore
+from .project_store import (
+    DEFAULT_KEEP_LAST_RUNS,
+    MAX_INLINE_RESULT_BYTES,
+    ProjectStore,
+)
 from .repositories import (
     AgentSessionRepository,
     AgentTraceRepository,
@@ -47,13 +52,16 @@ from .repositories import (
     RunRepository,
     SandboxAuditRepository,
     ScenarioRepository,
+    ScenarioVersionRepository,
     UsageRepository,
 )
 
 __all__ = [
+    "DEFAULT_KEEP_LAST_RUNS",
     "FORMAT",
     "FORMAT_VERSION",
     "LATEST_SCHEMA_VERSION",
+    "MAX_INLINE_RESULT_BYTES",
     "AgentSession",
     "AgentSessionRepository",
     "AgentTraceEntry",
@@ -88,6 +96,8 @@ __all__ = [
     "SandboxAuditRepository",
     "ScenarioRecord",
     "ScenarioRepository",
+    "ScenarioVersion",
+    "ScenarioVersionRepository",
     "SchemaTooNewError",
     "SimulationRun",
     "StorageError",

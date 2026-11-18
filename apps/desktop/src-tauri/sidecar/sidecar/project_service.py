@@ -263,7 +263,7 @@ def _persist_result(
             scenario.model,
             scenario_payload,
         )
-    run = store.runs.add(
+    run = store.save_run(
         project_id,
         result.engine_version,
         result.runs,

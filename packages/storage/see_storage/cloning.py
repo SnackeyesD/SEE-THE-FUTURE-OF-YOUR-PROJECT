@@ -4,7 +4,7 @@ import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .errors import ProjectNotFound
+from .errors import IntegrityError, ProjectNotFound
 from .utils import new_id, safe_relative_path, utc_now
 
 
@@ -14,6 +14,7 @@ class CloneResult:
     run_paths: list[tuple[str, str]] = field(default_factory=list)
     provider_profiles: dict[str, str] = field(default_factory=dict)
     scenarios: dict[str, str] = field(default_factory=dict)
+    versions: dict[str, str] = field(default_factory=dict)
     runs: dict[str, str] = field(default_factory=dict)
 
 
@@ -131,11 +132,23 @@ def clone_project(
     for scenario in scenarios:
         scenario_id = scenario["id"] if preserve_ids else new_id()
         result.scenarios[scenario["id"]] = scenario_id
+
+    pending_parents: list[tuple[str, str]] = []
+    for scenario in scenarios:
+        scenario_id = result.scenarios[scenario["id"]]
+        if scenario["parent_id"] is not None:
+            mapped_parent = result.scenarios.get(scenario["parent_id"])
+            if mapped_parent is None:
+                raise IntegrityError(
+                    f"parent de scénario absent du projet: {scenario['parent_id']}"
+                )
+            pending_parents.append((mapped_parent, scenario_id))
         target.execute(
             """
             INSERT INTO scenarios (
-                id, project_id, name, model, scenario_json, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                id, project_id, name, model, scenario_json, parent_id,
+                branch_label, version, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 scenario_id,
@@ -143,8 +156,47 @@ def clone_project(
                 scenario["name"],
                 scenario["model"],
                 scenario["scenario_json"],
+                None,
+                scenario["branch_label"],
+                scenario["version"],
                 now if reset_timestamps else scenario["created_at"],
                 now if reset_timestamps else scenario["updated_at"],
+            ),
+        )
+    for parent_id, scenario_id in pending_parents:
+        target.execute(
+            "UPDATE scenarios SET parent_id = ? WHERE id = ?", (parent_id, scenario_id)
+        )
+
+    for version in source.execute(
+        "SELECT * FROM scenario_versions WHERE project_id = ? ORDER BY created_at, id",
+        (source_project_id,),
+    ).fetchall():
+        version_id = version["id"] if preserve_ids else new_id()
+        result.versions[version["id"]] = version_id
+        mapped_scenario_id = None
+        if version["scenario_id"] is not None:
+            mapped_scenario_id = result.scenarios.get(version["scenario_id"])
+            if mapped_scenario_id is None:
+                raise IntegrityError(
+                    f"scénario de version absent du projet: {version['scenario_id']}"
+                )
+        target.execute(
+            """
+            INSERT INTO scenario_versions (
+                id, project_id, scenario_id, label, scenario_json, seed,
+                engine_version, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                version_id,
+                project_id,
+                mapped_scenario_id,
+                version["label"],
+                version["scenario_json"],
+                version["seed"],
+                version["engine_version"],
+                now if reset_timestamps else version["created_at"],
             ),
         )
 
@@ -310,6 +362,20 @@ def clone_project(
     ).fetchall():
         run_id = run["id"] if preserve_ids else new_id()
         result.runs[run["id"]] = run_id
+        scenario_id = None
+        if run["scenario_id"] is not None:
+            scenario_id = result.scenarios.get(run["scenario_id"])
+            if scenario_id is None:
+                raise IntegrityError(
+                    f"scénario de run absent du projet: {run['scenario_id']}"
+                )
+        scenario_version_id = None
+        if run["scenario_version_id"] is not None:
+            scenario_version_id = result.versions.get(run["scenario_version_id"])
+            if scenario_version_id is None:
+                raise IntegrityError(
+                    f"version de run absente du projet: {run['scenario_version_id']}"
+                )
         result_path = run["result_path"]
         if result_path is not None:
             result_path = safe_relative_path(result_path)
@@ -320,13 +386,14 @@ def clone_project(
             """
             INSERT INTO simulation_runs (
                 id, project_id, scenario_id, engine_version, seed, runs, duration_ms,
-                summary_json, result_json, result_path, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                summary_json, result_json, result_path, quality, scenario_version_id,
+                pinned, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_id,
                 project_id,
-                result.scenarios.get(run["scenario_id"]) if run["scenario_id"] else None,
+                scenario_id,
                 run["engine_version"],
                 run["seed"],
                 run["runs"],
@@ -334,6 +401,10 @@ def clone_project(
                 run["summary_json"],
                 run["result_json"],
                 result_path,
+                run["quality"],
+                scenario_version_id,
+                run["pinned"],
+                run["status"],
                 now if reset_timestamps else run["created_at"],
             ),
         )
