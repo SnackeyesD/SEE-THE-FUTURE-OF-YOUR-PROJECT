@@ -42,6 +42,7 @@ jobs:
         with:
           node-version: 22
       - run: npm run protocol:check
+      - run: npm run catalog:check
       - run: uv sync --project packages/engine
       - run: uv sync --project packages/storage
       - run: uv sync --project packages/providers
