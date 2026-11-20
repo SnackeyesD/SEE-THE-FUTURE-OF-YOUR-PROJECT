@@ -1,4 +1,5 @@
-import type { Project, ProjectDataResult, ScenarioRecord } from "@see/protocol";
+import type { Project, ProjectDataResult, Scenario, ScenarioEvent } from "@see/protocol";
+import { EVENT_CATALOG, EVENT_CATALOG_BY_TYPE } from "@see/protocol";
 import {
   Badge,
   Button,
@@ -10,7 +11,13 @@ import {
 } from "@see/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CommandPalette, type PaletteAction } from "../components/CommandPalette";
+import { ShortcutsHelp } from "../components/ShortcutsHelp";
 import { ProfitHistogram, SensitivityTornado } from "../components/Charts";
+import { EventCatalog } from "../components/cockpit/EventCatalog";
+import { EventEditor } from "../components/cockpit/EventEditor";
+import { EventTimeline } from "../components/cockpit/EventTimeline";
+import { clampWindow, type EventWindow } from "../components/cockpit/events";
 import { FanChartPanel, fanPointsFromMonthly, type FanMode } from "../components/cockpit/FanChartPanel";
 import { GhostLegend } from "../components/cockpit/GhostLegend";
 import {
@@ -20,21 +27,31 @@ import {
   type BenchmarkReference,
 } from "../components/cockpit/HypothesesPanel";
 import { KpiBar } from "../components/cockpit/KpiBar";
-import { useLiveSimulation } from "../hooks/useLiveSimulation";
-import { formatCurrency, formatNumber } from "../lib/format";
+import { MonthInspector } from "../components/cockpit/MonthInspector";
+import { TimeScrubber } from "../components/cockpit/TimeScrubber";
 import { PanelGrid } from "../components/layout/PanelGrid";
+import { useCockpitHotkeys } from "../hooks/useCockpitHotkeys";
+import { useLiveSimulation } from "../hooks/useLiveSimulation";
+import { usePlayback } from "../hooks/usePlayback";
+import { formatCurrency, formatNumber } from "../lib/format";
 import { CockpitProvider, useCockpitContext } from "../store/CockpitProvider";
 import { useCockpit, type RunState } from "../store/cockpitStore";
 import { snapshotCommand } from "../store/commands";
-import { loadLayout } from "../store/layout";
+import { loadLayout, layoutFromPreset, PRESET_LABELS, PRESET_NAMES } from "../store/layout";
 
 export interface CockpitScreenProps {
   project: Project;
-  scenario: ScenarioRecord | null;
+  scenario: ScenarioRecordLike | null;
   run: ProjectDataResult["run"];
   onBack: () => void;
   onOpenHypotheses: () => void;
+  /** Enregistre le scénario complet (hypothèses, événements, saisonnalité). */
+  onSaveScenario: (name: string, scenario: Scenario) => Promise<boolean>;
+  /** Signale les modifications non enregistrées au shell (garde de navigation). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
+
+type ScenarioRecordLike = NonNullable<ProjectDataResult["scenario"]>;
 
 function latestResult(runs: Record<string, RunState>): RunState | null {
   const ids = Object.keys(runs);
@@ -45,12 +62,30 @@ function latestResult(runs: Record<string, RunState>): RunState | null {
   return null;
 }
 
+let eventCounter = 0;
+
+function newEventId(): string {
+  eventCounter += 1;
+  return `evt-${Date.now().toString(36)}-${eventCounter.toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 6)}`;
+}
+
+function cloneMagnitude<T>(value: T): T {
+  if (typeof structuredClone === "function") return structuredClone(value);
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function clampMonth(month: number, horizon: number): number {
+  return Math.min(Math.max(Math.round(month), 1), Math.max(1, horizon));
+}
+
 /**
  * Cockpit 2D : composition KPI / hypothèses / éventail / secondaire / frise.
  *
  * Toutes les valeurs viennent du store, alimenté par les agrégats du moteur
  * (partiels et finaux). Aucun chiffre n'est recalculé dans React ; le seuil
- * n'interroge que la CDF fournie.
+ * n'interroge que la CDF fournie, et l'histogramme du mois vient du résultat.
  */
 export function CockpitScreen({
   project,
@@ -58,6 +93,8 @@ export function CockpitScreen({
   run,
   onBack,
   onOpenHypotheses,
+  onSaveScenario,
+  onDirtyChange,
 }: CockpitScreenProps) {
   const initialLayout = useMemo(() => loadLayout(project.id), [project.id]);
   const seed = run?.result?.seed ?? run?.seed ?? 42;
@@ -77,7 +114,9 @@ export function CockpitScreen({
 
   return (
     <CockpitProvider
-      key={`${project.id}:${scenario.id}`}
+      // Clé stable : un enregistrement crée un nouveau `ScenarioRecord`, mais
+      // ne doit pas remonter le provider (l'historique des runs serait perdu).
+      key={project.id}
       projectId={project.id}
       scenario={scenario.scenario}
       seed={seed}
@@ -89,6 +128,8 @@ export function CockpitScreen({
         initialRun={run}
         onBack={onBack}
         onOpenHypotheses={onOpenHypotheses}
+        onSaveScenario={onSaveScenario}
+        onDirtyChange={onDirtyChange}
       />
     </CockpitProvider>
   );
@@ -100,12 +141,16 @@ function CockpitBody({
   initialRun,
   onBack,
   onOpenHypotheses,
+  onSaveScenario,
+  onDirtyChange,
 }: {
   project: Project;
-  record: ScenarioRecord;
+  record: ScenarioRecordLike;
   initialRun: ProjectDataResult["run"];
   onBack: () => void;
   onOpenHypotheses: () => void;
+  onSaveScenario: (name: string, scenario: Scenario) => Promise<boolean>;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { store, inputs, applyLayout } = useCockpitContext();
   const session = useCockpit(store, (state) => state.session);
@@ -118,15 +163,37 @@ function CockpitBody({
   const [mode, setMode] = useState<FanMode>("cash");
   const [thresholdOverride, setThresholdOverride] = useState<number | null>(null);
   const [locks, setLocks] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+  const [monthNotice, setMonthNotice] = useState("");
+  const [dirty, setDirty] = useState(false);
   const gesture = useRef(false);
+  const suppressInvalidate = useRef(false);
+  const savedScenario = useRef<string>(JSON.stringify(record.scenario));
 
   useEffect(() => {
     const result = initialRun?.result;
     if (!result) return;
-    if (!store.getState().runs[result.runId]) store.getState().hydrateRun(result);
+    if (!store.getState().runs[result.runId]) {
+      store.getState().hydrateRun(result, initialRun?.createdAt ?? null);
+    }
   }, [initialRun, store]);
 
-  useEffect(() => inputs.subscribe(() => live.invalidate()), [inputs, live.invalidate]);
+  useEffect(
+    () =>
+      inputs.subscribe(() => {
+        // Un drop d'événement déclenche nous-mêmes un unique `runFinal` :
+        // l'invalidation automatique est neutralisée pour cette commande.
+        if (suppressInvalidate.current) return;
+        live.invalidate();
+      }),
+    [inputs, live.invalidate],
+  );
 
   const active = session.activeRunId ? runs[session.activeRunId] ?? null : null;
   const latest = useMemo(() => latestResult(runs), [runs]);
@@ -142,6 +209,55 @@ function CockpitBody({
   const currency = result?.currency ?? record.scenario.currency ?? project.currency ?? "XOF";
   const quality = display?.quality ?? result?.quality ?? null;
   const threshold = thresholdOverride ?? metrics?.minCashP50 ?? 0;
+  const horizon = monthly.length > 0 ? monthly[monthly.length - 1].index : 0;
+
+  // Le mois survit aux nouveaux résultats tant que l'horizon le permet.
+  useEffect(() => {
+    if (horizon <= 0) return;
+    const current = store.getState().selection.month;
+    if (current === null) {
+      store.getState().setSelection({ month: clampMonth(12, horizon) });
+      return;
+    }
+    if (current < 1 || current > horizon) {
+      const next = clampMonth(current, horizon);
+      store.getState().setSelection({ month: next });
+      setMonthNotice(
+        `L'horizon est passé à ${horizon} mois : le mois ${current} a été ramené au mois ${next}.`,
+      );
+    }
+  }, [horizon, store]);
+
+  useEffect(() => {
+    const next = JSON.stringify(session.scenario) !== savedScenario.current;
+    setDirty(next);
+  }, [session.scenario]);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
+  const selectedMonth = selection.month ?? (horizon > 0 ? clampMonth(12, horizon) : null);
+  const inspectorEntry = useMemo(
+    () => monthly.find((entry) => entry.index === selectedMonth) ?? null,
+    [monthly, selectedMonth],
+  );
+
+  const changeMonth = useCallback(
+    (month: number) => {
+      if (horizon <= 0) return;
+      store.getState().setSelection({ month: clampMonth(month, horizon) });
+      setMonthNotice("");
+    },
+    [horizon, store],
+  );
+
+  const playback = usePlayback({
+    horizon,
+    month: selectedMonth,
+    onMonthChange: changeMonth,
+    disabled: session.activeRunId !== null,
+  });
 
   const pinnedRuns = useMemo(
     () => pinned.map((runId) => runs[runId]).filter((run): run is RunState => Boolean(run?.result)),
@@ -207,6 +323,161 @@ function CockpitBody({
     setThresholdOverride(value);
   }, []);
 
+  /** Commande de scénario + un seul calcul final (partiels neutralisés). */
+  const mutateScenario = useCallback(
+    (
+      label: string,
+      change: (scenario: Scenario) => Scenario,
+      coalesceKey?: string,
+      runFinal = true,
+    ): boolean => {
+      const before = store.getState().session.scenario;
+      const after = change(before);
+      if (after === before) return false;
+      suppressInvalidate.current = true;
+      try {
+        inputs.dispatch(
+          snapshotCommand({
+            label,
+            before,
+            after,
+            apply: (scenario) => store.getState().setScenario(scenario),
+            coalesceKey,
+          }),
+        );
+      } finally {
+        suppressInvalidate.current = false;
+      }
+      if (runFinal) void live.runFinal();
+      return true;
+    },
+    [inputs, live, store],
+  );
+
+  const changeEventWindow = useCallback(
+    (id: string, window: EventWindow) => {
+      const target = store
+        .getState()
+        .session.scenario.events?.find((event) => event.id === id);
+      const safe = clampWindow(window, Math.max(1, horizon));
+      mutateScenario(
+        `Événement ${EVENT_CATALOG_BY_TYPE[target?.type ?? "supply_disruption"]?.label ?? ""} : fenêtre`,
+        (scenario) => ({
+          ...scenario,
+          events: (scenario.events ?? []).map((event) =>
+            event.id === id ? { ...event, ...safe } : event,
+          ),
+        }),
+        `event:${id}:window`,
+      );
+    },
+    [horizon, mutateScenario, store],
+  );
+
+  const addEvent = useCallback(
+    (type: ScenarioEvent["type"]) => {
+      const entry = EVENT_CATALOG_BY_TYPE[type];
+      const start = selectedMonth ?? 1;
+      const duration = Math.min(3, Math.max(1, horizon - start + 1));
+      const event: ScenarioEvent = {
+        id: newEventId(),
+        type,
+        startMonth: start,
+        durationMonths: duration,
+        target: entry.target,
+        mode: entry.mode,
+        probability: 1,
+        magnitude: cloneMagnitude(entry.defaultMagnitude),
+        enabled: true,
+      };
+      mutateScenario(`Ajouter ${entry.label}`, (scenario) => ({
+        ...scenario,
+        schemaVersion: "1.1.0",
+        events: [...(scenario.events ?? []), event],
+      }));
+      setCatalogOpen(false);
+    },
+    [horizon, mutateScenario, selectedMonth],
+  );
+
+  const toggleEvent = useCallback(
+    (id: string) => {
+      mutateScenario(
+        "Activer/désactiver l'événement",
+        (scenario) => ({
+          ...scenario,
+          events: (scenario.events ?? []).map((event) =>
+            event.id === id ? { ...event, enabled: event.enabled === false } : event,
+          ),
+        }),
+        `event:${id}:enabled`,
+      );
+    },
+    [mutateScenario],
+  );
+
+  const duplicateEvent = useCallback(
+    (id: string) => {
+      const source = store.getState().session.scenario.events?.find((event) => event.id === id);
+      if (!source) return;
+      const copy: ScenarioEvent = {
+        ...cloneMagnitude(source),
+        id: newEventId(),
+        startMonth: clampMonth(
+          source.startMonth + source.durationMonths,
+          Math.max(1, horizon - source.durationMonths + 1),
+        ),
+      };
+      mutateScenario(`Dupliquer ${EVENT_CATALOG_BY_TYPE[source.type]?.label ?? "l'événement"}`, (scenario) => ({
+        ...scenario,
+        events: [...(scenario.events ?? []), copy],
+      }));
+    },
+    [horizon, mutateScenario, store],
+  );
+
+  const deleteEvent = useCallback(
+    (id: string) => {
+      mutateScenario("Supprimer l'événement", (scenario) => ({
+        ...scenario,
+        events: (scenario.events ?? []).filter((event) => event.id !== id),
+      }));
+      setEditingId(null);
+      setSelectedEventId(null);
+    },
+    [mutateScenario],
+  );
+
+  const applyEditor = useCallback(
+    async (id: string, patch: Partial<ScenarioEvent>): Promise<boolean> => {
+      const changed = mutateScenario(
+        "Éditer l'événement",
+        (scenario) => ({
+          ...scenario,
+          events: (scenario.events ?? []).map((event) =>
+            event.id === id ? { ...event, ...patch } : event,
+          ),
+        }),
+        `event:${id}:edit`,
+        false,
+      );
+      if (!changed) {
+        setEditingId(null);
+        setSelectedEventId(null);
+        return true;
+      }
+      // L'éditeur reste ouvert tant que le sidecar n'a pas accepté le run :
+      // un refus doit rester corrigeable dans le formulaire.
+      const accepted = await live.runFinal();
+      if (accepted) {
+        setEditingId(null);
+        setSelectedEventId(null);
+      }
+      return accepted;
+    },
+    [live, mutateScenario],
+  );
+
   const pinCurrent = useCallback(() => {
     const current = store.getState();
     const target = current.session.activeRunId
@@ -216,9 +487,54 @@ function CockpitBody({
     current.pinRun(target.runId, !current.pinned.includes(target.runId));
   }, [store]);
 
+  const handleSave = useCallback(async () => {
+    if (saving) return;
+    const snapshot = store.getState().session.scenario;
+    const serialized = JSON.stringify(snapshot);
+    setSaving(true);
+    setSaveMessage("");
+    try {
+      const ok = await onSaveScenario(record.name, snapshot);
+      if (ok) {
+        savedScenario.current = serialized;
+        // Une modification peut être survenue pendant l'IPC : on compare le
+        // scénario courant à l'instantané réellement sauvegardé.
+        const current = store.getState().session.scenario;
+        const pending = JSON.stringify(current) !== serialized;
+        setDirty(pending);
+        setSaveMessage(
+          pending
+            ? "Scénario enregistré ; de nouvelles modifications restent à enregistrer."
+            : "Scénario enregistré.",
+        );
+      }
+    } finally {
+      setSaving(false);
+    }
+  }, [onSaveScenario, record.name, saving, store]);
+
+  const toggleFullscreen = useCallback(() => {
+    const current = store.getState().layout;
+    applyLayout({ ...current, fullscreen: current.fullscreen ? null : "main" });
+  }, [applyLayout, store]);
+
+  useCockpitHotkeys({
+    onTogglePlayback: playback.toggle,
+    onMonthStep: (delta) => changeMonth((selectedMonth ?? 1) + delta),
+    onMonthEdge: (edge) => changeMonth(edge === "first" ? 1 : horizon),
+    onToggleFullscreen: toggleFullscreen,
+    onOpenPalette: () => setPaletteOpen(true),
+    onOpenHelp: () => setHelpOpen(true),
+    onSave: () => {
+      void handleSave();
+    },
+    onEscape: () => {
+      if (store.getState().layout.fullscreen) toggleFullscreen();
+    },
+  });
+
   const selectedRun = display;
   const isPinned = selectedRun ? pinned.includes(selectedRun.runId) : false;
-  const horizon = monthly.length > 0 ? monthly[monthly.length - 1].index : 0;
 
   const benchmarkReferences = useMemo(() => {
     const references: Record<string, BenchmarkReference> = {};
@@ -267,6 +583,75 @@ function CockpitBody({
     aggregates && aggregates.totalRuns > 0
       ? aggregates.completedRuns / aggregates.totalRuns
       : null;
+  const events = session.scenario.events ?? [];
+  const editing = editingId ? events.find((event) => event.id === editingId) ?? null : null;
+
+  const paletteActions = useMemo<PaletteAction[]>(() => {
+    const actions: PaletteAction[] = [
+      {
+        id: "save",
+        label: "Enregistrer le scénario",
+        hint: dirty ? "modifications en attente" : "à jour",
+        run: () => {
+          void handleSave();
+        },
+      },
+      { id: "relaunch", label: "Relancer le calcul final", run: () => live.runFinal() },
+      { id: "pin", label: isPinned ? "Désépingler le run" : "Épingler le run", run: pinCurrent },
+      { id: "help", label: "Afficher les raccourcis", run: () => setHelpOpen(true) },
+      {
+        id: "fullscreen",
+        label: layout.fullscreen ? "Quitter le plein écran" : "Plein écran du panneau principal",
+        run: toggleFullscreen,
+      },
+      {
+        id: "month-first",
+        label: "Aller au premier mois",
+        run: () => changeMonth(1),
+      },
+      {
+        id: "month-middle",
+        label: "Aller au milieu de l'horizon",
+        run: () => changeMonth(Math.round(horizon / 2)),
+      },
+      {
+        id: "month-last",
+        label: "Aller au dernier mois",
+        run: () => changeMonth(horizon),
+      },
+      { id: "hypotheses", label: "Ouvrir les hypothèses", run: onOpenHypotheses },
+    ];
+    for (const preset of PRESET_NAMES) {
+      actions.push({
+        id: `layout-${preset}`,
+        label: `Disposition ${PRESET_LABELS[preset]}`,
+        run: () => applyLayout(layoutFromPreset(preset)),
+      });
+    }
+    for (const entry of EVENT_CATALOG) {
+      actions.push({
+        id: `event-${entry.type}`,
+        label: `Ajouter : ${entry.label}`,
+        hint: `mois ${selectedMonth ?? "—"}`,
+        run: () => addEvent(entry.type),
+      });
+    }
+    return actions;
+  }, [
+    addEvent,
+    applyLayout,
+    changeMonth,
+    dirty,
+    handleSave,
+    horizon,
+    isPinned,
+    layout.fullscreen,
+    live,
+    onOpenHypotheses,
+    pinCurrent,
+    selectedMonth,
+    toggleFullscreen,
+  ]);
 
   const header = (
     <>
@@ -282,8 +667,33 @@ function CockpitBody({
         runsRetained={result?.runsRetained}
         engineVersion={display?.engineVersion || undefined}
         disabled={running}
+        month={selectedMonth}
+        onMonthChange={changeMonth}
         onSeedChange={handleSeed}
       />
+      <div className="cockpit-save" aria-live="polite">
+        {dirty ? (
+          <Badge tone="warn">Modifications non enregistrées</Badge>
+        ) : (
+          <Badge tone="neutral">Scénario à jour</Badge>
+        )}
+        <Button
+          variant={dirty ? "primary" : "secondary"}
+          size="small"
+          onClick={() => {
+            void handleSave();
+          }}
+          disabled={saving}
+        >
+          {saving ? "Enregistrement…" : "Enregistrer le scénario"}
+        </Button>
+        {saveMessage ? <span className="ui-muted">{saveMessage}</span> : null}
+      </div>
+      {monthNotice ? (
+        <p className="cockpit-month-notice" role="status">
+          {monthNotice}
+        </p>
+      ) : null}
       {session.error ? (
         <InlineAlert tone="danger" title="Calcul impossible">
           {session.error}
@@ -307,20 +717,32 @@ function CockpitBody({
 
   const footer = (
     <div className="cockpit-footer">
-      <div className="cockpit-timeline" role="group" aria-label="Sélection du mois">
-        {monthly.map((entry) => (
-          <button
-            key={entry.index}
-            type="button"
-            className="cockpit-timeline__month"
-            aria-pressed={selection.month === entry.index}
-            onClick={() => store.getState().setSelection({ month: entry.index })}
-            title={`Mois ${entry.index}`}
-          >
-            {entry.index}
-          </button>
-        ))}
-      </div>
+      <TimeScrubber
+        month={selectedMonth}
+        horizon={horizon}
+        playing={playback.playing}
+        disabled={running}
+        onMonthChange={changeMonth}
+        onTogglePlay={playback.toggle}
+      />
+
+      <EventTimeline
+        events={events}
+        horizon={Math.max(1, horizon)}
+        selectedId={selectedEventId}
+        disabled={running}
+        onSelect={setSelectedEventId}
+        onChange={changeEventWindow}
+        onToggle={toggleEvent}
+        onDuplicate={duplicateEvent}
+        onDelete={deleteEvent}
+        onEdit={(id) => {
+          setSelectedEventId(id);
+          setEditingId(id);
+        }}
+        onOpenCatalog={() => setCatalogOpen(true)}
+        onSelectMonth={changeMonth}
+      />
 
       <div className="cockpit-footer__actions">
         <Button
@@ -341,6 +763,83 @@ function CockpitBody({
     </div>
   );
 
+  const right = (
+    <div className="cockpit-secondary">
+      <MonthInspector
+        month={selectedMonth}
+        entry={inspectorEntry}
+        currency={currency}
+        quality={quality}
+        seed={display?.seed ?? session.seed}
+        runs={result?.runs ?? aggregates?.totalRuns}
+        computedAt={display?.computedAt}
+        stale={selectedRun?.stale ?? false}
+        onRelaunch={() => live.runFinal()}
+      />
+      <Card>
+        <CardHeader
+          title="Distribution du profit"
+          description={result ? `${formatNumber(result.runs)} runs · horizon complet` : "En cours de calcul"}
+        />
+        {histogram && metrics ? (
+          <ProfitHistogram
+            histogram={histogram}
+            currency={currency}
+            p10={metrics.p10}
+            p50={metrics.p50}
+            p90={metrics.p90}
+          />
+        ) : (
+          <p className="ui-muted">Distribution disponible après un calcul.</p>
+        )}
+      </Card>
+      <Card>
+        <CardHeader title="Sensibilité" description="Contribution à la variance du profit" />
+        {sensitivity.length > 0 ? (
+          <SensitivityTornado entries={sensitivity} currency={currency} />
+        ) : (
+          <p className="ui-muted">Analyse disponible après un calcul final.</p>
+        )}
+      </Card>
+      {!result && !aggregates ? (
+        <EmptyState
+          title="Aucun résultat"
+          description="Lancez un calcul pour afficher l'éventail et les indicateurs."
+          action={
+            <Button variant="secondary" onClick={() => live.runFinal()}>
+              Lancer le calcul
+            </Button>
+          }
+        />
+      ) : null}
+      <p className="ui-muted">
+        Seuil affiché : {formatCurrency(threshold, currency)} · devise {currency}
+      </p>
+    </div>
+  );
+
+  const hypotheses = useMemo(
+    () => (
+      <HypothesesPanel
+        scenario={session.scenario}
+        locks={locks}
+        benchmarks={benchmarkReferences}
+        disabled={running}
+        onToggleLock={toggleLock}
+        onChange={(key, hypothesis, commit) => handleHypothesis(key, hypothesis, commit)}
+        onResetToBenchmark={resetToBenchmark}
+      />
+    ),
+    [
+      benchmarkReferences,
+      handleHypothesis,
+      locks,
+      resetToBenchmark,
+      running,
+      session.scenario,
+    ],
+  );
+
   return (
     <div className="cockpit-screen">
       <div className="cockpit-screen__bar">
@@ -355,6 +854,9 @@ function CockpitBody({
             <Badge tone="warn">Graines différentes : comparaison signalée</Badge>
           ) : null}
           <Badge tone="neutral">{formatNumber(monthly.length)} points</Badge>
+          <Button variant="ghost" size="small" onClick={() => setPaletteOpen(true)}>
+            Commandes (Ctrl+K)
+          </Button>
           <Button variant="ghost" size="small" onClick={onOpenHypotheses}>
             Hypothèses
           </Button>
@@ -378,17 +880,7 @@ function CockpitBody({
         onLayoutChange={applyLayout}
         header={header}
         footer={footer}
-        left={
-          <HypothesesPanel
-            scenario={session.scenario}
-            locks={locks}
-            benchmarks={benchmarkReferences}
-            disabled={running}
-            onToggleLock={toggleLock}
-            onChange={(key, hypothesis, commit) => handleHypothesis(key, hypothesis, commit)}
-            onResetToBenchmark={resetToBenchmark}
-          />
-        }
+        left={hypotheses}
         main={
           <FanChartPanel
             monthly={monthly}
@@ -400,53 +892,36 @@ function CockpitBody({
             selectedMonth={selection.month}
             onModeChange={setMode}
             onThresholdChange={handleThreshold}
-            onSelectMonth={(month) => store.getState().setSelection({ month })}
+            onSelectMonth={changeMonth}
           />
         }
-        right={
-          <div className="cockpit-secondary">
-            <Card>
-              <CardHeader
-                title="Distribution du profit"
-                description={result ? `${formatNumber(result.runs)} runs` : "En cours de calcul"}
-              />
-              {histogram && metrics ? (
-                <ProfitHistogram
-                  histogram={histogram}
-                  currency={currency}
-                  p10={metrics.p10}
-                  p50={metrics.p50}
-                  p90={metrics.p90}
-                />
-              ) : (
-                <p className="ui-muted">Distribution disponible après un calcul.</p>
-              )}
-            </Card>
-            <Card>
-              <CardHeader title="Sensibilité" description="Contribution à la variance du profit" />
-              {sensitivity.length > 0 ? (
-                <SensitivityTornado entries={sensitivity} currency={currency} />
-              ) : (
-                <p className="ui-muted">Analyse disponible après un calcul final.</p>
-              )}
-            </Card>
-            {!result && !aggregates ? (
-              <EmptyState
-                title="Aucun résultat"
-                description="Lancez un calcul pour afficher l'éventail et les indicateurs."
-                action={
-                  <Button variant="secondary" onClick={() => live.runFinal()}>
-                    Lancer le calcul
-                  </Button>
-                }
-              />
-            ) : null}
-            <p className="ui-muted">
-              Seuil affiché : {formatCurrency(threshold, currency)} · devise {currency}
-            </p>
-          </div>
-        }
+        right={right}
       />
+
+      {catalogOpen ? (
+        <EventCatalog
+          month={selectedMonth ?? 1}
+          horizon={Math.max(1, horizon)}
+          onPick={addEvent}
+          onClose={() => setCatalogOpen(false)}
+        />
+      ) : null}
+
+      {editing ? (
+        <EventEditor
+          event={editing}
+          horizon={Math.max(1, horizon)}
+          error={session.status === "error" ? session.error : ""}
+          onApply={(patch) => applyEditor(editing.id, patch)}
+          onClose={() => setEditingId(null)}
+        />
+      ) : null}
+
+      {paletteOpen ? (
+        <CommandPalette actions={paletteActions} onClose={() => setPaletteOpen(false)} />
+      ) : null}
+
+      {helpOpen ? <ShortcutsHelp onClose={() => setHelpOpen(false)} /> : null}
     </div>
   );
 }

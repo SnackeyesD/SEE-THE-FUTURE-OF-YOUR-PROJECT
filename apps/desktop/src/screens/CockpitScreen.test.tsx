@@ -1,4 +1,4 @@
-import type { MonthlyAverage, SimulationResult } from "@see/protocol";
+import type { MonthlyAverage, Scenario, SimulationResult } from "@see/protocol";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -59,7 +59,11 @@ beforeEach(() => {
   );
 });
 
-function renderCockpit(withScenario = true) {
+function renderCockpit(
+  withScenario = true,
+  options: { onSaveScenario?: (name: string, scenario: Scenario) => Promise<boolean> } = {},
+) {
+  const onSaveScenario = options.onSaveScenario ?? (async () => true);
   return render(
     <CockpitScreen
       project={project}
@@ -67,6 +71,7 @@ function renderCockpit(withScenario = true) {
       run={run}
       onBack={() => undefined}
       onOpenHypotheses={() => undefined}
+      onSaveScenario={onSaveScenario}
     />,
   );
 }
@@ -159,10 +164,113 @@ describe("CockpitScreen", () => {
   it("bascule l'éventail entre trésorerie et profit", () => {
     renderCockpit();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Profit" }));
+    const fan = screen.getByRole("region", { name: "Éventail des résultats" });
+    fireEvent.click(within(fan).getByRole("tab", { name: "Profit" }));
     expect(screen.getByText("Profit par mois")).toBeInTheDocument();
     expect(
       screen.queryByRole("slider", { name: "Trésorerie minimale" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("change de mois sans relancer le moteur", async () => {
+    renderCockpit();
+    await waitFor(() => expect(ipc.onSimulationEvent).toHaveBeenCalled());
+    const calls = ipc.startSimulation.mock.calls.length;
+
+    fireEvent.change(screen.getByRole("slider", { name: "Mois sélectionné" }), {
+      target: { value: "9" },
+    });
+
+    expect(screen.getByRole("slider", { name: "Mois sélectionné" })).toHaveValue("9");
+    const inspector = screen.getByRole("region", {
+      name: "Distribution du mois sélectionné",
+    });
+    expect(within(inspector).getByText("Mois 9")).toBeInTheDocument();
+    expect(ipc.startSimulation).toHaveBeenCalledTimes(calls);
+  });
+
+  it("conserve les modifications survenues pendant l'enregistrement", async () => {
+    let accept: (value: boolean) => void = () => undefined;
+    const onSaveScenario = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          accept = resolve;
+        }),
+    );
+    renderCockpit(true, { onSaveScenario });
+
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer le scénario" }));
+    await waitFor(() => expect(onSaveScenario).toHaveBeenCalledTimes(1));
+
+    // Modification pendant que l'IPC de sauvegarde est en vol.
+    fireEvent.keyDown(screen.getByRole("slider", { name: "Prix de vente unitaire — mode" }), {
+      key: "ArrowRight",
+    });
+    accept(true);
+
+    await waitFor(() =>
+      expect(screen.getByText("Modifications non enregistrées")).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/nouvelles modifications restent à enregistrer/)).toBeInTheDocument();
+  });
+
+  it("laisse l'éditeur ouvert quand le sidecar refuse le calcul", async () => {
+    renderCockpit();
+    await waitFor(() => expect(ipc.onSimulationEvent).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajouter un événement" }));
+    const catalog = screen.getByRole("dialog", { name: "Catalogue d'événements" });
+    fireEvent.click(
+      within(catalog).getByRole("button", { name: /Hausse du prix fournisseur/ }),
+    );
+
+    const block = await screen.findByRole("button", {
+      name: /Hausse du prix fournisseur — mois/,
+    });
+    await waitFor(() => expect(ipc.startSimulation).toHaveBeenCalled());
+    act(() => {
+      handler?.({
+        method: "simulation.done",
+        params: { runId: "live-1", seq: 1, result, persisted: false },
+      } as SimulationEvent);
+    });
+    await waitFor(() => expect(block).toBeEnabled());
+
+    fireEvent.doubleClick(block);
+
+    const editor = screen.getByRole("dialog", { name: "Hausse du prix fournisseur" });
+    expect(editor).toBeInTheDocument();
+
+    ipc.startSimulation.mockRejectedValueOnce(new Error("refus du moteur"));
+    fireEvent.click(within(editor).getByRole("button", { name: "Appliquer et relancer" }));
+
+    expect(await screen.findByText("Refusé par le moteur")).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Hausse du prix fournisseur" }),
+    ).toBeInTheDocument();
+  });
+
+  it("annule et rétablit l'ajout d'un événement", async () => {
+    renderCockpit();
+    await waitFor(() => expect(ipc.onSimulationEvent).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajouter un événement" }));
+    const catalog = screen.getByRole("dialog", { name: "Catalogue d'événements" });
+    fireEvent.click(
+      within(catalog).getByRole("button", { name: /Hausse du prix fournisseur/ }),
+    );
+    await screen.findByRole("button", { name: /Hausse du prix fournisseur — mois/ });
+
+    fireEvent.keyDown(document.body, { key: "z", ctrlKey: true });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /Hausse du prix fournisseur — mois/ }),
+      ).not.toBeInTheDocument(),
+    );
+
+    fireEvent.keyDown(document.body, { key: "y", ctrlKey: true });
+    expect(
+      await screen.findByRole("button", { name: /Hausse du prix fournisseur — mois/ }),
+    ).toBeInTheDocument();
   });
 });

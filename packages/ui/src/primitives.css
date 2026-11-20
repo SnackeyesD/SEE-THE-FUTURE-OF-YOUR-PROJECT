@@ -522,3 +522,36 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Utilitaires partagés (phase 10). */
+.ui-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.ui-link-like {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ui-field--checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.ui-field--checkbox > span:first-child {
+  min-width: 6rem;
+}
