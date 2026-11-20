@@ -80,6 +80,7 @@ class SimulationConfig(CamelModel):
     histogram_bins: int = Field(default=40, ge=1, le=200)
     monthly_histogram_bins: int = Field(default=20, ge=10, le=30)
     histogram_month: int | None = Field(default=1, ge=1, le=120)
+    include_monthly_histograms: bool = False
 
 
 class CashCdfPoint(CamelModel):

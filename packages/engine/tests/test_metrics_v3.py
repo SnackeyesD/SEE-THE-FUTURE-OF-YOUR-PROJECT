@@ -7,6 +7,8 @@ bandes mensuelles, CDF et histogrammes mensuels.
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 
@@ -199,6 +201,67 @@ def test_histogram_month_outside_horizon_is_rejected(scenario_factory) -> None:
     scenario = scenario_factory(horizonMonths=3)
     with pytest.raises(EngineError, match="histogramMonth"):
         simulate(scenario, SimulationConfig(runs=10, seed=2, histogram_month=4))
+
+
+def test_all_months_get_histograms_when_requested(scenario_factory) -> None:
+    scenario = scenario_factory(horizonMonths=4)
+    result = simulate(
+        scenario,
+        SimulationConfig(
+            runs=200,
+            seed=1,
+            monthly_histogram_bins=12,
+            include_monthly_histograms=True,
+        ),
+    )
+
+    assert [month.index for month in result.monthly.values] == [1, 2, 3, 4]
+    for month in result.monthly.values:
+        assert month.profit_histogram is not None
+        assert month.cash_histogram is not None
+        assert len(month.profit_histogram) == 12
+        assert len(month.cash_histogram) == 12
+        assert sum(bin.count for bin in month.profit_histogram) == 200
+        assert sum(bin.count for bin in month.cash_histogram) == 200
+        assert sum(bin.probability for bin in month.profit_histogram) == pytest.approx(
+            1.0
+        )
+        for bin in month.profit_histogram + month.cash_histogram:
+            assert bin.lower < bin.upper
+
+
+def test_all_months_take_precedence_over_selected_month(scenario_factory) -> None:
+    scenario = scenario_factory(horizonMonths=3)
+    result = simulate(
+        scenario,
+        SimulationConfig(
+            runs=60,
+            seed=5,
+            histogram_month=2,
+            include_monthly_histograms=True,
+        ),
+    )
+
+    assert all(month.profit_histogram is not None for month in result.monthly.values)
+
+
+def test_all_month_histograms_payload_stays_under_target(scenario_factory) -> None:
+    scenario = scenario_factory(horizonMonths=36)
+    result = simulate(
+        scenario,
+        SimulationConfig(runs=40, seed=7, include_monthly_histograms=True),
+    )
+    payload = [
+        {
+            "index": month.index,
+            "profit": [bin.model_dump(by_alias=True) for bin in month.profit_histogram or []],
+            "cash": [bin.model_dump(by_alias=True) for bin in month.cash_histogram or []],
+        }
+        for month in result.monthly.values
+    ]
+    encoded = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+
+    assert len(encoded) < 200_000
 
 
 def test_sample_is_capped_and_is_a_prefix(scenario_factory, monkeypatch) -> None:

@@ -734,7 +734,14 @@ def _validate_start(
             "simulation_invalid", "runToken doit être une chaîne"
         )
 
-    config = config.model_copy(update={"seed": seed})
+    config = config.model_copy(
+        update={
+            "seed": seed,
+            # Les distributions mensuelles de tous les mois sont réservées au
+            # calcul final : les partiels restent légers (bandes seules).
+            "include_monthly_histograms": quality == "final",
+        }
+    )
     return scenario, config, quality, seed, project_id.strip(), run_token
 
 

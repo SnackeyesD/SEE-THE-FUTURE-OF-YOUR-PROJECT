@@ -3,7 +3,7 @@
   "$id": "https://seethefuture.local/protocol/messages.schema.json",
   "title": "See The Future IPC protocol",
   "description": "Source unique des messages JSON-RPC 2.0 échangés entre le shell Tauri et le sidecar Python.",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "$defs": {
     "RequestId": {
       "description": "Identifiant de requête JSON-RPC (entier ou chaîne).",
@@ -291,6 +291,10 @@
             { "type": "integer", "minimum": 1, "maximum": 120 },
             { "type": "null" }
           ]
+        },
+        "includeMonthlyHistograms": {
+          "description": "Demande les histogrammes profit/trésorerie de tous les mois. Réservé aux calculs finaux : les partiels restent sans histogramme mensuel. Prioritaire sur histogramMonth.",
+          "type": "boolean"
         }
       }
     },

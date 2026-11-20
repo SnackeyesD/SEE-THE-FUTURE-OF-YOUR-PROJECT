@@ -1,6 +1,6 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 # Source: packages/protocol/schema/messages.schema.json
-# Protocol version: 1.10.0
+# Protocol version: 1.11.0
 # Regenerate with: npm run protocol:generate
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-PROTOCOL_VERSION = "1.10.0"
+PROTOCOL_VERSION = "1.11.0"
 
 RequestId = int | str
 
@@ -231,6 +231,7 @@ class SimulationConfig(BaseModel):
     histogramBins: int | None = None
     monthlyHistogramBins: int | None = None
     histogramMonth: int | None = None
+    includeMonthlyHistograms: bool | None = None
 
 
 class CashCdfPoint(BaseModel):

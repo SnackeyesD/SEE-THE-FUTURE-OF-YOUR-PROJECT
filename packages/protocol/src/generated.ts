@@ -1,9 +1,9 @@
 // AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 // Source: packages/protocol/schema/messages.schema.json
-// Protocol version: 1.10.0
+// Protocol version: 1.11.0
 // Regenerate with: npm run protocol:generate
 
-export const PROTOCOL_VERSION = "1.10.0";
+export const PROTOCOL_VERSION = "1.11.0";
 
 export type RequestId = number | string;
 
@@ -123,6 +123,7 @@ export interface SimulationConfig {
   histogramBins?: number;
   monthlyHistogramBins?: number;
   histogramMonth?: number | null;
+  includeMonthlyHistograms?: boolean;
 }
 
 export interface CashCdfPoint {

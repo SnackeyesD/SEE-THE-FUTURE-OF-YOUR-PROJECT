@@ -365,7 +365,22 @@ def build_monthly(
     include_monthly_histograms: bool = True,
     band_sample_limit: int = BAND_SAMPLE_LIMIT,
 ) -> MonthlyAverages:
-    selected_month = config.histogram_month if include_monthly_histograms else None
+    """Agrège les moyennes mensuelles et, si demandé, leurs distributions.
+
+    ``config.include_monthly_histograms`` prime sur ``config.histogram_month`` :
+    un calcul final peut ainsi livrer les histogrammes de **tous** les mois,
+    tandis que les partiels passent ``include_monthly_histograms=False`` pour
+    rester légers et ne jamais recalculer une distribution dans l'UI.
+    """
+
+    if not include_monthly_histograms:
+        selected_months: frozenset[int] = frozenset()
+    elif config.include_monthly_histograms:
+        selected_months = frozenset(range(1, state.horizon + 1))
+    elif config.histogram_month is not None:
+        selected_months = frozenset({config.histogram_month})
+    else:
+        selected_months = frozenset()
     profit_bands = np.percentile(
         _band_matrix(sample.profit_monthly, band_sample_limit),
         [10.0, 50.0, 90.0],
@@ -378,7 +393,7 @@ def build_monthly(
     )
     values = []
     for index in range(state.horizon):
-        include_histograms = selected_month == index + 1
+        include_histograms = index + 1 in selected_months
         values.append(
             MonthlyAverage(
                 index=index + 1,

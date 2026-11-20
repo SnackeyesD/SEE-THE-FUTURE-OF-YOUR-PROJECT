@@ -67,7 +67,7 @@ class SidecarProcess:
     def send(self, payload: dict[str, Any]) -> None:
         self.send_raw(json.dumps(payload) + "\n")
 
-    def read_json(self, timeout: float = 5.0) -> dict[str, Any]:
+    def read_json(self, timeout: float = 30.0) -> dict[str, Any]:
         line = self._lines.get(timeout=timeout)
         return json.loads(line)
 
@@ -139,7 +139,7 @@ def test_health_exposes_versions(sidecar: SidecarProcess) -> None:
     response = sidecar.call("health")
     result = response["result"]
     assert result["status"] == "ok"
-    assert result["protocolVersion"] == "1.10.0"
+    assert result["protocolVersion"] == "1.11.0"
     assert isinstance(result["pid"], int)
     assert result["sidecarVersion"]
 
@@ -929,7 +929,11 @@ SLOW_CONFIG: dict[str, Any] = {"runs": 120_000, "batchSize": 512}
 
 
 def _create_project(sidecar: SidecarProcess, name: str = "Phase 06") -> str:
-    created = sidecar.call("project.create", {"name": name}, request_id=900)
+    # ``collect`` tolère le démarrage à froid du sidecar (imports numpy/engine)
+    # qui peut dépasser le délai par défaut de 5 s sur une machine chargée.
+    _, created = sidecar.collect(
+        "project.create", {"name": name}, request_id=900, timeout=30.0
+    )
     return created["result"]["project"]["id"]
 
 
@@ -1063,6 +1067,70 @@ def test_final_is_persisted_once_with_its_seed(sidecar: SidecarProcess) -> None:
     _read_until(sidecar, lambda message: _is_terminal(message))
     data = sidecar.call("project.data", {"projectId": project_id}, request_id=923)
     assert data["result"]["run"]["id"] == run_id
+
+
+def test_final_carries_monthly_histograms_for_every_month(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Monthly")
+    response = sidecar.call(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "final",
+            "seed": 11,
+            "config": {"runs": 40, "batchSize": 10},
+        },
+        request_id=924,
+    )
+    run_id = response["result"]["runId"]
+    _, terminal = _read_until(
+        sidecar,
+        lambda message: _is_terminal(message)
+        and message["params"].get("runId") == run_id,
+    )
+    result = terminal["params"]["result"]
+    months = result["monthly"]["values"]
+    assert len(months) == 2
+    for month in months:
+        assert month["profitHistogram"], "histogramme de profit manquant"
+        assert month["cashHistogram"], "histogramme de trésorerie manquant"
+        assert sum(bin["count"] for bin in month["profitHistogram"]) == 40
+    encoded = json.dumps(result["monthly"], separators=(",", ":")).encode("utf-8")
+    assert len(encoded) < 200_000
+
+
+def test_draft_partials_never_carry_monthly_histograms(
+    sidecar: SidecarProcess,
+) -> None:
+    project_id = _create_project(sidecar, "Partial")
+    response = sidecar.call(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "draft",
+            "seed": 12,
+            "config": {"runs": 40, "batchSize": 10},
+        },
+        request_id=925,
+    )
+    run_id = response["result"]["runId"]
+    messages, _ = _read_until(
+        sidecar,
+        lambda message: _is_terminal(message)
+        and message["params"].get("runId") == run_id,
+    )
+    partials = [
+        message
+        for message in messages
+        if message["method"] == "simulation.partial"
+        and message["params"].get("runId") == run_id
+    ]
+    assert partials
+    for partial in partials:
+        for month in partial["params"]["aggregates"]["monthly"]["values"]:
+            assert month.get("profitHistogram") is None
+            assert month.get("cashHistogram") is None
 
 
 def test_new_start_supersedes_the_previous_run(sidecar: SidecarProcess) -> None:
