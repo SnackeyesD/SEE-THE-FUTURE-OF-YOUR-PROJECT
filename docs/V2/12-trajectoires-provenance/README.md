@@ -39,7 +39,7 @@ Puis, s'il le demande, une explication en langage naturel — générée **uniqu
 
 ## 3. Livrables
 
-- [ ] Protocole `1.12.0` : `simulation.trajectories`, `simulation.run_params`, `simulation.provenance`, `simulation.explain`.
+- [ ] Protocole `1.13.0` : `simulation.trajectories`, `simulation.run_params`, `simulation.provenance`, `simulation.explain`.
 - [ ] `engine` : accès borné à l'échantillon de runs.
 - [ ] `sidecar/provenance_service.py` et `sidecar/explain_service.py`.
 - [ ] `components/cockpit/ProvenancePanel.tsx`.
@@ -181,7 +181,7 @@ Règles :
 - [ ] Le repli déterministe fonctionne hors ligne.
 - [ ] Le cache est borné et respecte la vie privée.
 - [ ] Les tests du validateur couvrent les formats français.
-- [ ] Protocole `1.12.0` généré.
+- [ ] Protocole `1.13.0` généré.
 
 ## 8. Performance
 

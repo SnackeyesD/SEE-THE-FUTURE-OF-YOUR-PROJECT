@@ -228,7 +228,7 @@ Les trois constats les plus structurants :
 ## 5. Contrats figés par cette phase
 
 - Définitions métier : voir ADR 0015.
-- Versionnement : protocole `1.8.0` (02) → `1.9.0` (05) → `1.10.0` (06) → `1.11.0` (11) → `1.12.0` (12) ; scénario `1.0.0` → `1.1.0` (05) ; base migration `0006` (07).
+- Versionnement : protocole `1.8.0` (02) → `1.9.0` (05) → `1.10.0` (06) → `1.11.0` (10) → `1.12.0` (11) → `1.13.0` (12) ; scénario `1.0.0` → `1.1.0` (05) ; base migration `0006` (07).
 - Budgets : voir `docs/perf/baseline.md` §3.
 - Dataviz : `@see/ui/viz` conservé (ADR 0012).
 - 3D : Three.js + `@react-three/fiber`, lazy, repli heatmap (ADR 0013).

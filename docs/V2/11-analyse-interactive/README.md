@@ -26,7 +26,7 @@ Grâce aux tirages communs, la métrique est **déterministe à graine fixée**.
 
 - `surface()` moteur : grille 2D, CRN, progression, annulation.
 - `goal_seek()` moteur : un ou plusieurs leviers, contraintes, budget, faisabilité.
-- Protocole `1.11.0` : méthodes asynchrones `simulation.surface`, `simulation.goalseek` + notifications.
+- Protocole `1.12.0` : méthodes asynchrones `simulation.surface`, `simulation.goalseek` + notifications.
 - UI : formulaire d'objectif, application en un clic, heatmap 2D, tornado interactif.
 - Tests analytiques, budget et annulation.
 - Budgets mesurés et consignés.
@@ -39,7 +39,7 @@ Grâce aux tirages communs, la métrique est **déterministe à graine fixée**.
 ## 3. Livrables
 
 - [ ] `engine/surface.py` et `engine/goal_seek.py`.
-- [ ] Protocole `1.11.0`, types générés.
+- [ ] Protocole `1.12.0`, types générés.
 - [ ] `sidecar` : handlers asynchrones surface/goalseek.
 - [ ] `components/cockpit/Heatmap.tsx`, `Tornado.tsx`, `GoalSeekPanel.tsx`.
 - [ ] Tests moteur, sidecar, UI.
@@ -132,7 +132,7 @@ def goal_seek(
 - [ ] Notifications : `simulation.progress` (jobId), `simulation.surface.partial` (lignes calculées), `simulation.done` (résultat), `simulation.cancelled`, `simulation.error`.
 - [ ] Budget mémoire : pas de stockage de toutes les trajectoires.
 - [ ] Job de surface/goalseek **annulable** et **remplaçable** par un nouveau job du même projet.
-- [ ] Bump protocole `1.11.0`.
+- [ ] Bump protocole `1.12.0`.
 
 ### Lot D — Heatmap 2D
 
@@ -173,7 +173,7 @@ def goal_seek(
 - [ ] Budget : jamais plus d'évaluations que demandé.
 - [ ] Annulation : < 200 ms.
 - [ ] Heatmap : mapping valeur → couleur, clic → commande.
-- [ ] Contrat : protocole `1.11.0`.
+- [ ] Contrat : protocole `1.12.0`.
 
 ## 5. Contrats
 
@@ -248,7 +248,7 @@ Règles :
 ## 10. Definition of Done
 
 - [ ] Surface, goal seek, heatmap et tornado livrés.
-- [ ] Protocole `1.11.0` généré.
+- [ ] Protocole `1.12.0` généré.
 - [ ] Tests analytiques et budgets verts.
 - [ ] « Appliquer comme branche » fonctionne.
 - [ ] Jalon B validé.

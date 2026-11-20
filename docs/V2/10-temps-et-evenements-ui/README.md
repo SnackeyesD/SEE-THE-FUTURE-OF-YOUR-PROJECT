@@ -7,6 +7,11 @@
 **Débloque** : 11 (objectif avec événements), 15 (démo).
 **Profil** : intermédiaire UI (senior pour la frise et l'accessibilité) ; 5–6 jours.
 
+**État au 2026-11-20** : **livrable**. Les constats de la revue
+[`REVUE-PHASE-10.md`](REVUE-PHASE-10.md) sont traités, les tests dédiés sont
+écrits et verts (desktop 155/155, engine 130/130, sidecar 48/48). Le protocole
+passe en `1.11.0`. Les commits sont découpés sur `v3/cockpit` (voir §11).
+
 ---
 
 ## 1. Contexte
@@ -37,78 +42,109 @@ Le cockpit statique montre l'horizon complet. La V3 doit permettre de :
 
 ## 3. Livrables
 
-- [ ] `components/cockpit/TimeScrubber.tsx`, `MonthInspector.tsx`.
-- [ ] `components/cockpit/EventTimeline.tsx`, `EventCatalog.tsx`, `EventEditor.tsx`.
-- [ ] `components/CommandPalette.tsx`.
-- [ ] Schéma de distributions mensuelles côté moteur/protocole (extension de la phase 02 si absente).
-- [ ] Raccourcis documentés dans l'aide.
-- [ ] Tests et captures.
+- [x] `components/cockpit/TimeScrubber.tsx`, `MonthInspector.tsx`.
+- [x] `components/cockpit/EventTimeline.tsx`, `EventCatalog.tsx`, `EventEditor.tsx`.
+- [x] `components/CommandPalette.tsx` et `ShortcutsHelp.tsx`.
+- [x] Schéma de distributions mensuelles côté moteur/protocole
+      (`SimulationConfig.includeMonthlyHistograms`, protocole `1.11.0`).
+- [x] Raccourcis documentés dans l'aide (`lib/shortcuts.ts` → `ShortcutsHelp`).
+- [x] Tests dédiés phase 10 : géométrie, playback, raccourcis, éditeur, frise,
+      focus des dialogues et parcours d'intégration.
 
 ## 4. Tâches détaillées
 
 ### Lot A — Distribution mensuelle
 
-- [ ] Vérifier que le payload final fournit, par mois, un histogramme (ou des quantiles suffisants) pour profit et trésorerie.
-- [ ] Si la phase 02 n'a livré que P10/P50/P90 : ajouter `MonthlyHistogram` (20–30 bins) au **final uniquement**.
-  - Taille estimée : 36 mois × 2 métriques × 25 bins × 3 nombres ≈ 60 Ko.
-  - Ne pas envoyer les histogrammes dans les partiels (trop lourd) ; les partiels gardent les bandes.
-- [ ] L'UI affiche « distribution du dernier calcul final » avec la date/graine, pas une distribution inventée.
+- [x] Le payload final fournit, par mois, les histogrammes profit et trésorerie
+      (`MonthlyAverage.profitHistogram` / `cashHistogram`).
+- [x] `SimulationConfig.includeMonthlyHistograms` (défaut `false`) demande **tous**
+      les mois et prime sur `histogramMonth`.
+  - Le sidecar force le flag à `true` uniquement quand `quality == "final"` ;
+    les partiels n'envoient jamais d'histogramme mensuel.
+  - Payload 36 mois × 2 métriques × 20 bins testé sous 200 Ko côté moteur et
+    sidecar.
+- [x] L'UI affiche la « distribution du dernier calcul final » avec la date
+      (`RunState.computedAt`) et la graine ; elle n'invente jamais de distribution.
+      Les anciens runs sans histogrammes affichent un message et un bouton de relance.
 
 ### Lot B — Curseur de temps
 
-- [ ] `TimeScrubber` : piste de 1 à horizon, poignée, ticks trimestriels.
-- [ ] Lecture/pause : `Espace`, vitesse lente (1 mois/400 ms) ; pause automatique quand la fenêtre perd le focus.
-- [ ] Flèches ←/→ : mois précédent/suivant ; `Home`/`End` : premier/dernier.
-- [ ] Le mois sélectionné met à jour :
-  - le crosshair du FanChart ;
-  - l'histogramme du `MonthInspector` ;
-  - la probabilité cumulée de point mort à ce mois.
-- [ ] **Aucun recalcul moteur** pour changer de mois : tout vient du résultat courant.
-- [ ] Si le mois dépasse l'horizon du résultat (changement de scénario), clamper et signaler.
+- [x] `TimeScrubber` : piste `input[type=range]` de 1 à horizon, ticks
+      trimestriels cliquables, valeur « Mois N / horizon ».
+- [x] Lecture/pause (`Espace` ou bouton) : 1 mois / 400 ms ; pause automatique
+      sur `blur` et `visibilitychange` ; arrêt en fin d'horizon.
+- [x] Flèches ←/→ : mois précédent/suivant ; `Home`/`End` : premier/dernier.
+- [x] Le mois sélectionné met à jour **toutes** les vues temporelles :
+      crosshair, inspecteur et probabilité de point mort de `KpiBar` (le mois
+      courant est accepté même hors `[6, 12, 18, horizon]`).
+- [x] **Aucun recalcul moteur** pour changer de mois : tout vient du résultat courant.
+- [x] Si le mois dépasse l'horizon d'un nouveau résultat, il est borné **et**
+      signalé (`cockpit-month-notice`).
 
 ### Lot C — Frise d'événements
 
-- [ ] Représenter chaque événement comme un bloc `[start, start + duration)` sur la frise.
-- [ ] Glisser le bloc : déplacement d'un mois entier, snap visuel.
-- [ ] Poignées gauche/droite : durée minimale 1 mois, ne pas dépasser l'horizon.
-- [ ] Pendant le drag : mise à jour **locale** de la position (pas de simulation) ; au drop : commande + `draft`/`final`.
-- [ ] Double-clic : ouvre `EventEditor`.
-- [ ] Menu contextuel : activer/désactiver, dupliquer, supprimer (annulable).
-- [ ] Couleur par type, mais aussi libellé/icône (pas de couleur seule).
-- [ ] **Alternative clavier** : sélection du bloc, flèches pour déplacer, `Shift+←/→` pour la durée, `Suppr`, `Entrée` pour éditer.
-- [ ] Empilement vertical si les événements se chevauchent.
+- [x] Bloc `[start, start + duration - 1]` (durée inclusive, API 1-based).
+- [x] Glisser le bloc : déplacement d'un mois entier (snap), aperçu local.
+- [x] Poignées gauche/droite : durée minimale 1 mois, fenêtre bornée à l'horizon.
+- [x] Pendant le drag : mise à jour **locale** (aucune simulation) ; au drop :
+      une commande + un seul `runFinal` (invalidation automatique neutralisée).
+- [x] Double-clic et menu contextuel : éditer, activer/désactiver, dupliquer,
+      supprimer (chaque action est une commande annulable).
+- [x] Couleur par type **et** libellé du catalogue (pas de couleur seule).
+- [x] **Alternative clavier** : flèches déplacer, `Shift+←/→` durée,
+      `Alt+←/→` début, `Entrée` éditer, `Suppr` supprimer, `Espace` activer.
+- [x] Empilement vertical glouton si les événements se chevauchent.
+- [x] Corrections de revue : `pointercancel` annule le glissement sans commit et
+      le menu contextuel n'est plus rogné par la piste.
 
 ### Lot D — Catalogue et éditeur
 
-- [ ] Catalogue depuis le moteur (types, libellés, cibles, magnitudes par défaut) ; pas de duplication en dur.
-- [ ] Ajout : place l'événement au mois sélectionné, durée par défaut 3 mois, probabilité 100 %, magnitude par défaut.
-- [ ] `EventEditor` :
-  - type (lecture seule après création ou changement explicite) ;
-  - début et durée (champs numériques) ;
+- [x] Catalogue généré depuis `engine.EVENT_CATALOG` vers
+      `packages/protocol/src/catalog.generated.ts` (`npm run catalog:generate`),
+      vérifié par `catalog:check`. Aucune duplication en dur, aucune méthode IPC.
+- [x] Ajout : place l'événement au mois sélectionné, durée par défaut 3 mois,
+      probabilité 100 %, magnitude par défaut du catalogue.
+- [x] `EventEditor` :
+  - début et durée (champs numériques, aperçu de fenêtre) ;
   - probabilité 0–100 % ;
-  - intensité : selon la loi (min/mode/max ou moyenne/écart-type), aperçu ;
-  - cible et mode affichés en clair ;
-  - activé/désactivé ;
-  - avertissement si la fenêtre dépasse l'horizon ;
-  - erreurs de validation renvoyées par le sidecar affichées telles quelles.
-- [ ] L'aperçu d'intensité est un **paramètre**, pas un résultat de simulation.
-- [ ] Chaque modification passe par une commande (undo).
+  - intensité selon la loi (min/mode/max, moyenne/écart-type, valeurs) ;
+  - cible et mode affichés en clair, activé/désactivé ;
+  - avertissement local si la fenêtre dépasse l'horizon.
+- [x] L'aperçu d'intensité est un **paramètre**, pas un résultat de simulation.
+- [x] Chaque modification passe par une commande (undo/redo).
+- [x] Les erreurs de validation du sidecar restent affichées **dans** l'éditeur :
+      celui-ci attend l'acceptation du run et ne se ferme pas sur un refus.
 
 ### Lot E — Palette et raccourcis
 
-- [ ] `Ctrl+K` / `Cmd+K` : palette avec recherche d'actions (ajouter un événement, épingler, relancer, changer de disposition, aller au mois, ouvrir l'aide).
-- [ ] Raccourcis : `Espace` lecture, `←/→` temps, `F` plein écran, `1–6` vues, `Ctrl+Z/Y`, `Échap` ferme les dialogues.
-- [ ] Ne pas intercepter les raccourcis quand un champ de saisie a le focus.
-- [ ] Aide contextuelle (`?`) listant les raccourcis.
+- [x] `Ctrl+K` / `Cmd+K` : palette avec recherche (actions, dispositions, mois,
+      événements du catalogue, aide). Filtre insensible aux accents et à la casse.
+- [x] Raccourcis : `Espace` lecture, `←/→` temps, `Home/End`, `F` plein écran,
+      `1–8` vues, `Ctrl+Z/Y`, `Ctrl+S` enregistrer, `?` aide, `Échap` fermer.
+- [x] Ne pas intercepter les raccourcis quand un champ de saisie a le focus :
+      `isTextEntryTarget`, `isInteractiveTarget`, `ownsActivationKeys` et
+      `data-hotkeys-scope` couvrent champs, curseurs, boutons et dialogues.
+- [x] Aide contextuelle (`?`) listant les raccourcis (`ShortcutsHelp`).
 
 ### Lot F — Tests
 
-- [ ] Géométrie : mois ↔ pixel, clamp, drag au-delà des bornes.
-- [ ] Clavier : déplacement, durée, suppression, annulation.
-- [ ] Éditeur : validation, erreur serveur, annulation.
-- [ ] Intégration : ajouter un événement → partiel → final ; l'effet est visible ; undo restaure.
-- [ ] Distribution mensuelle : sélection d'un mois met à jour l'histogramme sans nouvel appel IPC.
-- [ ] Accessibilité : rôles, focus, alternatives.
+Les tests existants ont été adaptés (`KpiBar` avec mois contrôlé,
+`CockpitScreen` avec `onSaveScenario`, `App` avec `includeMonthlyHistograms`) et
+les tests spécifiques phase 10 sont écrits :
+
+- [x] Géométrie : mois ↔ pixel, clamp, drag au-delà des bornes
+      (`events.test.ts`).
+- [x] Clavier : déplacement, durée, suppression, annulation
+      (`useCockpitHotkeys.test.tsx`, `useViewHotkeys.test.tsx`,
+      `usePlayback.test.tsx`, scénario annulé/rétabli).
+- [x] Éditeur : validation, erreur serveur, attente du sidecar
+      (`EventEditor.test.tsx`).
+- [x] Intégration : ajouter un événement → calcul final ; undo/redo restaure.
+- [x] Distribution mensuelle : sélection d'un mois met à jour l'inspecteur sans
+      nouvel appel IPC.
+- [x] Accessibilité : rôles, focus, alternatives clavier
+      (`useDialogFocus.test.tsx`, `TimeScrubber.test.tsx`,
+      `EventTimeline.test.tsx`).
 
 ## 5. Contrats
 
@@ -133,8 +169,9 @@ type MonthDistribution = {
 Invariants :
 
 - La frise ne dépasse jamais l'horizon.
-- Un événement désactivé reste visible mais grisé et n'est pas envoyé au moteur (ou envoyé `enabled:false`, au choix — le moteur l'ignore).
-- Le mois sélectionné est indépendant du run ; il survit à un nouveau résultat si l'horizon le permet.
+- Un événement désactivé reste visible mais grisé et n'est pas tiré par le moteur.
+- Le mois sélectionné est indépendant du run ; il survit à un nouveau résultat si
+  l'horizon le permet.
 - Un drag ne déclenche pas plus d'un calcul par drop.
 
 ## 6. Pièges
@@ -149,20 +186,22 @@ Invariants :
 
 ## 7. Critères d'acceptation
 
-- [ ] Le curseur de temps change l'état affiché sans recalcul.
-- [ ] L'histogramme du mois sélectionné est fourni par le moteur.
-- [ ] Un événement peut être ajouté, déplacé, redimensionné, édité, désactivé, supprimé, annulé.
-- [ ] L'effet d'un événement est visible sur le graphique après le calcul.
-- [ ] Tout est faisable au clavier.
-- [ ] Les raccourcis n'interfèrent pas avec la saisie.
-- [ ] Tests et `ui:check` verts.
+- [x] Le curseur de temps change l'état affiché sans recalcul.
+- [x] L'histogramme du mois sélectionné est fourni par le moteur.
+- [x] Un événement peut être ajouté, déplacé, redimensionné, édité, désactivé,
+      supprimé, annulé.
+- [x] L'effet d'un événement est visible sur le graphique après le calcul.
+- [x] Tout est faisable au clavier : la frise oui, et les gardes globales
+      (boutons, dialogues, `Ctrl+K`/`Ctrl+S`) sont corrigées.
+- [x] Les raccourcis n'interfèrent pas avec la saisie.
+- [x] Tests dédiés et `ui:check` verts.
 
 ## 8. Performance
 
 - Changer de mois < 16 ms.
 - Drag de frise : 60 i/s en local, un seul calcul au drop.
-- Payload final avec histogrammes : < 200 Ko.
-- Partiels inchangés : < 50 Ko.
+- Payload final avec histogrammes : < 200 Ko (testé).
+- Partiels inchangés : < 50 Ko (sans histogrammes mensuels).
 
 ## 9. Risques
 
@@ -176,8 +215,77 @@ Invariants :
 
 ## 10. Definition of Done
 
-- [ ] Temps, événements et palette livrés.
-- [ ] Distribution mensuelle fournie par le moteur.
-- [ ] Accessibilité clavier validée.
-- [ ] Tests d'intégration draft/final verts.
-- [ ] Documentation des raccourcis et du catalogue.
+- [x] Temps, événements et palette livrés, corrections de revue incluses.
+- [x] Distribution mensuelle fournie par le moteur.
+- [x] Accessibilité clavier validée (tests et gardes).
+- [x] Tests d'intégration draft/final verts.
+- [x] Documentation des raccourcis et du catalogue généré (ADR 0017).
+
+## 11. État d'implémentation au 2026-11-20
+
+Branche `v3/cockpit`, partie de `d09ab21` (phase 09). La phase 10 est
+**committée** par lots cohérents : protocole/moteur, catalogue, socle UI,
+temps, frise/éditeur/palette, docs et tests.
+
+### Livré
+
+| Domaine | Fichiers / points clés |
+|---|---|
+| Protocole | `messages.schema.json` en `1.11.0`, champ `includeMonthlyHistograms`, `generated.ts` et `protocol_models.py` régénérés |
+| Moteur | `SimulationConfig.include_monthly_histograms`, priorité sur `histogramMonth`, partiels sans histogrammes, tests de payload |
+| Sidecar | `include_monthly_histograms = (quality == "final")`, tests « final tous les mois » / « partiels sans histogramme » |
+| Catalogue | `packages/engine/scripts/export_events.py`, `packages/protocol/src/catalog.generated.ts`, scripts `catalog:generate` / `catalog:check` |
+| Store | `RunState.computedAt`, `hydrateRun(result, computedAt)`, horodatage dans `applyFinal` |
+| Temps | `TimeScrubber`, `MonthInspector`, `usePlayback`, sélection de mois partagée, notice de bornage |
+| Événements | `events.ts` (géométrie pure), `EventTimeline`, `EventCatalog`, `EventEditor` |
+| Palette / aide | `CommandPalette`, `ShortcutsHelp`, `lib/keyboard.ts`, `lib/shortcuts.ts`, `useCockpitHotkeys`, `useViewHotkeys` |
+| Persistance | Bouton « Enregistrer le scénario », badge « modifications non enregistrées », `onSaveScenario`, garde `window.confirm` partagée par `navigate` et « Recharger », préservation de `events`/`seasonality` |
+| Accessibilité | `useDialogFocus`, focus initial/piège de tabulation/restitution, `data-hotkeys-scope` |
+| Styles | Blocs phase 10 dans `apps/desktop/src/styles.css`, utilitaires dans `packages/ui/src/primitives.css` |
+| Tests | `events`, `TimeScrubber`, `usePlayback`, `useCockpitHotkeys`, `useViewHotkeys`, `EventEditor`, `EventTimeline`, `useDialogFocus`, intégration `CockpitScreen`, garde de rechargement `App` |
+| Docs | cet état, ADR 0017, protocole `1.11.0` répercuté dans le plan et les phases 11/12 |
+
+### Contrôles exécutés
+
+| Contrôle | Résultat |
+|---|---|
+| `npm run protocol:check` | Vert |
+| `npm run catalog:check` | Vert |
+| `npm run typecheck` | Vert |
+| `npm run lint` (dont `ui:check`) | Vert |
+| `npm run test -w @see/desktop` | **155/155**, 25 fichiers |
+| `pytest packages/engine/tests` | **130/130** |
+| `pytest apps/desktop/src-tauri/sidecar/tests` | **48/48** après fiabilisation du harnais (`collect(..., timeout=30)` pour `project.create`) |
+
+La revue du 2026-11-20 avait également validé le build web, le protocole, le
+storage, les providers, l'agent core, les benchmarks, le sandbox et Rust. Ces
+contrôles doivent être rejoués avant le commit final.
+
+### Reste à faire avant merge
+
+1. **Rejeu final** — relancer `npm run typecheck`, `npm run lint`,
+   `npm run protocol:check`, `npm run catalog:check`, puis les suites engine,
+   sidecar et desktop sur la branche prête à fusionner.
+2. **Revue** — faire relire le diff par lot (protocole/moteur, catalogue, UI,
+   docs) et vérifier le build web / Tauri avant merge.
+
+Les points de revue (mois KPI, course de sauvegarde, rechargement, gardes
+clavier, `pointercancel`, menu de frise, erreur sidecar, focus, bornage) sont
+traités et couverts par les tests listés ci-dessus.
+
+## 12. Réponse à la revue
+
+La revue [`REVUE-PHASE-10.md`](REVUE-PHASE-10.md) est acceptée dans son
+diagnostic. Décisions déjà actées :
+
+- **Dirty sur le scénario seul** : la graine reste attachée au run et ne rend
+  pas le scénario « dirty ». Persister la graine avec le scénario serait un
+  changement de contrat, hors phase 10.
+- **`includeMonthlyHistograms: true` dans le parcours Résultats** : conservé ;
+  le run persisté est ainsi directement exploitable par le cockpit, sans
+  recalcul ni fabrication de données côté React.
+- **Nouveau `ScenarioRecord` à chaque sauvegarde** : conservé en phase 10 ;
+  l'upsert/déduplication est une dette de la phase 13. Le provider reste donc
+  clé sur `project.id` pour ne pas perdre l'historique des runs.
+- **Harnais sidecar** : le `project.create` des tests utilise désormais un
+  timeout de 30 s ; la suite complète est passée de 45–46/48 à **48/48**.
