@@ -5,7 +5,6 @@ import type {
   SimulationQuality,
 } from "@see/protocol";
 import { Badge, Stat } from "@see/ui";
-import { useState } from "react";
 
 import { formatCurrency, formatNumber, formatProbability } from "../../lib/format";
 import type { SessionStatus } from "../../store/cockpitStore";
@@ -36,6 +35,8 @@ export function KpiBar({
   runsRetained,
   engineVersion,
   disabled = false,
+  month,
+  onMonthChange,
   onSeedChange,
   onRerollSeed,
 }: {
@@ -50,19 +51,27 @@ export function KpiBar({
   runsRetained?: number;
   engineVersion?: string;
   disabled?: boolean;
+  /** Mois sélectionné dans le cockpit (partagé avec le curseur de temps). */
+  month: number | null;
+  onMonthChange: (month: number) => void;
   onSeedChange: (seed: number) => void;
   onRerollSeed?: () => void;
 }) {
-  const [requestedMonth, setRequestedMonth] = useState(12);
   const horizon = monthly.length > 0 ? monthly[monthly.length - 1].index : 0;
+  const candidates = new Set([6, 12, 18, horizon]);
+  // Le mois courant peut venir du curseur de temps (valeur arbitraire) :
+  // il doit rester lisible dans le sélecteur, sinon la probabilité affichée
+  // serait celle de l'horizon au lieu du mois inspecté.
+  if (month !== null && month >= 1 && month <= horizon) candidates.add(month);
   const options = horizon
-    ? [...new Set([6, 12, 18, horizon])]
+    ? [...candidates]
         .filter((months) => months > 0 && months <= horizon)
         .sort((left, right) => left - right)
     : [];
-  const selectedMonth = options.includes(requestedMonth)
-    ? requestedMonth
-    : (options[options.length - 1] ?? 0);
+  const selectedMonth =
+    month !== null && options.includes(month)
+      ? month
+      : (options[options.length - 1] ?? 0);
   const breakEvenMonth = monthly.find((entry) => entry.index === selectedMonth);
   const breakEvenProbability = breakEvenMonth?.breakEvenProbability ?? null;
 
@@ -85,7 +94,7 @@ export function KpiBar({
             id="cockpit-break-even"
             className="cockpit-kpi__select"
             value={selectedMonth || ""}
-            onChange={(event) => setRequestedMonth(Number(event.target.value))}
+            onChange={(event) => onMonthChange(Number(event.target.value))}
             disabled={options.length === 0}
           >
             {options.length === 0 ? <option value="">—</option> : null}

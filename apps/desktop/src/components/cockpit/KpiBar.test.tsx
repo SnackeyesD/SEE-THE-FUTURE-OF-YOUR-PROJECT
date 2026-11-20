@@ -1,9 +1,21 @@
 import type { MonthlyAverage } from "@see/protocol";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { simulationResult } from "../../test/fixtures";
 import { KpiBar } from "./KpiBar";
+
+/** Le mois est désormais contrôlé par l'écran : le test fournit un harnais. */
+function ControlledKpi({
+  initialMonth = 12,
+  ...props
+}: Omit<Parameters<typeof KpiBar>[0], "month" | "onMonthChange"> & {
+  initialMonth?: number;
+}) {
+  const [month, setMonth] = useState<number | null>(initialMonth);
+  return <KpiBar {...props} month={month} onMonthChange={setMonth} />;
+}
 
 function month(index: number, breakEvenProbability: number | null): MonthlyAverage {
   return {
@@ -32,7 +44,7 @@ const monthly = Array.from({ length: 12 }, (_, index) =>
 describe("KpiBar", () => {
   it("affiche les KPI du moteur et la graine", () => {
     render(
-      <KpiBar
+      <ControlledKpi
         currency="XOF"
         metrics={simulationResult.metrics}
         monthly={monthly}
@@ -57,7 +69,7 @@ describe("KpiBar", () => {
 
   it("lit la probabilité cumulée au mois choisi", () => {
     render(
-      <KpiBar
+      <ControlledKpi
         currency="XOF"
         metrics={simulationResult.metrics}
         monthly={monthly}
@@ -72,9 +84,29 @@ describe("KpiBar", () => {
     expect(screen.getByText(/40\s?%/)).toBeInTheDocument();
   });
 
+  it("accepte un mois arbitraire venu du curseur de temps", () => {
+    render(
+      <ControlledKpi
+        initialMonth={7}
+        currency="XOF"
+        metrics={simulationResult.metrics}
+        monthly={monthly}
+        status="idle"
+        seed={42}
+        onSeedChange={() => undefined}
+      />,
+    );
+
+    const kpi = screen.getByRole("region", { name: "Indicateurs clés" });
+    expect(within(kpi).getByLabelText("Point mort ≤")).toHaveValue("7");
+    // month(7) porte une probabilité de 0,7 : elle ne doit pas être
+    // remplacée par celle de l'horizon (0,9).
+    expect(within(kpi).getByText(/70\s?%/)).toBeInTheDocument();
+  });
+
   it("affiche « non disponible » sans agrégats", () => {
     render(
-      <KpiBar
+      <ControlledKpi
         currency="XOF"
         metrics={null}
         monthly={[]}
@@ -90,7 +122,7 @@ describe("KpiBar", () => {
 
   it("signale une stabilité partielle pendant un calcul", () => {
     render(
-      <KpiBar
+      <ControlledKpi
         currency="XOF"
         metrics={simulationResult.metrics}
         monthly={monthly}
@@ -106,7 +138,7 @@ describe("KpiBar", () => {
   it("remonte les changements de graine", () => {
     const onSeedChange = vi.fn();
     render(
-      <KpiBar
+      <ControlledKpi
         currency="XOF"
         metrics={null}
         monthly={[]}
