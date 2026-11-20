@@ -156,7 +156,9 @@ describe("useLiveSimulation", () => {
     const ctx = setup();
     await flush();
 
-    act(() => ctx.hook.result.current.runFinal());
+    act(() => {
+      void ctx.hook.result.current.runFinal();
+    });
     await flush();
     expect(ctx.store.getState().session.activeRunId).toBe("run-1");
 
@@ -214,7 +216,9 @@ describe("useLiveSimulation", () => {
     await flush();
     ctx.start.mockRejectedValueOnce(new Error("moteur indisponible"));
 
-    act(() => ctx.hook.result.current.runFinal());
+    act(() => {
+      void ctx.hook.result.current.runFinal();
+    });
     await flush();
 
     expect(ctx.store.getState().session.status).toBe("error");
@@ -236,7 +240,9 @@ describe("useLiveSimulation", () => {
   it("annule le run actif et se désabonne au démontage", async () => {
     const ctx = setup();
     await flush();
-    act(() => ctx.hook.result.current.runFinal());
+    act(() => {
+      void ctx.hook.result.current.runFinal();
+    });
     await flush();
     expect(ctx.store.getState().session.activeRunId).toBe("run-1");
 

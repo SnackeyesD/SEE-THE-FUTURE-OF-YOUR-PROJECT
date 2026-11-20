@@ -30,7 +30,8 @@ export interface LiveSimulationController {
   invalidate: () => void;
   beginGesture: () => void;
   endGesture: () => void;
-  runFinal: () => void;
+  /** `true` si le sidecar a accepté le run ; `false` sur refus ou annulation. */
+  runFinal: () => Promise<boolean>;
   cancel: () => void;
 }
 
@@ -91,10 +92,10 @@ export function useLiveSimulation(options: LiveSimulationOptions): LiveSimulatio
   }, []);
 
   const start = useCallback(
-    async (quality: SimulationQuality): Promise<void> => {
-      if (!enabledRef.current) return;
+    async (quality: SimulationQuality): Promise<boolean> => {
+      if (!enabledRef.current) return false;
       const session = store.getState().session;
-      if (!scenarioIsRunnable(session.scenario)) return;
+      if (!scenarioIsRunnable(session.scenario)) return false;
       if (session.activeRunId) {
         const previousRunId = session.activeRunId;
         store.getState().cancelRun(previousRunId);
@@ -112,16 +113,18 @@ export function useLiveSimulation(options: LiveSimulationOptions): LiveSimulatio
         });
         if (token !== generation.current) {
           void depsRef.current.cancel(result.runId).catch(() => undefined);
-          return;
+          return false;
         }
         store.getState().startRun({
           runId: result.runId,
           quality,
           seed: session.seed,
         });
+        return true;
       } catch (error) {
-        if (token !== generation.current) return;
+        if (token !== generation.current) return false;
         store.getState().failSession(humanize(error));
+        return false;
       }
     },
     [store],
@@ -170,12 +173,12 @@ export function useLiveSimulation(options: LiveSimulationOptions): LiveSimulatio
     void start("final");
   }, [clearDraft, clearFinal, start]);
 
-  const runFinal = useCallback(() => {
+  const runFinal = useCallback((): Promise<boolean> => {
     gesture.current = false;
     gestureDirty.current = false;
     clearDraft();
     clearFinal();
-    void start("final");
+    return start("final");
   }, [clearDraft, clearFinal, start]);
 
   const cancel = useCallback(() => {

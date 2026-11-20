@@ -350,15 +350,20 @@ export function HypothesesScreen({
       return false;
     }
     setLocalError("");
+    // Les événements et la saisonnalité sont édités dans le cockpit : un
+    // enregistrement depuis les hypothèses ne doit jamais les effacer.
+    const existing = scenario?.scenario ?? null;
+    const events = existing?.events ?? [];
     const content: Scenario = {
-      schemaVersion: "1.0.0",
+      schemaVersion: events.length > 0 ? "1.1.0" : (existing?.schemaVersion ?? "1.0.0"),
       name: name.trim(),
       model: "retail_depot",
       currency: scope.currency,
       horizonMonths: scope.horizonMonths,
       assumptions,
-      seasonality: null,
-      notes: "Hypothèses saisies dans l'interface.",
+      events,
+      seasonality: existing?.seasonality ?? null,
+      notes: existing?.notes ?? "Hypothèses saisies dans l'interface.",
     };
     return onSave(name.trim(), content);
   };

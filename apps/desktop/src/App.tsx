@@ -13,7 +13,7 @@ import type {
 } from "@see/protocol";
 import { PROTOCOL_VERSION } from "@see/protocol";
 import { Badge, Button, InlineAlert } from "@see/ui";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /* Thème : dark par défaut, bascule persistée (refont phase 06). */
 type Theme = "dark" | "light";
@@ -41,6 +41,7 @@ import {
   SandboxReviewPanel,
   type SandboxProposal,
 } from "./components/SandboxReviewPanel";
+import { useViewHotkeys } from "./hooks/useViewHotkeys";
 import { BriefScreen } from "./screens/BriefScreen";
 import { TokenBoard } from "./components/TokenBoard";
 import { ComponentsShowcase } from "./components/ComponentsShowcase";
@@ -82,6 +83,17 @@ type View =
   | "results"
   | "cockpit"
   | "settings";
+
+const VIEW_IDS: View[] = [
+  "projects",
+  "interview",
+  "brief",
+  "hypotheses",
+  "simulation",
+  "results",
+  "cockpit",
+  "settings",
+];
 
 const NAV: Array<{ id: View; fr: string; en: string }> = [
   { id: "projects", fr: "Projets", en: "Projects" },
@@ -161,6 +173,7 @@ export function App() {
   const [sandboxProposal, setSandboxProposal] = useState<SandboxProposal | null>(null);
   const [narration, setNarration] = useState("");
   const [narrationBusy, setNarrationBusy] = useState(false);
+  const cockpitDirty = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [online, setOnline] = useState(() => navigator.onLine);
@@ -318,10 +331,43 @@ export function App() {
     document.documentElement.lang = locale;
   }, [locale]);
 
-  const navigate = useCallback((next: View) => {
-    setError("");
-    setView(next);
+  const confirmDiscardCockpit = useCallback((): boolean => {
+    if (!cockpitDirty.current) return true;
+    try {
+      return window.confirm(
+        "Le scénario du cockpit contient des modifications non enregistrées. Quitter et les perdre ?",
+      );
+    } catch {
+      // Environnement sans `confirm` (tests, webview restreinte).
+      return true;
+    }
   }, []);
+
+  const navigate = useCallback(
+    (next: View) => {
+      setError("");
+      setView((current) => {
+        if (current === "cockpit" && next !== "cockpit") {
+          if (!confirmDiscardCockpit()) return current;
+          cockpitDirty.current = false;
+        }
+        return next;
+      });
+    },
+    [confirmDiscardCockpit],
+  );
+
+  const handleReload = useCallback(() => {
+    if (view === "cockpit" && !confirmDiscardCockpit()) return;
+    cockpitDirty.current = false;
+    void bootstrap();
+  }, [bootstrap, confirmDiscardCockpit, view]);
+
+  useViewHotkeys({
+    views: VIEW_IDS,
+    onSelect: (id) => navigate(id as View),
+    enabled: !sandboxProposal,
+  });
 
   const handleCreateProject = useCallback(
     async (name: string, description: string) => {
@@ -523,7 +569,9 @@ export function App() {
       try {
         const result = await simulateProject({
           projectId: activeProject.id,
-          config,
+          // Le run persisté est celui que le cockpit recharge : il doit
+          // contenir les distributions de tous les mois (final uniquement).
+          config: { ...config, includeMonthlyHistograms: true },
           progress: true,
         });
         await refreshWorkspace(activeProject.id);
@@ -730,6 +778,10 @@ export function App() {
           run={data?.run ?? null}
           onBack={() => navigate("results")}
           onOpenHypotheses={() => navigate("hypotheses")}
+          onSaveScenario={handleSaveScenario}
+          onDirtyChange={(dirty) => {
+            cockpitDirty.current = dirty;
+          }}
         />
       ) : null}
 
@@ -768,7 +820,7 @@ export function App() {
           >
             {theme === "dark" ? "Thème clair" : "Thème sombre"}
           </Button>
-          <Button variant="ghost" size="small" onClick={() => void bootstrap()} disabled={busy}>
+          <Button variant="ghost" size="small" onClick={handleReload} disabled={busy}>
             Recharger l'application
           </Button>
         </div>

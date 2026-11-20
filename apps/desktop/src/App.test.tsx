@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,6 +12,9 @@ const ipc = vi.hoisted(() => ({
   listRoles: vi.fn(),
   onSimulationProgress: vi.fn(),
   simulateProject: vi.fn(),
+  startSimulation: vi.fn(),
+  cancelSimulation: vi.fn(),
+  onSimulationEvent: vi.fn(),
   createProject: vi.fn(),
   saveProjectBrief: vi.fn(),
   saveProjectScenario: vi.fn(),
@@ -59,6 +62,9 @@ beforeEach(() => {
   ipc.agentState.mockResolvedValue({ session });
   ipc.listRoles.mockResolvedValue({ assignments: [] });
   ipc.onSimulationProgress.mockResolvedValue(() => undefined);
+  ipc.onSimulationEvent.mockResolvedValue(() => undefined);
+  ipc.startSimulation.mockResolvedValue({ runId: "live-1", accepted: true });
+  ipc.cancelSimulation.mockResolvedValue(undefined);
   ipc.simulateProject.mockImplementation(async () => {
     ipc.getProjectData.mockResolvedValue(dataWithRun);
     return { run: runRecord, scenario: scenarioRecord, result: simulationResult };
@@ -82,7 +88,7 @@ describe("App — parcours critique", () => {
     ).toBeInTheDocument();
     expect(ipc.simulateProject).toHaveBeenCalledWith({
       projectId: project.id,
-      config: { runs: 10_000, seed: 42, histogramBins: 40 },
+      config: { runs: 10_000, seed: 42, histogramBins: 40, includeMonthlyHistograms: true },
       progress: true,
     });
     expect(screen.getByText("Distribution du profit")).toBeInTheDocument();
@@ -98,5 +104,41 @@ describe("App — parcours critique", () => {
 
     expect(await screen.findByText("moteur indisponible")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Monte Carlo local" })).toBeInTheDocument();
+  });
+
+  it("confirme avant de recharger un cockpit modifié", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Monte Carlo local" });
+    await user.click(screen.getByRole("button", { name: "Lancer la simulation" }));
+    await screen.findByRole("heading", { name: "Scénario de base", level: 1 });
+
+    await user.click(screen.getByRole("button", { name: "Cockpit" }));
+    const slider = await screen.findByRole("slider", {
+      name: "Prix de vente unitaire — mode",
+    });
+    fireEvent.keyDown(slider, { key: "ArrowRight" });
+    expect(await screen.findByText("Modifications non enregistrées")).toBeInTheDocument();
+
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const before = ipc.getProjectData.mock.calls.length;
+    try {
+      await user.click(screen.getByRole("button", { name: "Recharger l'application" }));
+      expect(confirm).toHaveBeenCalledTimes(1);
+      expect(ipc.getProjectData).toHaveBeenCalledTimes(before);
+      // Le cockpit reste affiché : le rechargement a bien été annulé.
+      expect(screen.getByRole("button", { name: "Cockpit" })).toHaveClass(
+        "app-nav__item--active",
+      );
+
+      confirm.mockReturnValue(true);
+      await user.click(screen.getByRole("button", { name: "Recharger l'application" }));
+      await waitFor(() =>
+        expect(ipc.getProjectData.mock.calls.length).toBeGreaterThan(before),
+      );
+    } finally {
+      confirm.mockRestore();
+    }
   });
 });

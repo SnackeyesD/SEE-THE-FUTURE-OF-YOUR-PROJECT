@@ -25,6 +25,8 @@ export interface RunState {
   seq: number;
   seed: number;
   engineVersion: string;
+  /** Horodatage du résultat (run persisté ou fin de calcul local). */
+  computedAt: string | null;
   stale: boolean;
   error?: { code: SimulationError["code"]; message: string };
 }
@@ -79,7 +81,7 @@ export interface CockpitState {
   updateEvent: (eventId: string, patch: Partial<ScenarioEvent>) => void;
   removeEvent: (eventId: string) => void;
   /** Injecte un résultat déjà calculé (ouverture d'un run persisté). */
-  hydrateRun: (result: SimulationResult) => void;
+  hydrateRun: (result: SimulationResult, computedAt?: string | null) => void;
   startRun: (input: StartRunInput) => void;
   applyPartial: (input: ApplyPartialInput) => void;
   applyFinal: (input: ApplyFinalInput) => void;
@@ -231,7 +233,7 @@ export function createCockpitStore(options: CockpitStoreOptions): CockpitStore {
         runs: staleRuns(state.runs, state.pinned),
       })),
 
-    hydrateRun: (result) =>
+    hydrateRun: (result, computedAt = null) =>
       set((state) => ({
         runs: {
           ...state.runs,
@@ -244,6 +246,7 @@ export function createCockpitStore(options: CockpitStoreOptions): CockpitStore {
             seq: 0,
             seed: result.seed,
             engineVersion: result.engineVersion,
+            computedAt,
             stale: false,
           },
         },
@@ -271,6 +274,7 @@ export function createCockpitStore(options: CockpitStoreOptions): CockpitStore {
             seq: 0,
             seed,
             engineVersion: "",
+            computedAt: null,
             stale: false,
           },
         },
@@ -312,6 +316,7 @@ export function createCockpitStore(options: CockpitStoreOptions): CockpitStore {
               seq: Math.max(current.seq, seq),
               result,
               engineVersion: result.engineVersion,
+              computedAt: new Date().toISOString(),
               stale: false,
             },
           },
