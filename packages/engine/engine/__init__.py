@@ -21,6 +21,13 @@ from .events import (
     draw_events,
     register_event_slots,
 )
+from .goal_seek import (
+    GoalSeekResult,
+    GoalTraceEntry,
+    Lever,
+    Objective,
+    goal_seek,
+)
 from .models import get_model
 from .progressive import (
     QUALITY_PROFILES,
@@ -50,8 +57,10 @@ from .scenario import (
     SimulationResult,
     to_camel,
 )
+from .surface import AxisSpec, SurfaceResult, surface
 
 __all__ = [
+    "AxisSpec",
     "BreakEven",
     "CancelToken",
     "CashCdfPoint",
@@ -68,12 +77,16 @@ __all__ = [
     "EventSpec",
     "EventTarget",
     "EventType",
+    "GoalSeekResult",
+    "GoalTraceEntry",
     "Histogram",
     "HistogramBin",
     "Hypothesis",
+    "Lever",
     "Metrics",
     "MonthlyAverage",
     "MonthlyAverages",
+    "Objective",
     "PartialAggregates",
     "PartialCallback",
     "ProgressCallback",
@@ -87,12 +100,15 @@ __all__ = [
     "SimulationCancelled",
     "SimulationConfig",
     "SimulationResult",
+    "SurfaceResult",
     "UnknownModelError",
     "build_event_modifiers",
     "draw_events",
     "get_model",
+    "goal_seek",
     "register_event_slots",
     "resolve_execution",
     "simulate",
+    "surface",
     "to_camel",
 ]
