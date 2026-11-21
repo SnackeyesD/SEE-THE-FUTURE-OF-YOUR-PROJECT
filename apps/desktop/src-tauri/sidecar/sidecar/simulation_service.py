@@ -59,7 +59,12 @@ TERMINAL_STATUSES = frozenset({"done", "cancelled", "error"})
 ACTIVE_STATUSES = frozenset({"queued", "running", "cancelling"})
 
 DROP_NOTIFICATIONS = frozenset(
-    {"simulation.partial", "simulation.progress", "simulate.progress"}
+    {
+        "simulation.partial",
+        "simulation.surface.partial",
+        "simulation.progress",
+        "simulate.progress",
+    }
 )
 
 

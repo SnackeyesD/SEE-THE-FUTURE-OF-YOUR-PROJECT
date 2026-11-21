@@ -107,6 +107,26 @@ def test_surface_progress_covers_every_point(scenario_factory):
     assert values == sorted(values)
 
 
+def test_surface_row_callback_matches_the_matrix(scenario_factory):
+    scenario = _deterministic_scenario(scenario_factory)
+    rows: list[tuple[int, list[float], list[float] | None, list[float] | None]] = []
+    result = surface(
+        scenario,
+        axis_x=AxisSpec(key="unit_price", minimum=10, maximum=20),
+        axis_y=AxisSpec(key="unit_cost", minimum=5, maximum=7),
+        grid=(3, 2),
+        runs=5,
+        on_row=lambda index, values, p10, p90: rows.append(
+            (index, values, p10, p90)
+        ),
+    )
+    assert [row[0] for row in rows] == [0, 1]
+    assert rows[0][1] == result.z_p50[0]
+    assert rows[1][1] == result.z_p50[1]
+    assert rows[0][2] == result.z_p10[0]
+    assert rows[0][3] == result.z_p90[0]
+
+
 def test_surface_uses_the_config_seed_by_default(scenario_factory):
     scenario = _deterministic_scenario(scenario_factory)
     result = surface(

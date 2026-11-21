@@ -178,6 +178,25 @@ def test_goal_seek_is_deterministic(scenario_factory):
     ]
 
 
+def test_goal_seek_progress_stays_within_the_budget(scenario_factory):
+    scenario = _deterministic_scenario(scenario_factory)
+    progress: list[tuple[int, int]] = []
+    result = goal_seek(
+        scenario,
+        Objective(metric="profit_p50", comparator=">=", target=1_200),
+        [Lever(key="unit_price", minimum=10, maximum=20)],
+        runs=20,
+        max_evaluations=40,
+        on_progress=lambda done, total: progress.append((done, total)),
+        confirm_quality=None,
+    )
+
+    assert progress[0] == (0, 40)
+    assert progress[-1][0] == result.evaluations
+    assert [done for done, _ in progress] == sorted(done for done, _ in progress)
+    assert all(done <= total == 40 for done, total in progress)
+
+
 def test_goal_seek_cancellation(scenario_factory):
     scenario = _deterministic_scenario(scenario_factory)
     cancel = CancelToken()

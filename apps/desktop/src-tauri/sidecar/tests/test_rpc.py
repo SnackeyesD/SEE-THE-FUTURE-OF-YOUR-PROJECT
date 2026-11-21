@@ -139,7 +139,7 @@ def test_health_exposes_versions(sidecar: SidecarProcess) -> None:
     response = sidecar.call("health")
     result = response["result"]
     assert result["status"] == "ok"
-    assert result["protocolVersion"] == "1.11.0"
+    assert result["protocolVersion"] == "1.12.0"
     assert isinstance(result["pid"], int)
     assert result["sidecarVersion"]
 
@@ -1414,3 +1414,194 @@ def test_ten_rapid_starts_keep_one_active_run(sidecar: SidecarProcess) -> None:
         "project.data", {"projectId": project_id}, request_id=999
     )
     assert data["result"]["run"]["id"] == started_ids[-1]
+
+
+# ---------------------------------------------------------------------------
+# Phase 11 — surface et recherche d'objectif
+# ---------------------------------------------------------------------------
+
+def _job_terminal(job_id: str, message: dict[str, Any]) -> bool:
+    if message.get("method") not in {
+        "simulation.done",
+        "simulation.cancelled",
+        "simulation.error",
+    }:
+        return False
+    return message["params"].get("jobId") == job_id
+
+
+def test_surface_job_returns_an_oriented_grid(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Surface")
+    started = time.monotonic()
+    response = sidecar.call(
+        "simulation.surface",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "axisX": {"key": "unit_price", "minimum": 10, "maximum": 20},
+            "axisY": {"key": "unit_cost", "minimum": 5, "maximum": 7},
+            "metric": "profit_p50",
+            "grid": [2, 2],
+            "runs": 10,
+            "seed": 9,
+            "quality": "draft",
+        },
+        request_id=1300,
+    )
+    elapsed = time.monotonic() - started
+    assert response["result"]["accepted"] is True
+    assert elapsed < 0.5, f"réponse simulation.surface trop lente: {elapsed:.3f}s"
+    job_id = response["result"]["jobId"]
+
+    messages, terminal = _read_until(
+        sidecar, lambda message: _job_terminal(job_id, message)
+    )
+    assert terminal["method"] == "simulation.done"
+    result = terminal["params"]["result"]
+    assert result["seed"] == 9
+    assert result["grid"] == [2, 2]
+    assert result["cost"] == 40
+    assert result["xValues"] == [10.0, 20.0]
+    assert result["yValues"] == [5.0, 7.0]
+    assert result["zP50"][0][0] == pytest.approx(100.0)
+    assert result["zP50"][0][1] == pytest.approx(300.0)
+    assert result["zP50"][1][0] == pytest.approx(60.0)
+    assert result["zP50"][1][1] == pytest.approx(260.0)
+
+    partials = [
+        message
+        for message in messages
+        if message["method"] == "simulation.surface.partial"
+        and message["params"].get("jobId") == job_id
+    ]
+    assert [partial["params"]["rowIndex"] for partial in partials] == [0, 1]
+    assert [partial["params"]["seq"] for partial in partials] == [1, 2]
+
+    _, data = sidecar.collect(
+        "project.data", {"projectId": project_id}, request_id=1301
+    )
+    assert data["result"]["run"] is None
+
+
+def test_goal_seek_job_returns_a_feasible_decisions(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Objectif")
+    response = sidecar.call(
+        "simulation.goalseek",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "objective": {
+                "metric": "profit_p50",
+                "comparator": ">=",
+                "target": 200,
+            },
+            "levers": [{"key": "unit_price", "minimum": 10, "maximum": 20}],
+            "locked": [],
+            "maxEvaluations": 20,
+            "runs": 10,
+            "seed": 4,
+            "confirmQuality": None,
+        },
+        request_id=1310,
+    )
+    job_id = response["result"]["jobId"]
+    _, terminal = _read_until(
+        sidecar, lambda message: _job_terminal(job_id, message)
+    )
+    assert terminal["method"] == "simulation.done"
+    result = terminal["params"]["result"]
+    assert result["feasible"] is True
+    assert result["achieved"] >= 200
+    assert result["best"]["unit_price"] == pytest.approx(15)
+    assert result["evaluations"] <= 20
+    assert result["quality"] == "draft"
+    assert result["trace"]
+
+
+def test_goal_seek_reports_an_unreachable_target(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Infaisable")
+    response = sidecar.call(
+        "simulation.goalseek",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "objective": {
+                "metric": "profit_p50",
+                "comparator": ">=",
+                "target": 10_000,
+            },
+            "levers": [{"key": "unit_price", "minimum": 10, "maximum": 20}],
+            "maxEvaluations": 20,
+            "runs": 10,
+            "confirmQuality": None,
+        },
+        request_id=1320,
+    )
+    job_id = response["result"]["jobId"]
+    _, terminal = _read_until(
+        sidecar, lambda message: _job_terminal(job_id, message)
+    )
+    result = terminal["params"]["result"]
+    assert result["feasible"] is False
+    assert result["gap"] > 0
+    assert "non atteignable" in result["message"]
+    assert "Objectif atteint" not in result["message"]
+
+
+def test_surface_cancel_by_job_id(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Annulation analyse")
+    response = sidecar.call(
+        "simulation.surface",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "axisX": {"key": "unit_price", "minimum": 10, "maximum": 20},
+            "axisY": {"key": "unit_cost", "minimum": 5, "maximum": 7},
+            "grid": [30, 30],
+            "runs": 2_000,
+            "seed": 3,
+            "quality": "draft",
+        },
+        request_id=1330,
+    )
+    job_id = response["result"]["jobId"]
+    notifications, cancelled = sidecar.collect(
+        "simulation.cancel", {"jobId": job_id}, request_id=1331
+    )
+    assert cancelled["result"]["cancelled"] is True
+
+    terminals = [
+        message for message in notifications if _job_terminal(job_id, message)
+    ]
+    if terminals:
+        terminal = terminals[0]
+    else:
+        _, terminal = _read_until(
+            sidecar,
+            lambda message: _job_terminal(job_id, message),
+            timeout=15.0,
+        )
+    assert terminal["method"] == "simulation.cancelled"
+    assert terminal["params"]["reason"] == "analysis_cancelled"
+
+
+def test_surface_rejects_an_unknown_axis(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Axe inconnu")
+    response = sidecar.call(
+        "simulation.surface",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "axisX": {"key": "unknown", "minimum": 1, "maximum": 2},
+            "axisY": {"key": "unit_cost", "minimum": 5, "maximum": 7},
+            "grid": [2, 2],
+            "runs": 5,
+        },
+        request_id=1340,
+    )
+    job_id = response["result"]["jobId"]
+    _, terminal = _read_until(
+        sidecar, lambda message: _job_terminal(job_id, message)
+    )
+    assert terminal["method"] == "simulation.error"
+    assert terminal["params"]["code"] == "analysis_invalid"

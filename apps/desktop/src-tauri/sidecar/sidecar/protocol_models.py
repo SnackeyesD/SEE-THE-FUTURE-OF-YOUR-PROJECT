@@ -1,6 +1,6 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 # Source: packages/protocol/schema/messages.schema.json
-# Protocol version: 1.11.0
+# Protocol version: 1.12.0
 # Regenerate with: npm run protocol:generate
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-PROTOCOL_VERSION = "1.11.0"
+PROTOCOL_VERSION = "1.12.0"
 
 RequestId = int | str
 
@@ -64,6 +64,8 @@ MethodName = Literal[
     "project.simulate",
     "simulation.start",
     "simulation.cancel",
+    "simulation.surface",
+    "simulation.goalseek",
     "integrity.check",
     "storage.backup",
     "provider.catalog",
@@ -101,6 +103,7 @@ NotificationName = Literal[
     "simulate.progress",
     "simulation.progress",
     "simulation.partial",
+    "simulation.surface.partial",
     "simulation.done",
     "simulation.cancelled",
     "simulation.error",
@@ -618,7 +621,8 @@ class SimulationStartResult(BaseModel):
 class SimulationCancelParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    runId: str
+    runId: str | None = None
+    jobId: str | None = None
 
 
 class SimulationCancelResult(BaseModel):
@@ -687,6 +691,187 @@ class SimulationError(BaseModel):
     ]
     message: str
     retryable: bool
+
+
+class SurfaceAxis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    minimum: float
+    maximum: float
+    scale: Literal["linear"] | None = None
+
+
+SurfaceMetric = Literal[
+    "profit_p50",
+    "profit_p10",
+    "profit_p90",
+    "break_even_months_p50",
+    "financing_need_p90",
+    "loss_probability",
+]
+
+
+class SurfaceResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    xValues: list[float]
+    yValues: list[float]
+    zP50: list[list[float]]
+    zP10: list[list[float]] | None = None
+    zP90: list[list[float]] | None = None
+    current: list[float]
+    metric: SurfaceMetric
+    runs: int
+    seed: int
+    grid: list[int]
+    cost: int
+    durationMs: float
+
+
+GoalComparator = Literal[
+    ">=",
+    "<=",
+]
+
+
+class GoalObjective(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    metric: SurfaceMetric
+    comparator: GoalComparator
+    target: float
+    tolerance: float | None = None
+
+
+class GoalLever(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    minimum: float
+    maximum: float
+
+
+class GoalTraceEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    point: dict[str, float]
+    value: float
+    feasible: bool
+
+
+class GoalSeekResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    feasible: bool
+    best: dict[str, float]
+    achieved: float
+    target: float
+    gap: float
+    evaluations: int
+    trace: list[GoalTraceEntry]
+    budgetExhausted: bool
+    message: str
+    metric: SurfaceMetric
+    comparator: GoalComparator
+    quality: SimulationQuality | None = None
+
+
+class SurfacePartial(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    jobId: str
+    seq: int
+    rowIndex: int
+    values: list[float]
+    p10: list[float] | None = None
+    p90: list[float] | None = None
+    completedPoints: int
+    totalPoints: int
+
+
+class AnalysisProgress(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    jobId: str
+    kind: Literal["surface", "goalseek"]
+    completed: int
+    total: int
+    fraction: float
+
+
+class AnalysisDone(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    jobId: str
+    kind: Literal["surface", "goalseek"]
+    result: SurfaceResult | GoalSeekResult
+
+
+class AnalysisCancelled(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    jobId: str
+    kind: Literal["surface", "goalseek"]
+    reason: Literal["analysis_cancelled", "analysis_superseded", "shutdown"]
+
+
+class AnalysisError(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    jobId: str
+    kind: Literal["surface", "goalseek"]
+    code: Literal[
+        "analysis_invalid",
+        "analysis_busy",
+        "analysis_cancelled",
+        "analysis_superseded",
+        "analysis_failed",
+        "job_not_found",
+    ]
+    message: str
+    retryable: bool
+
+
+class SimulationSurfaceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenario: Scenario
+    config: SimulationConfig | None = None
+    axisX: SurfaceAxis
+    axisY: SurfaceAxis
+    metric: SurfaceMetric | None = None
+    grid: list[int] | None = None
+    runs: int | None = None
+    seed: int | None = None
+    quality: SimulationQuality | None = None
+    runToken: str | None = None
+
+
+class SimulationGoalSeekParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenario: Scenario
+    config: SimulationConfig | None = None
+    objective: GoalObjective
+    levers: list[GoalLever]
+    locked: list[str] | None = None
+    maxEvaluations: int | None = None
+    runs: int | None = None
+    seed: int | None = None
+    confirmQuality: SimulationQuality | None = None
+    confirmRuns: int | None = None
+    runToken: str | None = None
+
+
+class AnalysisJobAccepted(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    jobId: str
+    accepted: bool
+    replacedJobId: str | None = None
 
 
 class BackupParams(BaseModel):

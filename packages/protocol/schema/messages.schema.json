@@ -3,7 +3,7 @@
   "$id": "https://seethefuture.local/protocol/messages.schema.json",
   "title": "See The Future IPC protocol",
   "description": "Source unique des messages JSON-RPC 2.0 échangés entre le shell Tauri et le sidecar Python.",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "$defs": {
     "RequestId": {
       "description": "Identifiant de requête JSON-RPC (entier ou chaîne).",
@@ -70,6 +70,8 @@
         "project.simulate",
         "simulation.start",
         "simulation.cancel",
+        "simulation.surface",
+        "simulation.goalseek",
         "integrity.check",
         "storage.backup",
         "provider.catalog",
@@ -108,6 +110,7 @@
         "simulate.progress",
         "simulation.progress",
         "simulation.partial",
+        "simulation.surface.partial",
         "simulation.done",
         "simulation.cancelled",
         "simulation.error"
@@ -908,11 +911,12 @@
       }
     },
     "SimulationCancelParams": {
+      "description": "Annule un run de simulation ou un job d'analyse. L'un des deux identifiants suffit.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["runId"],
       "properties": {
-        "runId": { "type": "string" }
+        "runId": { "type": "string" },
+        "jobId": { "type": "string" }
       }
     },
     "SimulationCancelResult": {
@@ -1012,6 +1016,307 @@
         },
         "message": { "type": "string" },
         "retryable": { "type": "boolean" }
+      }
+    },
+    "SurfaceAxis": {
+      "description": "Hypothèse variant sur un axe de surface. Échelle linéaire uniquement en V3.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "minimum", "maximum"],
+      "properties": {
+        "key": { "type": "string" },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "scale": { "enum": ["linear"] }
+      }
+    },
+    "SurfaceMetric": {
+      "description": "Métrique extraite du moteur pour une surface ou un objectif.",
+      "enum": [
+        "profit_p50",
+        "profit_p10",
+        "profit_p90",
+        "break_even_months_p50",
+        "financing_need_p90",
+        "loss_probability"
+      ]
+    },
+    "SurfaceResult": {
+      "description": "Surface 2D orientée z[ligneY][colonneX]. Aucune valeur n'est recalculée par l'UI.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "xValues",
+        "yValues",
+        "zP50",
+        "current",
+        "metric",
+        "runs",
+        "seed",
+        "grid",
+        "cost",
+        "durationMs"
+      ],
+      "properties": {
+        "xValues": { "type": "array", "items": { "type": "number" } },
+        "yValues": { "type": "array", "items": { "type": "number" } },
+        "zP50": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "number" } }
+        },
+        "zP10": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": { "type": "array", "items": { "type": "number" } }
+            },
+            { "type": "null" }
+          ]
+        },
+        "zP90": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": { "type": "array", "items": { "type": "number" } }
+            },
+            { "type": "null" }
+          ]
+        },
+        "current": { "type": "array", "items": { "type": "number" } },
+        "metric": { "$ref": "#/$defs/SurfaceMetric" },
+        "runs": { "type": "integer" },
+        "seed": { "type": "integer" },
+        "grid": { "type": "array", "items": { "type": "integer" } },
+        "cost": { "type": "integer" },
+        "durationMs": { "type": "number" }
+      }
+    },
+    "GoalComparator": {
+      "description": "Sens de la contrainte d'objectif.",
+      "enum": [">=", "<="]
+    },
+    "GoalObjective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric", "comparator", "target"],
+      "properties": {
+        "metric": { "$ref": "#/$defs/SurfaceMetric" },
+        "comparator": { "$ref": "#/$defs/GoalComparator" },
+        "target": { "type": "number" },
+        "tolerance": { "type": "number" }
+      }
+    },
+    "GoalLever": {
+      "description": "Hypothèse que la recherche d'objectif peut faire varier.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "minimum", "maximum"],
+      "properties": {
+        "key": { "type": "string" },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" }
+      }
+    },
+    "GoalTraceEntry": {
+      "description": "Une évaluation moteur de la recherche, jamais une estimation UI.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["point", "value", "feasible"],
+      "properties": {
+        "point": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "value": { "type": "number" },
+        "feasible": { "type": "boolean" }
+      }
+    },
+    "GoalSeekResult": {
+      "description": "Meilleur point trouvé. feasible=false signifie que la cible n'est pas atteinte.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "feasible",
+        "best",
+        "achieved",
+        "target",
+        "gap",
+        "evaluations",
+        "trace",
+        "budgetExhausted",
+        "message",
+        "metric",
+        "comparator"
+      ],
+      "properties": {
+        "feasible": { "type": "boolean" },
+        "best": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "achieved": { "type": "number" },
+        "target": { "type": "number" },
+        "gap": { "type": "number" },
+        "evaluations": { "type": "integer" },
+        "trace": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GoalTraceEntry" }
+        },
+        "budgetExhausted": { "type": "boolean" },
+        "message": { "type": "string" },
+        "metric": { "$ref": "#/$defs/SurfaceMetric" },
+        "comparator": { "$ref": "#/$defs/GoalComparator" },
+        "quality": {
+          "anyOf": [
+            { "$ref": "#/$defs/SimulationQuality" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "SurfacePartial": {
+      "description": "Notification d'une ligne calculée. Les valeurs restent celles du moteur.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jobId",
+        "seq",
+        "rowIndex",
+        "values",
+        "completedPoints",
+        "totalPoints"
+      ],
+      "properties": {
+        "jobId": { "type": "string" },
+        "seq": { "type": "integer", "minimum": 1 },
+        "rowIndex": { "type": "integer", "minimum": 0 },
+        "values": { "type": "array", "items": { "type": "number" } },
+        "p10": { "type": "array", "items": { "type": "number" } },
+        "p90": { "type": "array", "items": { "type": "number" } },
+        "completedPoints": { "type": "integer" },
+        "totalPoints": { "type": "integer" }
+      }
+    },
+    "AnalysisProgress": {
+      "description": "Progression d'un job d'analyse (surface ou recherche d'objectif).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobId", "kind", "completed", "total", "fraction"],
+      "properties": {
+        "jobId": { "type": "string" },
+        "kind": { "enum": ["surface", "goalseek"] },
+        "completed": { "type": "integer" },
+        "total": { "type": "integer" },
+        "fraction": { "type": "number" }
+      }
+    },
+    "AnalysisDone": {
+      "description": "Résultat terminal d'un job d'analyse. kind permet de choisir le type de result.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobId", "kind", "result"],
+      "properties": {
+        "jobId": { "type": "string" },
+        "kind": { "enum": ["surface", "goalseek"] },
+        "result": {
+          "anyOf": [
+            { "$ref": "#/$defs/SurfaceResult" },
+            { "$ref": "#/$defs/GoalSeekResult" }
+          ]
+        }
+      }
+    },
+    "AnalysisCancelled": {
+      "description": "Fin d'un job d'analyse sans résultat.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobId", "kind", "reason"],
+      "properties": {
+        "jobId": { "type": "string" },
+        "kind": { "enum": ["surface", "goalseek"] },
+        "reason": {
+          "enum": ["analysis_cancelled", "analysis_superseded", "shutdown"]
+        }
+      }
+    },
+    "AnalysisError": {
+      "description": "Échec terminal d'un job d'analyse. Le code est stable et destiné à l'UI.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobId", "kind", "code", "message", "retryable"],
+      "properties": {
+        "jobId": { "type": "string" },
+        "kind": { "enum": ["surface", "goalseek"] },
+        "code": {
+          "enum": [
+            "analysis_invalid",
+            "analysis_busy",
+            "analysis_cancelled",
+            "analysis_superseded",
+            "analysis_failed",
+            "job_not_found"
+          ]
+        },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "SimulationSurfaceParams": {
+      "description": "Démarre une surface 2D asynchrone. La graine est celle du résultat affiché.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "scenario", "axisX", "axisY"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "scenario": { "$ref": "#/$defs/Scenario" },
+        "config": { "$ref": "#/$defs/SimulationConfig" },
+        "axisX": { "$ref": "#/$defs/SurfaceAxis" },
+        "axisY": { "$ref": "#/$defs/SurfaceAxis" },
+        "metric": { "$ref": "#/$defs/SurfaceMetric" },
+        "grid": { "type": "array", "items": { "type": "integer" } },
+        "runs": { "type": "integer" },
+        "seed": { "type": "integer" },
+        "quality": { "$ref": "#/$defs/SimulationQuality" },
+        "runToken": { "type": "string" }
+      }
+    },
+    "SimulationGoalSeekParams": {
+      "description": "Démarre une recherche d'objectif asynchrone sur des leviers bornés.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "scenario", "objective", "levers"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "scenario": { "$ref": "#/$defs/Scenario" },
+        "config": { "$ref": "#/$defs/SimulationConfig" },
+        "objective": { "$ref": "#/$defs/GoalObjective" },
+        "levers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GoalLever" }
+        },
+        "locked": { "type": "array", "items": { "type": "string" } },
+        "maxEvaluations": { "type": "integer" },
+        "runs": { "type": "integer" },
+        "seed": { "type": "integer" },
+        "confirmQuality": {
+          "anyOf": [
+            { "$ref": "#/$defs/SimulationQuality" },
+            { "type": "null" }
+          ]
+        },
+        "confirmRuns": { "type": "integer" },
+        "runToken": { "type": "string" }
+      }
+    },
+    "AnalysisJobAccepted": {
+      "description": "Accusé de réception d'un job d'analyse. Le résultat arrive par notification.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobId", "accepted"],
+      "properties": {
+        "jobId": { "type": "string" },
+        "accepted": { "type": "boolean" },
+        "replacedJobId": { "type": "string" }
       }
     },
     "BackupParams": {

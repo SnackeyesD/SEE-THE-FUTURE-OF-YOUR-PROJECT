@@ -12,7 +12,7 @@ Nelder-Mead.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -26,6 +26,9 @@ from .schema import CamelModel
 from .surface import SurfaceMetric, _linspace, metric_value
 
 Comparator = Literal[">=", "<="]
+
+GoalSeekProgress = Callable[[int, int], None]
+"""Progression : évaluations terminées et budget d'évaluations."""
 
 
 class Objective(CamelModel):
@@ -153,6 +156,7 @@ def goal_seek(
     runs: int = 500,
     config: SimulationConfig | None = None,
     cancel: CancelToken | None = None,
+    on_progress: GoalSeekProgress | None = None,
     confirm_quality: Quality | None = "final",
     confirm_runs: int = 5_000,
 ) -> GoalSeekResult:
@@ -203,6 +207,8 @@ def goal_seek(
         value = metric_value(result, objective.metric, scenario.horizon_months)
         cache[key] = value
         evaluations += 1
+        if on_progress is not None:
+            on_progress(evaluations, max_evaluations)
         trace.append(
             GoalTraceEntry(
                 point=dict(point),
@@ -224,6 +230,9 @@ def goal_seek(
             best_value = value
             best_score = score
             best_distance = distance
+
+    if on_progress is not None:
+        on_progress(0, max_evaluations)
 
     budget_exhausted = False
     try:
@@ -406,6 +415,7 @@ def _search_compass(
 
 __all__ = [
     "Comparator",
+    "GoalSeekProgress",
     "GoalSeekResult",
     "GoalTraceEntry",
     "Lever",

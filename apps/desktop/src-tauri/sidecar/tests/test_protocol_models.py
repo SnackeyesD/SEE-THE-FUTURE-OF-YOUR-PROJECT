@@ -12,7 +12,7 @@ from sidecar.protocol_models import (
 
 
 def test_protocol_version_matches_schema() -> None:
-    assert PROTOCOL_VERSION == "1.11.0"
+    assert PROTOCOL_VERSION == "1.12.0"
 
 
 def test_request_accepts_valid_payload() -> None:
@@ -124,3 +124,87 @@ def test_scenario_accepts_events_with_schema_version_1_1() -> None:
     assert scenario.events is not None
     assert scenario.events[0].startMonth == 3
     assert scenario.events[0].magnitude.kind == "uniform"
+
+
+def test_analysis_protocol_models_accept_camel_case_payloads() -> None:
+    from sidecar.protocol_models import (
+        AnalysisCancelled,
+        AnalysisDone,
+        AnalysisError,
+        AnalysisJobAccepted,
+        SimulationGoalSeekParams,
+        SimulationSurfaceParams,
+    )
+
+    accepted = AnalysisJobAccepted.model_validate(
+        {"jobId": "abc", "accepted": True, "replacedJobId": "def"}
+    )
+    assert accepted.replacedJobId == "def"
+
+    surface = SimulationSurfaceParams.model_validate(
+        {
+            "projectId": "p1",
+            "scenario": {"name": "Test"},
+            "axisX": {"key": "unit_price", "minimum": 1, "maximum": 2},
+            "axisY": {"key": "unit_cost", "minimum": 0, "maximum": 1},
+            "grid": [2, 2],
+            "runs": 10,
+            "seed": 1,
+            "metric": "profit_p50",
+        }
+    )
+    assert surface.axisX.key == "unit_price"
+    assert surface.grid == [2, 2]
+
+    goal = SimulationGoalSeekParams.model_validate(
+        {
+            "projectId": "p1",
+            "scenario": {"name": "Test"},
+            "objective": {
+                "metric": "profit_p50",
+                "comparator": ">=",
+                "target": 100,
+            },
+            "levers": [{"key": "unit_price", "minimum": 1, "maximum": 2}],
+            "locked": [],
+            "maxEvaluations": 20,
+        }
+    )
+    assert goal.objective.target == 100
+    assert goal.locked == []
+
+    done = AnalysisDone.model_validate(
+        {
+            "jobId": "abc",
+            "kind": "surface",
+            "result": {
+                "xValues": [1.0],
+                "yValues": [2.0],
+                "zP50": [[3.0]],
+                "current": [1.0, 2.0],
+                "metric": "profit_p50",
+                "runs": 10,
+                "seed": 1,
+                "grid": [1, 1],
+                "cost": 10,
+                "durationMs": 1.0,
+            },
+        }
+    )
+    assert done.result.metric == "profit_p50"
+
+    cancelled = AnalysisCancelled.model_validate(
+        {"jobId": "abc", "kind": "goalseek", "reason": "analysis_cancelled"}
+    )
+    assert cancelled.reason == "analysis_cancelled"
+
+    error = AnalysisError.model_validate(
+        {
+            "jobId": "abc",
+            "kind": "surface",
+            "code": "analysis_invalid",
+            "message": "invalide",
+            "retryable": False,
+        }
+    )
+    assert error.code == "analysis_invalid"

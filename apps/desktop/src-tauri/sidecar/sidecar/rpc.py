@@ -23,6 +23,7 @@ from see_storage import ProjectNotFound, StorageError, StorageValidationError
 from . import (
     __version__,
     agent_service,
+    analysis_service,
     benchmark_service,
     project_service,
     provider_service,
@@ -47,6 +48,7 @@ PROVIDER_ERROR = -32003
 BUDGET_ERROR = -32004
 AGENT_ERROR = -32005
 SIMULATION_ERROR = -32006
+ANALYSIS_ERROR = -32007
 
 
 class RpcError(Exception):
@@ -63,10 +65,12 @@ class RequestContext:
         notifier: Callable[[str, dict[str, Any]], None],
         *,
         service: simulation_service.SimulationService | None = None,
+        analysis: analysis_service.AnalysisService | None = None,
         diagnostics: Callable[[], dict[str, Any]] | None = None,
     ) -> None:
         self._notifier = notifier
         self.service = service
+        self.analysis = analysis
         self._diagnostics = diagnostics
 
     def notify(self, method: str, params: dict[str, Any]) -> None:
@@ -184,15 +188,54 @@ def simulation_start(
         ) from exc
 
 
+def _analysis_service(context: RequestContext) -> analysis_service.AnalysisService:
+    service = context.analysis
+    if service is None:
+        raise RpcError(
+            INTERNAL_ERROR,
+            "service d'analyse indisponible",
+        )
+    return service
+
+
+def _require_project(params: dict[str, Any]) -> None:
+    project_id = params.get("projectId")
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise RpcError(
+            ANALYSIS_ERROR,
+            "projectId doit être une chaîne non vide",
+            {"code": "analysis_invalid"},
+        )
+    try:
+        get_store().projects.require(project_id.strip())
+    except ProjectNotFound as exc:
+        raise RpcError(NOT_FOUND, str(exc)) from exc
+    except StorageValidationError as exc:
+        raise RpcError(INVALID_PARAMS, str(exc)) from exc
+
+
 def simulation_cancel(
     params: dict[str, Any], context: RequestContext
 ) -> dict[str, Any]:
+    job_id = params.get("jobId")
+    if isinstance(job_id, str) and job_id.strip():
+        service = _analysis_service(context)
+        try:
+            return service.cancel(job_id.strip())
+        except analysis_service.AnalysisServiceError as exc:
+            code = NOT_FOUND if exc.code == "job_not_found" else ANALYSIS_ERROR
+            raise RpcError(
+                code,
+                exc.message,
+                {"code": exc.code, "retryable": exc.retryable},
+            ) from exc
+
     service = _simulation_service(context)
     run_id = params.get("runId")
     if not isinstance(run_id, str) or not run_id.strip():
         raise RpcError(
             SIMULATION_ERROR,
-            "runId doit être une chaîne non vide",
+            "runId ou jobId doit être une chaîne non vide",
             {"code": "simulation_invalid"},
         )
     try:
@@ -201,6 +244,36 @@ def simulation_cancel(
         code = NOT_FOUND if exc.code == "run_not_found" else SIMULATION_ERROR
         raise RpcError(
             code,
+            exc.message,
+            {"code": exc.code, "retryable": exc.retryable},
+        ) from exc
+
+
+def simulation_surface(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    service = _analysis_service(context)
+    _require_project(params)
+    try:
+        return service.start_surface(params, context.notify)
+    except analysis_service.AnalysisServiceError as exc:
+        raise RpcError(
+            ANALYSIS_ERROR,
+            exc.message,
+            {"code": exc.code, "retryable": exc.retryable},
+        ) from exc
+
+
+def simulation_goalseek(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    service = _analysis_service(context)
+    _require_project(params)
+    try:
+        return service.start_goal_seek(params, context.notify)
+    except analysis_service.AnalysisServiceError as exc:
+        raise RpcError(
+            ANALYSIS_ERROR,
             exc.message,
             {"code": exc.code, "retryable": exc.retryable},
         ) from exc
@@ -640,6 +713,8 @@ def default_handlers() -> dict[str, Handler]:
         "project.simulate": project_simulate,
         "simulation.start": simulation_start,
         "simulation.cancel": simulation_cancel,
+        "simulation.surface": simulation_surface,
+        "simulation.goalseek": simulation_goalseek,
         "integrity.check": integrity_check,
         "storage.backup": storage_backup,
         "provider.catalog": provider_catalog,
@@ -685,6 +760,7 @@ class RpcServer:
         *,
         writer: simulation_service.OutboundWriter | None = None,
         simulation: simulation_service.SimulationService | None = None,
+        analysis: analysis_service.AnalysisService | None = None,
     ) -> None:
         self.handlers = dict(handlers or default_handlers())
         self.max_message_bytes = max_message_bytes
@@ -694,6 +770,7 @@ class RpcServer:
         self.simulation = simulation or simulation_service.SimulationService(
             persist=self._persist_result
         )
+        self.analysis = analysis or analysis_service.AnalysisService()
 
     def _persist_result(
         self,
@@ -729,6 +806,7 @@ class RpcServer:
             # runs encore actifs sont annulés par le service.
             self.simulation.process_completed()
             self.simulation.shutdown()
+            self.analysis.shutdown()
             self._writer.close(drain=True, timeout=2.0)
         logger.info("sidecar stopped")
         return 0
@@ -826,7 +904,12 @@ class RpcServer:
         context = RequestContext(
             self._notify,
             service=self.simulation,
-            diagnostics=lambda: {"droppedMessages": self._writer.dropped},
+            analysis=self.analysis,
+            diagnostics=lambda: {
+                "droppedMessages": self._writer.dropped,
+                **self.simulation.health_stats(),
+                **self.analysis.health_stats(),
+            },
         )
 
         try:
@@ -851,6 +934,8 @@ class RpcServer:
                 # La réponse est déjà en file du writer : le premier événement
                 # du run ne peut pas la précéder.
                 self.simulation.activate()
+            elif request.method in ("simulation.surface", "simulation.goalseek"):
+                self.analysis.activate()
 
     def _notify(self, method: str, params: dict[str, Any]) -> None:
         self._write({"jsonrpc": "2.0", "method": method, "params": params})

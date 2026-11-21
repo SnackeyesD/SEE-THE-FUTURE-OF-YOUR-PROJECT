@@ -34,6 +34,11 @@ SurfaceMetric = Literal[
 ]
 
 SurfaceProgress = Callable[[float], None]
+SurfaceRowCallback = Callable[
+    [int, list[float], list[float] | None, list[float] | None],
+    None,
+]
+"""Appelé après chaque ligne : index, valeurs z, p10 et p90 (ou ``None``)."""
 
 
 class AxisSpec(CamelModel):
@@ -133,6 +138,7 @@ def surface(
     runs: int = 200,
     seed: int | None = None,
     on_progress: SurfaceProgress | None = None,
+    on_row: SurfaceRowCallback | None = None,
     cancel: CancelToken | None = None,
     *,
     quality: Quality = "draft",
@@ -208,6 +214,13 @@ def surface(
             done += 1
             if on_progress is not None:
                 on_progress(done / total)
+        if on_row is not None:
+            on_row(
+                row_index,
+                list(z_p50[row_index]),
+                None if z_p10 is None else list(z_p10[row_index]),
+                None if z_p90 is None else list(z_p90[row_index]),
+            )
 
     return SurfaceResult(
         x_values=x_values,
@@ -239,6 +252,7 @@ __all__ = [
     "SurfaceMetric",
     "SurfaceProgress",
     "SurfaceResult",
+    "SurfaceRowCallback",
     "metric_value",
     "surface",
 ]

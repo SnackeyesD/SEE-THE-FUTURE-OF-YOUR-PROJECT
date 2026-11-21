@@ -22,6 +22,7 @@ from .events import (
     register_event_slots,
 )
 from .goal_seek import (
+    GoalSeekProgress,
     GoalSeekResult,
     GoalTraceEntry,
     Lever,
@@ -57,7 +58,7 @@ from .scenario import (
     SimulationResult,
     to_camel,
 )
-from .surface import AxisSpec, SurfaceResult, surface
+from .surface import AxisSpec, SurfaceResult, SurfaceRowCallback, surface
 
 __all__ = [
     "AxisSpec",
@@ -77,6 +78,7 @@ __all__ = [
     "EventSpec",
     "EventTarget",
     "EventType",
+    "GoalSeekProgress",
     "GoalSeekResult",
     "GoalTraceEntry",
     "Histogram",
@@ -101,6 +103,7 @@ __all__ = [
     "SimulationConfig",
     "SimulationResult",
     "SurfaceResult",
+    "SurfaceRowCallback",
     "UnknownModelError",
     "build_event_modifiers",
     "draw_events",

@@ -1,9 +1,9 @@
 // AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 // Source: packages/protocol/schema/messages.schema.json
-// Protocol version: 1.11.0
+// Protocol version: 1.12.0
 // Regenerate with: npm run protocol:generate
 
-export const PROTOCOL_VERSION = "1.11.0";
+export const PROTOCOL_VERSION = "1.12.0";
 
 export type RequestId = number | string;
 
@@ -27,9 +27,9 @@ export interface JSONRPCResponse {
   error?: JSONRPCErrorObject;
 }
 
-export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "project.list" | "project.create" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.simulate" | "simulation.start" | "simulation.cancel" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools" | "benchmark.lookup" | "benchmark.pack.list" | "benchmark.pack.import";
+export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "project.list" | "project.create" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.simulate" | "simulation.start" | "simulation.cancel" | "simulation.surface" | "simulation.goalseek" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools" | "benchmark.lookup" | "benchmark.pack.list" | "benchmark.pack.import";
 
-export type NotificationName = "simulate.progress" | "simulation.progress" | "simulation.partial" | "simulation.done" | "simulation.cancelled" | "simulation.error";
+export type NotificationName = "simulate.progress" | "simulation.progress" | "simulation.partial" | "simulation.surface.partial" | "simulation.done" | "simulation.cancelled" | "simulation.error";
 
 export interface PingParams {
   echo?: string;
@@ -426,7 +426,8 @@ export interface SimulationStartResult {
 }
 
 export interface SimulationCancelParams {
-  runId: string;
+  runId?: string;
+  jobId?: string;
 }
 
 export interface SimulationCancelResult {
@@ -474,6 +475,140 @@ export interface SimulationError {
   code: "simulation_invalid" | "simulation_busy" | "simulation_cancelled" | "simulation_superseded" | "simulation_failed" | "run_not_found";
   message: string;
   retryable: boolean;
+}
+
+export interface SurfaceAxis {
+  key: string;
+  minimum: number;
+  maximum: number;
+  scale?: "linear";
+}
+
+export type SurfaceMetric = "profit_p50" | "profit_p10" | "profit_p90" | "break_even_months_p50" | "financing_need_p90" | "loss_probability";
+
+export interface SurfaceResult {
+  xValues: number[];
+  yValues: number[];
+  zP50: number[][];
+  zP10?: number[][] | null;
+  zP90?: number[][] | null;
+  current: number[];
+  metric: SurfaceMetric;
+  runs: number;
+  seed: number;
+  grid: number[];
+  cost: number;
+  durationMs: number;
+}
+
+export type GoalComparator = ">=" | "<=";
+
+export interface GoalObjective {
+  metric: SurfaceMetric;
+  comparator: GoalComparator;
+  target: number;
+  tolerance?: number;
+}
+
+export interface GoalLever {
+  key: string;
+  minimum: number;
+  maximum: number;
+}
+
+export interface GoalTraceEntry {
+  point: Record<string, number>;
+  value: number;
+  feasible: boolean;
+}
+
+export interface GoalSeekResult {
+  feasible: boolean;
+  best: Record<string, number>;
+  achieved: number;
+  target: number;
+  gap: number;
+  evaluations: number;
+  trace: GoalTraceEntry[];
+  budgetExhausted: boolean;
+  message: string;
+  metric: SurfaceMetric;
+  comparator: GoalComparator;
+  quality?: SimulationQuality | null;
+}
+
+export interface SurfacePartial {
+  jobId: string;
+  seq: number;
+  rowIndex: number;
+  values: number[];
+  p10?: number[];
+  p90?: number[];
+  completedPoints: number;
+  totalPoints: number;
+}
+
+export interface AnalysisProgress {
+  jobId: string;
+  kind: "surface" | "goalseek";
+  completed: number;
+  total: number;
+  fraction: number;
+}
+
+export interface AnalysisDone {
+  jobId: string;
+  kind: "surface" | "goalseek";
+  result: SurfaceResult | GoalSeekResult;
+}
+
+export interface AnalysisCancelled {
+  jobId: string;
+  kind: "surface" | "goalseek";
+  reason: "analysis_cancelled" | "analysis_superseded" | "shutdown";
+}
+
+export interface AnalysisError {
+  jobId: string;
+  kind: "surface" | "goalseek";
+  code: "analysis_invalid" | "analysis_busy" | "analysis_cancelled" | "analysis_superseded" | "analysis_failed" | "job_not_found";
+  message: string;
+  retryable: boolean;
+}
+
+export interface SimulationSurfaceParams {
+  projectId: string;
+  scenario: Scenario;
+  config?: SimulationConfig;
+  axisX: SurfaceAxis;
+  axisY: SurfaceAxis;
+  metric?: SurfaceMetric;
+  grid?: number[];
+  runs?: number;
+  seed?: number;
+  quality?: SimulationQuality;
+  runToken?: string;
+}
+
+export interface SimulationGoalSeekParams {
+  projectId: string;
+  scenario: Scenario;
+  config?: SimulationConfig;
+  objective: GoalObjective;
+  levers: GoalLever[];
+  locked?: string[];
+  maxEvaluations?: number;
+  runs?: number;
+  seed?: number;
+  confirmQuality?: SimulationQuality | null;
+  confirmRuns?: number;
+  runToken?: string;
+}
+
+export interface AnalysisJobAccepted {
+  jobId: string;
+  accepted: boolean;
+  replacedJobId?: string;
 }
 
 export interface BackupParams {
