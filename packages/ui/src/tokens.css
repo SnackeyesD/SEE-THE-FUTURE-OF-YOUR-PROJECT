@@ -150,6 +150,14 @@
   --chart-positive: rgb(52 211 153 / 60%);
   --chart-negative: rgb(248 113 113 / 55%);
 
+  /* carte de chaleur (phase 11) : 5 paliers, du froid au chaud */
+  --heat-0: rgb(79 142 247 / 12%);
+  --heat-1: rgb(79 142 247 / 30%);
+  --heat-2: rgb(46 196 127 / 40%);
+  --heat-3: rgb(246 205 69 / 52%);
+  --heat-4: rgb(239 95 69 / 66%);
+  --heat-empty: rgb(154 163 182 / 8%);
+
   /* ------------------------------------------------------------
    * 5. CODE (sandbox, logs) — coloration syntaxique
    * ------------------------------------------------------------ */

@@ -67,6 +67,7 @@
         "project.data",
         "project.brief.save",
         "project.scenario.save",
+        "project.scenario.branch",
         "project.simulate",
         "simulation.start",
         "simulation.cancel",
@@ -765,6 +766,9 @@
         "name": { "type": "string" },
         "model": { "type": "string" },
         "scenario": { "$ref": "#/$defs/Scenario" },
+        "parentId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "branchLabel": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "version": { "type": "integer" },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" }
       }
@@ -854,6 +858,27 @@
       }
     },
     "ProjectScenarioSaveResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario"],
+      "properties": {
+        "scenario": { "$ref": "#/$defs/ScenarioRecord" }
+      }
+    },
+    "ProjectScenarioBranchParams": {
+      "description": "Crée une branche depuis un scénario existant. Le scénario fourni remplace les hypothèses du parent quand il est présent.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "scenarioId", "label"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "scenarioId": { "type": "string" },
+        "label": { "type": "string" },
+        "name": { "type": "string" },
+        "scenario": { "$ref": "#/$defs/Scenario" }
+      }
+    },
+    "ProjectScenarioBranchResult": {
       "type": "object",
       "additionalProperties": false,
       "required": ["scenario"],

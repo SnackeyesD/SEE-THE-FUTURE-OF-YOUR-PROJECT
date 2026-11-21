@@ -1,4 +1,10 @@
-import type { Project, ProjectDataResult, Scenario, ScenarioEvent } from "@see/protocol";
+import type {
+  GoalSeekResult,
+  Project,
+  ProjectDataResult,
+  Scenario,
+  ScenarioEvent,
+} from "@see/protocol";
 import { EVENT_CATALOG, EVENT_CATALOG_BY_TYPE } from "@see/protocol";
 import {
   Badge,
@@ -13,13 +19,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CommandPalette, type PaletteAction } from "../components/CommandPalette";
 import { ShortcutsHelp } from "../components/ShortcutsHelp";
-import { ProfitHistogram, SensitivityTornado } from "../components/Charts";
+import { ProfitHistogram } from "../components/Charts";
 import { EventCatalog } from "../components/cockpit/EventCatalog";
 import { EventEditor } from "../components/cockpit/EventEditor";
 import { EventTimeline } from "../components/cockpit/EventTimeline";
 import { clampWindow, type EventWindow } from "../components/cockpit/events";
 import { FanChartPanel, fanPointsFromMonthly, type FanMode } from "../components/cockpit/FanChartPanel";
 import { GhostLegend } from "../components/cockpit/GhostLegend";
+import {
+  GoalSeekPanel,
+  type ApplyState,
+  type GoalSeekFormValues,
+} from "../components/cockpit/GoalSeekPanel";
 import {
   HypothesesPanel,
   hypothesisFromTri,
@@ -28,12 +39,19 @@ import {
 } from "../components/cockpit/HypothesesPanel";
 import { KpiBar } from "../components/cockpit/KpiBar";
 import { MonthInspector } from "../components/cockpit/MonthInspector";
+import {
+  SurfacePanel,
+  type SurfaceFormValues,
+} from "../components/cockpit/SurfacePanel";
 import { TimeScrubber } from "../components/cockpit/TimeScrubber";
+import { Tornado } from "../components/cockpit/Tornado";
 import { PanelGrid } from "../components/layout/PanelGrid";
+import { useAnalysis } from "../hooks/useAnalysis";
 import { useCockpitHotkeys } from "../hooks/useCockpitHotkeys";
 import { useLiveSimulation } from "../hooks/useLiveSimulation";
 import { usePlayback } from "../hooks/usePlayback";
 import { formatCurrency, formatNumber } from "../lib/format";
+import { branchProjectScenario } from "../lib/ipc";
 import { CockpitProvider, useCockpitContext } from "../store/CockpitProvider";
 import { useCockpit, type RunState } from "../store/cockpitStore";
 import { snapshotCommand } from "../store/commands";
@@ -74,6 +92,11 @@ function newEventId(): string {
 function cloneMagnitude<T>(value: T): T {
   if (typeof structuredClone === "function") return structuredClone(value);
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function humanize(error: unknown): string {
+  const text = error instanceof Error ? error.message : String(error);
+  return text.replace(/^Error:\s*/i, "");
 }
 
 function clampMonth(month: number, horizon: number): number {
@@ -160,6 +183,13 @@ function CockpitBody({
   const selection = useCockpit(store, (state) => state.selection);
 
   const live = useLiveSimulation({ store });
+  const analysis = useAnalysis();
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [analysisTab, setAnalysisTab] = useState<"surface" | "objective">("surface");
+  const [applyState, setApplyState] = useState<ApplyState>({
+    status: "idle",
+    message: null,
+  });
   const [mode, setMode] = useState<FanMode>("cash");
   const [thresholdOverride, setThresholdOverride] = useState<number | null>(null);
   const [locks, setLocks] = useState<ReadonlySet<string>>(() => new Set<string>());
@@ -569,8 +599,91 @@ function CockpitBody({
     [inputs, live, store],
   );
 
-  const toggleLock = (key: string): void => {
-    setLocks((current) => {
+  const handleRunSurface = useCallback(
+    (values: SurfaceFormValues) => {
+      setAnalysisOpen(true);
+      setApplyState({ status: "idle", message: null });
+      void analysis.runSurface({
+        projectId: project.id,
+        scenario: store.getState().session.scenario,
+        axisX: values.axisX,
+        axisY: values.axisY,
+        metric: values.metric,
+        grid: values.grid,
+        runs: values.runs,
+        seed: store.getState().session.seed,
+        quality: "draft",
+      });
+    },
+    [analysis, project.id, store],
+  );
+
+  const handleRunGoalSeek = useCallback(
+    (values: GoalSeekFormValues) => {
+      setAnalysisOpen(true);
+      setApplyState({ status: "idle", message: null });
+      void analysis.runGoalSeek({
+        projectId: project.id,
+        scenario: store.getState().session.scenario,
+        objective: values.objective,
+        levers: values.levers,
+        maxEvaluations: values.maxEvaluations,
+        runs: values.runs,
+        seed: store.getState().session.seed,
+        confirmQuality: values.confirmQuality,
+      });
+    },
+    [analysis, project.id, store],
+  );
+
+  /** Clic sur une cellule : applique les deux axes comme toute autre entrée. */
+  const handleApplySurfacePoint = useCallback(
+    (points: Record<string, number>) => {
+      mutateScenario("Appliquer un point de surface", (scenario) => {
+        const assumptions = { ...(scenario.assumptions ?? {}) };
+        for (const [key, value] of Object.entries(points)) {
+          assumptions[key] = { value };
+        }
+        return { ...scenario, assumptions };
+      });
+    },
+    [mutateScenario],
+  );
+
+  /**
+   * Applique le meilleur point : création d'une branche côté stockage, puis
+   * calcul final avec la même graine que la recherche. Le scénario courant
+   * reçoit les valeurs du moteur, sans recalcul dans React.
+   */
+  const handleApplyGoal = useCallback(
+    async (best: GoalSeekResult, label: string) => {
+      setApplyState({ status: "running", message: "Création de la branche…" });
+      const base = store.getState().session.scenario;
+      const assumptions = { ...(base.assumptions ?? {}) };
+      for (const [key, value] of Object.entries(best.best)) {
+        assumptions[key] = { value };
+      }
+      const scenario: Scenario = { ...base, assumptions };
+      try {
+        const branch = await branchProjectScenario({
+          projectId: project.id,
+          scenarioId: record.id,
+          label,
+          scenario,
+        });
+        mutateScenario("Appliquer l'objectif", () => branch.scenario.scenario);
+        setApplyState({
+          status: "done",
+          message: `Branche « ${label} » créée. Calcul final lancé avec la graine ${session.seed}.`,
+        });
+      } catch (error) {
+        setApplyState({ status: "error", message: humanize(error) });
+      }
+    },
+    [mutateScenario, project.id, record.id, session.seed, store],
+  );
+
+  const toggleLock = (key: string): void => {    setLocks((current) => {
       const next = new Set(current);
       if (next.has(key)) next.delete(key);
       else next.add(key);

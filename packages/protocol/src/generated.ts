@@ -27,7 +27,7 @@ export interface JSONRPCResponse {
   error?: JSONRPCErrorObject;
 }
 
-export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "project.list" | "project.create" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.simulate" | "simulation.start" | "simulation.cancel" | "simulation.surface" | "simulation.goalseek" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools" | "benchmark.lookup" | "benchmark.pack.list" | "benchmark.pack.import";
+export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "project.list" | "project.create" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.scenario.branch" | "project.simulate" | "simulation.start" | "simulation.cancel" | "simulation.surface" | "simulation.goalseek" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools" | "benchmark.lookup" | "benchmark.pack.list" | "benchmark.pack.import";
 
 export type NotificationName = "simulate.progress" | "simulation.progress" | "simulation.partial" | "simulation.surface.partial" | "simulation.done" | "simulation.cancelled" | "simulation.error";
 
@@ -346,6 +346,9 @@ export interface ScenarioRecord {
   name: string;
   model: string;
   scenario: Scenario;
+  parentId?: string | null;
+  branchLabel?: string | null;
+  version?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -392,6 +395,18 @@ export interface ProjectScenarioSaveParams {
 }
 
 export interface ProjectScenarioSaveResult {
+  scenario: ScenarioRecord;
+}
+
+export interface ProjectScenarioBranchParams {
+  projectId: string;
+  scenarioId: string;
+  label: string;
+  name?: string;
+  scenario?: Scenario;
+}
+
+export interface ProjectScenarioBranchResult {
   scenario: ScenarioRecord;
 }
 

@@ -23,6 +23,8 @@ export function DivergingBars({
   rowHeight = 25,
   labelWidth = 220,
   ariaLabel,
+  onSelectRow,
+  selectedLabel,
 }: {
   title: string;
   description?: string;
@@ -32,6 +34,8 @@ export function DivergingBars({
   rowHeight?: number;
   labelWidth?: number;
   ariaLabel?: string;
+  onSelectRow?: (row: DivergingRow, index: number) => void;
+  selectedLabel?: string;
 }) {
   if (rows.length === 0) {
     return <p className="ui-muted">Aucune contribution disponible.</p>;
@@ -61,7 +65,34 @@ export function DivergingBars({
           const barStart = Math.min(center, end);
           const barWidth = Math.max(2, Math.abs(end - center));
           return (
-            <g key={row.label}>
+            <g
+              key={row.label}
+              className={
+                selectedLabel === row.label
+                  ? "viz__row viz__row--selected"
+                  : "viz__row"
+              }
+              role={onSelectRow ? "button" : undefined}
+              tabIndex={onSelectRow ? 0 : undefined}
+              aria-label={
+                onSelectRow
+                  ? `${row.label} : ${formatValue(row.value)}. Activer pour cibler l'hypothèse.`
+                  : undefined
+              }
+              onClick={
+                onSelectRow ? () => onSelectRow(row, index) : undefined
+              }
+              onKeyDown={
+                onSelectRow
+                  ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onSelectRow(row, index);
+                      }
+                    }
+                  : undefined
+              }
+            >
               <text className="viz__label" x={labelWidth} y={y + 12} textAnchor="end">
                 {row.label}
               </text>

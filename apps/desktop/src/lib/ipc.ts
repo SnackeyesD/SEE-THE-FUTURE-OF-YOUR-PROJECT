@@ -13,6 +13,11 @@ import type {
   AgentTraceResult,
   AgentTurnParams,
   AgentTurnResult,
+  AnalysisCancelled,
+  AnalysisDone,
+  AnalysisError,
+  AnalysisJobAccepted,
+  AnalysisProgress,
   BenchmarkLookupParams,
   BenchmarkLookupResult,
   BenchmarkPackImportResult,
@@ -26,6 +31,8 @@ import type {
   ProjectDataParams,
   ProjectDataResult,
   ProjectResult,
+  ProjectScenarioBranchParams,
+  ProjectScenarioBranchResult,
   ProjectScenarioSaveParams,
   ProjectScenarioSaveResult,
   ProjectSimulateParams,
@@ -56,11 +63,14 @@ import type {
   SimulationCancelled,
   SimulationDone,
   SimulationError,
+  SimulationGoalSeekParams,
   SimulationPartial,
   SimulationProgress,
   SimulationResult,
   SimulationStartParams,
   SimulationStartResult,
+  SimulationSurfaceParams,
+  SurfacePartial,
 } from "@see/protocol";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -111,6 +121,12 @@ export function saveProjectScenario(
   return invoke("project_scenario_save", { params });
 }
 
+export function branchProjectScenario(
+  params: ProjectScenarioBranchParams,
+): Promise<ProjectScenarioBranchResult> {
+  return invoke("project_scenario_branch", { params });
+}
+
 export function simulateProject(
   params: ProjectSimulateParams,
 ): Promise<ProjectSimulateResult> {
@@ -133,9 +149,21 @@ export type SimulationEvent =
   | { method: "simulation.cancelled"; params: SimulationCancelled }
   | { method: "simulation.error"; params: SimulationError };
 
+export type AnalysisEvent =
+  | { method: "simulation.progress"; params: AnalysisProgress }
+  | { method: "simulation.surface.partial"; params: SurfacePartial }
+  | { method: "simulation.done"; params: AnalysisDone }
+  | { method: "simulation.cancelled"; params: AnalysisCancelled }
+  | { method: "simulation.error"; params: AnalysisError };
+
 type SimulationHandler = (event: SimulationEvent) => void;
+type AnalysisHandler = (event: AnalysisEvent) => void;
 
 const simulationHandlers = new Set<SimulationHandler>();
+const analysisHandlers = new Map<string, Set<AnalysisHandler>>();
+/** Événements d'analyse arrivés avant l'abonnement du hook (course au démarrage). */
+const analysisBacklog = new Map<string, AnalysisEvent[]>();
+const ANALYSIS_BACKLOG_LIMIT = 64;
 let simulationUnlisten: Promise<UnlistenFn> | null = null;
 let activeSimulationRun: string | null = null;
 let lastSimulationSeq = 0;
@@ -147,6 +175,22 @@ let webTimers: ReturnType<typeof setTimeout>[] = [];
 
 function publishSimulation(event: SimulationEvent): void {
   for (const handler of [...simulationHandlers]) handler(event);
+}
+
+function publishAnalysis(event: AnalysisEvent): void {
+  const handlers = analysisHandlers.get(event.params.jobId);
+  if (!handlers) {
+    const buffered = analysisBacklog.get(event.params.jobId) ?? [];
+    buffered.push(event);
+    if (buffered.length > ANALYSIS_BACKLOG_LIMIT) buffered.shift();
+    analysisBacklog.set(event.params.jobId, buffered);
+    if (analysisBacklog.size > 16) {
+      const oldest = analysisBacklog.keys().next().value;
+      if (oldest !== undefined) analysisBacklog.delete(oldest);
+    }
+    return;
+  }
+  for (const handler of [...handlers]) handler(event);
 }
 
 function cancelScheduledPartial(): void {
@@ -188,7 +232,14 @@ function terminalSimulation(event: SimulationEvent): void {
   activeSimulationRun = null;
 }
 
-function dispatchSimulationEvent(event: SimulationEvent): void {
+function dispatchSimulationEvent(payload: unknown): void {
+  const params = (payload as { params?: Record<string, unknown> })?.params;
+  if (params && typeof params.jobId === "string") {
+    publishAnalysis(payload as AnalysisEvent);
+    return;
+  }
+
+  const event = payload as SimulationEvent;
   const { runId } = event.params;
   if (activeSimulationRun === null || runId !== activeSimulationRun) return;
 
@@ -237,6 +288,24 @@ export function cancelSimulation(runId: string): Promise<void> {
   return invoke<unknown>("simulation_cancel", { runId }).then(() => undefined);
 }
 
+function ensureEventListener(): void {
+  if (!ipcAvailable || simulationUnlisten !== null) return;
+  simulationUnlisten = listen<unknown>("simulation:event", (event) =>
+    dispatchSimulationEvent(event.payload),
+  ).catch((error) => {
+    simulationUnlisten = null;
+    throw error;
+  });
+}
+
+function releaseEventListenerIfIdle(): void {
+  if (simulationHandlers.size > 0 || analysisHandlers.size > 0) return;
+  if (simulationUnlisten === null) return;
+  const stop = simulationUnlisten;
+  simulationUnlisten = null;
+  stop.then((unlisten) => unlisten()).catch(() => undefined);
+}
+
 /**
  * Abonnement unique au flux de simulation. Le premier appel crée le listener
  * Tauri ; les suivants partagent le même. Le filtrage par run et par `seq`
@@ -246,22 +315,54 @@ export function onSimulationEvent(
   handler: SimulationHandler,
 ): Promise<UnlistenFn> {
   simulationHandlers.add(handler);
-  if (ipcAvailable && simulationUnlisten === null) {
-    simulationUnlisten = listen<SimulationEvent>("simulation:event", (event) =>
-      dispatchSimulationEvent(event.payload),
-    ).catch((error) => {
-      simulationUnlisten = null;
-      throw error;
-    });
-  }
+  ensureEventListener();
   return Promise.resolve(() => {
     simulationHandlers.delete(handler);
-    if (simulationHandlers.size === 0 && simulationUnlisten !== null) {
-      const stop = simulationUnlisten;
-      simulationUnlisten = null;
-      stop.then((unlisten) => unlisten()).catch(() => undefined);
-    }
+    releaseEventListenerIfIdle();
   });
+}
+
+/**
+ * Abonnement aux événements d'un job d'analyse (surface ou objectif).
+ * Le routage se fait par `jobId` : un job d'un autre projet n'atteint
+ * jamais ce handler.
+ */
+export function onAnalysisEvent(
+  jobId: string,
+  handler: AnalysisHandler,
+): Promise<UnlistenFn> {
+  const handlers = analysisHandlers.get(jobId) ?? new Set<AnalysisHandler>();
+  handlers.add(handler);
+  analysisHandlers.set(jobId, handlers);
+  ensureEventListener();
+  const buffered = analysisBacklog.get(jobId);
+  analysisBacklog.delete(jobId);
+  if (buffered) {
+    for (const event of buffered) handler(event);
+  }
+  return Promise.resolve(() => {
+    handlers.delete(handler);
+    if (handlers.size === 0) analysisHandlers.delete(jobId);
+    releaseEventListenerIfIdle();
+  });
+}
+
+export function startSurface(
+  params: SimulationSurfaceParams,
+): Promise<AnalysisJobAccepted> {
+  ensureEventListener();
+  return invoke("simulation_surface", { params });
+}
+
+export function startGoalSeek(
+  params: SimulationGoalSeekParams,
+): Promise<AnalysisJobAccepted> {
+  ensureEventListener();
+  return invoke("simulation_goalseek", { params });
+}
+
+export function cancelAnalysis(jobId: string): Promise<void> {
+  return invoke<unknown>("simulation_cancel", { jobId }).then(() => undefined);
 }
 
 function zeroConvergence() {

@@ -46,6 +46,9 @@ def _scenario_payload(record: ScenarioRecord | None) -> dict[str, Any] | None:
         "name": record.name,
         "model": record.model,
         "scenario": record.scenario,
+        "parentId": record.parent_id,
+        "branchLabel": record.branch_label,
+        "version": record.version,
         "createdAt": record.created_at,
         "updatedAt": record.updated_at,
     }
@@ -168,6 +171,62 @@ def save_scenario(store: ProjectStore, params: dict[str, Any]) -> dict[str, Any]
     return {"scenario": _scenario_payload(record)}
 
 
+def branch_scenario(store: ProjectStore, params: dict[str, Any]) -> dict[str, Any]:
+    """Crée une branche depuis un scénario existant.
+
+    Le parent reste intact : la branche porte ses propres hypothèses, son
+    libellé et un lien ``parentId``. Aucune simulation n'est lancée ici ; le
+    calcul final est demandé séparément par l'UI avec la même graine.
+    """
+
+    project_id = _required_text(params, "projectId")
+    store.projects.require(project_id)
+    scenario_id = _required_text(params, "scenarioId")
+    label = _required_text(params, "label")
+    parent = store.scenarios.get(scenario_id)
+    if parent is None or parent.project_id != project_id:
+        raise StorageValidationError(f"scénario introuvable: {scenario_id}")
+
+    raw = params.get("scenario")
+    if raw is None:
+        payload = parent.scenario
+        model = parent.model
+        name = parent.name
+    elif isinstance(raw, dict):
+        try:
+            scenario = Scenario.model_validate(raw)
+        except ValidationError as exc:
+            raise StorageValidationError(
+                "scénario invalide: "
+                + "; ".join(
+                    f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
+                    for error in exc.errors(include_url=False)
+                )
+            ) from exc
+        if not scenario.assumptions:
+            raise StorageValidationError("au moins une hypothèse est requise")
+        payload = scenario.model_dump(by_alias=True, mode="json")
+        model = scenario.model
+        name = scenario.name
+    else:
+        raise StorageValidationError("scenario doit être un objet")
+
+    requested_name = params.get("name")
+    if isinstance(requested_name, str) and requested_name.strip():
+        name = requested_name.strip()
+
+    record = store.scenarios.add(
+        project_id,
+        name,
+        model,
+        payload,
+        parent_id=parent.id,
+        branch_label=label,
+    )
+    _advance(store, project_id, "hypotheses_set")
+    return {"scenario": _scenario_payload(record)}
+
+
 def simulate(
     store: ProjectStore,
     params: dict[str, Any],
@@ -278,4 +337,11 @@ def _persist_result(
     return run, record
 
 
-__all__ = ["data", "persist_result", "save_brief", "save_scenario", "simulate"]
+__all__ = [
+    "branch_scenario",
+    "data",
+    "persist_result",
+    "save_brief",
+    "save_scenario",
+    "simulate",
+]

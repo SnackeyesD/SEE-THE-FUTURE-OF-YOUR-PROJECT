@@ -61,6 +61,7 @@ MethodName = Literal[
     "project.data",
     "project.brief.save",
     "project.scenario.save",
+    "project.scenario.branch",
     "project.simulate",
     "simulation.start",
     "simulation.cancel",
@@ -513,6 +514,9 @@ class ScenarioRecord(BaseModel):
     name: str
     model: str
     scenario: Scenario
+    parentId: str | None = None
+    branchLabel: str | None = None
+    version: int | None = None
     createdAt: str
     updatedAt: str
 
@@ -571,6 +575,22 @@ class ProjectScenarioSaveParams(BaseModel):
 
 
 class ProjectScenarioSaveResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario: ScenarioRecord
+
+
+class ProjectScenarioBranchParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenarioId: str
+    label: str
+    name: str | None = None
+    scenario: Scenario | None = None
+
+
+class ProjectScenarioBranchResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     scenario: ScenarioRecord

@@ -169,6 +169,15 @@ fn project_scenario_save(
 }
 
 #[tauri::command]
+fn project_scenario_branch(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("project.scenario.branch", params)
+}
+
+#[tauri::command]
 fn project_simulate(
     state: tauri::State<'_, Mutex<SidecarManager>>,
     params: Value,
@@ -189,10 +198,36 @@ fn simulation_start(
 #[tauri::command]
 fn simulation_cancel(
     state: tauri::State<'_, Mutex<SidecarManager>>,
-    run_id: String,
+    run_id: Option<String>,
+    job_id: Option<String>,
 ) -> Result<Value, String> {
     let handle = state.lock().map_err(|error| error.to_string())?.handle();
-    handle.request("simulation.cancel", json!({ "runId": run_id }))
+    let mut params = json!({});
+    if let Some(run_id) = run_id {
+        params["runId"] = Value::String(run_id);
+    }
+    if let Some(job_id) = job_id {
+        params["jobId"] = Value::String(job_id);
+    }
+    handle.request("simulation.cancel", params)
+}
+
+#[tauri::command]
+fn simulation_surface(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.surface", params)
+}
+
+#[tauri::command]
+fn simulation_goalseek(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.goalseek", params)
 }
 
 #[tauri::command]
@@ -414,9 +449,12 @@ pub fn run() {
             project_data,
             project_brief_save,
             project_scenario_save,
+            project_scenario_branch,
             project_simulate,
             simulation_start,
             simulation_cancel,
+            simulation_surface,
+            simulation_goalseek,
             agent_call,
             agent_turn,
             sandbox_call,

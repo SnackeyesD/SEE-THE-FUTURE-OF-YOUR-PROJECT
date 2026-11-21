@@ -175,6 +175,20 @@
   fill: var(--chart-negative);
 }
 
+/* Ligne sélectionnable (tornade interactive, phase 11) */
+.viz__row[role="button"] {
+  cursor: pointer;
+}
+
+.viz__row[role="button"]:focus-visible {
+  outline: var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
+.viz__row--selected .viz__bar {
+  filter: brightness(1.25);
+}
+
 /* ------------------------------------------------------------
  * Textes SVG — ticks mono tabulaires, labels UI
  * ------------------------------------------------------------ */

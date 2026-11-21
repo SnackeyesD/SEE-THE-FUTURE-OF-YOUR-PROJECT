@@ -1,6 +1,6 @@
 import type { Hypothesis, Scenario } from "@see/protocol";
 import { Badge, EmptyState } from "@see/ui";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import {
   ASSUMPTION_BY_KEY,
@@ -67,6 +67,7 @@ export function HypothesesPanel({
   locks,
   benchmarks = {},
   disabled = false,
+  focusKey = null,
   onToggleLock,
   onChange,
   onResetToBenchmark,
@@ -75,13 +76,24 @@ export function HypothesesPanel({
   locks: ReadonlySet<string>;
   benchmarks?: Record<string, BenchmarkReference>;
   disabled?: boolean;
+  /** Hypothèse ciblée par le tornado ; elle est mise en évidence et révélée. */
+  focusKey?: string | null;
   onToggleLock: (key: string) => void;
   onChange: (key: string, hypothesis: Hypothesis, commit: boolean) => void;
   onResetToBenchmark?: (key: string, reference: BenchmarkReference) => void;
 }) {
   const domains = useRef<Record<string, [number, number]>>({});
+  const itemRefs = useRef<Record<string, HTMLElement | null>>({});
   const assumptions = scenario.assumptions ?? {};
   const keys = Object.keys(assumptions);
+
+  useEffect(() => {
+    if (!focusKey) return;
+    const node = itemRefs.current[focusKey];
+    if (!node) return;
+    node.scrollIntoView?.({ block: "nearest" });
+    node.focus?.({ preventScroll: true });
+  }, [focusKey]);
 
   const domainFor = (key: string, hypothesis: Hypothesis): [number, number] => {
     const cached = domains.current[key];
@@ -142,8 +154,21 @@ export function HypothesesPanel({
             const tri = triFromHypothesis(hypothesis);
             const reference = benchmarks[key];
             const provenance = hypothesis.provenance;
+            const focused = focusKey === key;
             return (
-              <article key={key} className="cockpit-hypothesis">
+              <article
+                key={key}
+                ref={(node) => {
+                  itemRefs.current[key] = node;
+                }}
+                className={
+                  focused
+                    ? "cockpit-hypothesis cockpit-hypothesis--focused"
+                    : "cockpit-hypothesis"
+                }
+                data-focused={focused ? "true" : undefined}
+                tabIndex={focused ? -1 : undefined}
+              >
                 <TriHandleSlider
                   label={label}
                   unit={unit}

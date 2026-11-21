@@ -471,7 +471,10 @@ impl SidecarHandle {
 fn timeout_for(method: &str) -> Duration {
     if method == "ping" || method == "health" {
         PING_TIMEOUT
-    } else if method == "simulation.start" {
+    } else if method == "simulation.start"
+        || method == "simulation.surface"
+        || method == "simulation.goalseek"
+    {
         SIMULATION_START_TIMEOUT
     } else if method == "simulation.cancel" {
         SIMULATION_CANCEL_TIMEOUT

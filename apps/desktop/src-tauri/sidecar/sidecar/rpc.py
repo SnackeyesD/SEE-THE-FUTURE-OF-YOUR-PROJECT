@@ -505,6 +505,13 @@ def project_scenario_save(params: dict[str, Any], _context: RequestContext) -> d
 
 
 @_storage_handler
+def project_scenario_branch(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.branch_scenario(get_store(), params)
+
+
+@_storage_handler
 def project_simulate(params: dict[str, Any], context: RequestContext) -> dict[str, Any]:
     progress = None
     if _optional_bool(params, "progress"):
@@ -710,6 +717,7 @@ def default_handlers() -> dict[str, Handler]:
         "project.data": project_data,
         "project.brief.save": project_brief_save,
         "project.scenario.save": project_scenario_save,
+        "project.scenario.branch": project_scenario_branch,
         "project.simulate": project_simulate,
         "simulation.start": simulation_start,
         "simulation.cancel": simulation_cancel,
