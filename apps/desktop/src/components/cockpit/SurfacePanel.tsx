@@ -51,8 +51,8 @@ function axisForm(key: string, scenario: Scenario): AxisForm {
   const bounds = numericBounds(key, scenario);
   return {
     key,
-    min: String(formatNumber(bounds.minimum, 4)),
-    max: String(formatNumber(bounds.maximum, 4)),
+    min: String(bounds.minimum),
+    max: String(bounds.maximum),
   };
 }
 
@@ -314,7 +314,8 @@ export function SurfacePanel({
       {state.result ? (
         <p className="ui-muted">
           Point courant : {xLabel} = {formatNumber(state.result.current[0] ?? 0, 4)},{" "}
-          {yLabel} = {formatNumber(state.result.current[1] ?? 0, 4)}.
+          {yLabel} = {formatNumber(state.result.current[1] ?? 0, 4)} · durée moteur{" "}
+          {formatNumber(state.result.durationMs, 0)} ms.
         </p>
       ) : null}
     </section>

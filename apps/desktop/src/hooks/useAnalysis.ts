@@ -95,6 +95,16 @@ export interface AnalysisController {
   cancelGoalSeek: () => void;
 }
 
+/**
+ * Jeton d'un démarrage encore en attente d'accusé de réception.
+ * Il permet d'annuler avant de connaître le `jobId`, ou d'être remplacé
+ * par un démarrage plus récent sans appliquer un état périmé.
+ */
+interface PendingStart {
+  generation: number;
+  cancelRequested: boolean;
+}
+
 function emptyMatrix(rows: number, columns: number): Array<Array<number | null>> {
   return Array.from({ length: Math.max(0, rows) }, () =>
     Array.from({ length: Math.max(0, columns) }, () => null),
@@ -165,6 +175,11 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
 
   const surfaceJob = useRef<string | null>(null);
   const goalJob = useRef<string | null>(null);
+  const surfaceGeneration = useRef(0);
+  const goalGeneration = useRef(0);
+  const surfacePending = useRef<PendingStart | null>(null);
+  const goalPending = useRef<PendingStart | null>(null);
+  const mounted = useRef(true);
   const surfaceStop = useRef<(() => void) | null>(null);
   const goalStop = useRef<(() => void) | null>(null);
 
@@ -207,6 +222,8 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
           });
           break;
         case "simulation.done":
+          surfaceJob.current = null;
+          stopSurface();
           setSurface((state) => ({
             ...state,
             status: "done",
@@ -220,6 +237,8 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
           }));
           break;
         case "simulation.cancelled":
+          surfaceJob.current = null;
+          stopSurface();
           setSurface((state) => ({
             ...state,
             status: "cancelled",
@@ -227,6 +246,8 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
           }));
           break;
         case "simulation.error":
+          surfaceJob.current = null;
+          stopSurface();
           setSurface((state) => ({
             ...state,
             status: "error",
@@ -237,7 +258,7 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
           break;
       }
     },
-    [],
+    [stopSurface],
   );
 
   const handleGoalEvent = useCallback(
@@ -253,6 +274,8 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
           }));
           break;
         case "simulation.done":
+          goalJob.current = null;
+          stopGoal();
           setGoal((state) => ({
             ...state,
             status: "done",
@@ -261,6 +284,8 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
           }));
           break;
         case "simulation.cancelled":
+          goalJob.current = null;
+          stopGoal();
           setGoal((state) => ({
             ...state,
             status: "cancelled",
@@ -268,6 +293,8 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
           }));
           break;
         case "simulation.error":
+          goalJob.current = null;
+          stopGoal();
           setGoal((state) => ({
             ...state,
             status: "error",
@@ -278,24 +305,32 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
           break;
       }
     },
-    [],
+    [stopGoal],
   );
 
   const runSurface = useCallback(
     async (request: SurfaceRequest): Promise<boolean> => {
+      const generation = ++surfaceGeneration.current;
+      const token: PendingStart = { generation, cancelRequested: false };
+      surfacePending.current = token;
+
       const previous = surfaceJob.current;
       if (previous) {
         surfaceJob.current = null;
         stopSurface();
         void depsRef.current.cancel(previous).catch(() => undefined);
       }
+
       const grid = request.grid ?? [15, 15];
-      setSurface({
-        ...initialSurfaceState(),
-        status: "running",
-        rows: emptyMatrix(grid[1], grid[0]),
-        totalPoints: grid[0] * grid[1],
-      });
+      if (mounted.current) {
+        setSurface({
+          ...initialSurfaceState(),
+          status: "running",
+          rows: emptyMatrix(grid[1], grid[0]),
+          totalPoints: grid[0] * grid[1],
+        });
+      }
+
       let accepted;
       try {
         accepted = await depsRef.current.startSurface({
@@ -310,27 +345,71 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
           quality: request.quality,
         });
       } catch (error) {
-        setSurface((state) => ({
-          ...state,
-          status: "error",
-          error: humanize(error),
-        }));
+        // Un démarrage remplacé ou annulé pendant l'attente n'a plus à
+        // signaler d'erreur : son état a déjà été décidé ailleurs.
+        if (surfaceGeneration.current !== generation) return false;
+        surfacePending.current = null;
+        if (mounted.current) {
+          setSurface((state) =>
+            token.cancelRequested
+              ? {
+                  ...state,
+                  status: "cancelled",
+                  error: cancellationMessage("analysis_cancelled"),
+                }
+              : { ...state, status: "error", error: humanize(error) },
+          );
+        }
         return false;
       }
+
+      if (surfaceGeneration.current !== generation) {
+        // Un démarrage plus récent a pris la main : on libère le job obtenu.
+        if (accepted.accepted) {
+          void depsRef.current.cancel(accepted.jobId).catch(() => undefined);
+        }
+        if (surfacePending.current === token) surfacePending.current = null;
+        return false;
+      }
+
+      surfacePending.current = null;
+
+      if (token.cancelRequested) {
+        // Annulation demandée avant l'accusé de démarrage : le job vient
+        // d'exister, on l'annule sans jamais s'y abonner.
+        if (accepted.accepted) {
+          void depsRef.current.cancel(accepted.jobId).catch(() => undefined);
+        }
+        if (mounted.current) {
+          setSurface((state) => ({
+            ...state,
+            jobId: accepted.accepted ? accepted.jobId : state.jobId,
+            status: "cancelled",
+            error: cancellationMessage("analysis_cancelled"),
+          }));
+        }
+        return false;
+      }
+
       if (!accepted.accepted) {
-        setSurface((state) => ({
-          ...state,
-          status: "error",
-          error: "Le moteur a refusé l'analyse.",
-        }));
+        if (mounted.current) {
+          setSurface((state) => ({
+            ...state,
+            status: "error",
+            error: "Le moteur a refusé l'analyse.",
+          }));
+        }
         return false;
       }
+
       surfaceJob.current = accepted.jobId;
-      setSurface((state) => ({
-        ...state,
-        jobId: accepted.jobId,
-        replacedJobId: accepted.replacedJobId ?? null,
-      }));
+      if (mounted.current) {
+        setSurface((state) => ({
+          ...state,
+          jobId: accepted.jobId,
+          replacedJobId: accepted.replacedJobId ?? null,
+        }));
+      }
       const stop = await depsRef.current.subscribe(
         accepted.jobId,
         handleSurfaceEvent(accepted.jobId, grid),
@@ -347,17 +426,25 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
 
   const runGoalSeek = useCallback(
     async (request: GoalSeekRequest): Promise<boolean> => {
+      const generation = ++goalGeneration.current;
+      const token: PendingStart = { generation, cancelRequested: false };
+      goalPending.current = token;
+
       const previous = goalJob.current;
       if (previous) {
         goalJob.current = null;
         stopGoal();
         void depsRef.current.cancel(previous).catch(() => undefined);
       }
-      setGoal({
-        ...initialGoalSeekState(),
-        status: "running",
-        total: request.maxEvaluations ?? 80,
-      });
+
+      if (mounted.current) {
+        setGoal({
+          ...initialGoalSeekState(),
+          status: "running",
+          total: request.maxEvaluations ?? 80,
+        });
+      }
+
       let accepted;
       try {
         accepted = await depsRef.current.startGoalSeek({
@@ -373,27 +460,66 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
           confirmRuns: request.confirmRuns,
         });
       } catch (error) {
-        setGoal((state) => ({
-          ...state,
-          status: "error",
-          error: humanize(error),
-        }));
+        if (goalGeneration.current !== generation) return false;
+        goalPending.current = null;
+        if (mounted.current) {
+          setGoal((state) =>
+            token.cancelRequested
+              ? {
+                  ...state,
+                  status: "cancelled",
+                  error: cancellationMessage("analysis_cancelled"),
+                }
+              : { ...state, status: "error", error: humanize(error) },
+          );
+        }
         return false;
       }
+
+      if (goalGeneration.current !== generation) {
+        if (accepted.accepted) {
+          void depsRef.current.cancel(accepted.jobId).catch(() => undefined);
+        }
+        if (goalPending.current === token) goalPending.current = null;
+        return false;
+      }
+
+      goalPending.current = null;
+
+      if (token.cancelRequested) {
+        if (accepted.accepted) {
+          void depsRef.current.cancel(accepted.jobId).catch(() => undefined);
+        }
+        if (mounted.current) {
+          setGoal((state) => ({
+            ...state,
+            jobId: accepted.accepted ? accepted.jobId : state.jobId,
+            status: "cancelled",
+            error: cancellationMessage("analysis_cancelled"),
+          }));
+        }
+        return false;
+      }
+
       if (!accepted.accepted) {
-        setGoal((state) => ({
-          ...state,
-          status: "error",
-          error: "Le moteur a refusé la recherche.",
-        }));
+        if (mounted.current) {
+          setGoal((state) => ({
+            ...state,
+            status: "error",
+            error: "Le moteur a refusé la recherche.",
+          }));
+        }
         return false;
       }
+
       goalJob.current = accepted.jobId;
-      setGoal((state) => ({
-        ...state,
-        jobId: accepted.jobId,
-        replacedJobId: accepted.replacedJobId ?? null,
-      }));
+      if (mounted.current) {
+        setGoal((state) => ({
+          ...state,
+          jobId: accepted.jobId,
+          replacedJobId: accepted.replacedJobId ?? null,
+        }));
+      }
       const stop = await depsRef.current.subscribe(
         accepted.jobId,
         handleGoalEvent(accepted.jobId),
@@ -410,35 +536,67 @@ export function useAnalysis(options: UseAnalysisOptions = {}): AnalysisControlle
 
   const cancelSurface = useCallback(() => {
     const jobId = surfaceJob.current;
-    if (!jobId) return;
-    setSurface((state) =>
-      state.status === "running" ? { ...state, status: "cancelling" } : state,
-    );
-    void depsRef.current.cancel(jobId).catch(() => undefined);
+    if (jobId) {
+      if (mounted.current) {
+        setSurface((state) =>
+          state.status === "running" ? { ...state, status: "cancelling" } : state,
+        );
+      }
+      void depsRef.current.cancel(jobId).catch(() => undefined);
+      return;
+    }
+    // Démarrage encore en attente : on mémorise l'intention, le job sera
+    // annulé dès que son identifiant sera connu.
+    const pending = surfacePending.current;
+    if (!pending || pending.cancelRequested) return;
+    pending.cancelRequested = true;
+    if (mounted.current) {
+      setSurface((state) =>
+        state.status === "running" ? { ...state, status: "cancelling" } : state,
+      );
+    }
   }, []);
 
   const cancelGoalSeek = useCallback(() => {
     const jobId = goalJob.current;
-    if (!jobId) return;
-    setGoal((state) =>
-      state.status === "running" ? { ...state, status: "cancelling" } : state,
-    );
-    void depsRef.current.cancel(jobId).catch(() => undefined);
+    if (jobId) {
+      if (mounted.current) {
+        setGoal((state) =>
+          state.status === "running" ? { ...state, status: "cancelling" } : state,
+        );
+      }
+      void depsRef.current.cancel(jobId).catch(() => undefined);
+      return;
+    }
+    const pending = goalPending.current;
+    if (!pending || pending.cancelRequested) return;
+    pending.cancelRequested = true;
+    if (mounted.current) {
+      setGoal((state) =>
+        state.status === "running" ? { ...state, status: "cancelling" } : state,
+      );
+    }
   }, []);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
       const surfaceId = surfaceJob.current;
       const goalId = goalJob.current;
       surfaceJob.current = null;
       goalJob.current = null;
+      surfacePending.current = null;
+      goalPending.current = null;
+      // Toute réponse tardive à un démarrage est ignorée via la génération.
+      surfaceGeneration.current += 1;
+      goalGeneration.current += 1;
       stopSurface();
       stopGoal();
       if (surfaceId) void depsRef.current.cancel(surfaceId).catch(() => undefined);
       if (goalId) void depsRef.current.cancel(goalId).catch(() => undefined);
-    },
-    [stopGoal, stopSurface],
-  );
+    };
+  }, [stopGoal, stopSurface]);
 
   return useMemo(
     () => ({ surface, goal, runSurface, runGoalSeek, cancelSurface, cancelGoalSeek }),

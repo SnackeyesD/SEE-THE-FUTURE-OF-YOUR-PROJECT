@@ -50,7 +50,7 @@ export function Tornado({ entries, currency, selected, onSelect }: TornadoProps)
   return (
     <DivergingBars
       title="Analyse de sensibilité"
-      description="Contribution de chaque hypothèse à la variance du profit. Cliquez une barre pour cibler l'hypothèse."
+      description="Contribution de chaque hypothèse à la variance du profit — corrélation, pas causalité. Cliquez une barre pour cibler l'hypothèse."
       rows={rows}
       formatValue={(value) => formatCurrency(value, currency, { compact: true })}
       ariaLabel="Diagramme tornade interactif de la sensibilité du profit"

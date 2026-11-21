@@ -14,7 +14,7 @@ import {
   ProgressBar,
   SelectField,
 } from "@see/ui";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ASSUMPTION_BY_KEY } from "../../lib/assumptions";
 import { formatNumber } from "../../lib/format";
@@ -38,6 +38,8 @@ export interface ApplyState {
   message: string | null;
 }
 
+const EMPTY_LOCKS: ReadonlySet<string> = new Set();
+
 export interface GoalSeekPanelProps {
   scenario: Scenario;
   currency: string;
@@ -45,6 +47,8 @@ export interface GoalSeekPanelProps {
   seed: number;
   defaultMetric?: SurfaceMetric;
   disabled?: boolean;
+  /** Paramètres verrouillés dans le panneau d'hypothèses, exclus de la recherche. */
+  locked?: ReadonlySet<string>;
   applyState?: ApplyState;
   onRun: (values: GoalSeekFormValues) => void;
   onCancel: () => void;
@@ -53,6 +57,12 @@ export interface GoalSeekPanelProps {
 
 function comparatorFor(metric: SurfaceMetric): GoalComparator {
   return surfaceMetricSpec(metric).lowerIsBetter ? "<=" : ">=";
+}
+
+function firstUnlocked(keys: string[], locked: ReadonlySet<string>): string {
+  return ["unit_price", "unit_cost", "demand_mean_monthly", ...keys].find(
+    (key) => keys.includes(key) && !locked.has(key),
+  ) ?? "";
 }
 
 function defaultBounds(
@@ -65,8 +75,8 @@ function defaultBounds(
   const lower = spec?.min ?? hypothesis?.min ?? 0;
   const upper = spec?.max ?? hypothesis?.max ?? Math.max(value * 2, 1);
   return {
-    min: String(formatNumber(lower, 4)),
-    max: String(formatNumber(upper, 4)),
+    min: String(lower),
+    max: String(upper),
   };
 }
 
@@ -98,6 +108,7 @@ export function GoalSeekPanel({
   seed,
   defaultMetric = "profit_p50",
   disabled = false,
+  locked = EMPTY_LOCKS,
   applyState = { status: "idle", message: null },
   onRun,
   onCancel,
@@ -107,9 +118,7 @@ export function GoalSeekPanel({
     () => Object.keys(scenario.assumptions ?? {}),
     [scenario.assumptions],
   );
-  const initialLever = assumptionKeys.includes("unit_price")
-    ? "unit_price"
-    : (assumptionKeys[0] ?? "");
+  const initialLever = firstUnlocked(assumptionKeys, locked);
 
   const [metric, setMetric] = useState<SurfaceMetric>(defaultMetric);
   const [comparator, setComparator] = useState<GoalComparator>(
@@ -131,11 +140,41 @@ export function GoalSeekPanel({
   const [confirm, setConfirm] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setSelected((current) => {
+      const next = current.filter((key) => !locked.has(key));
+      if (next.length > 0) return next;
+      const fallback = firstUnlocked(assumptionKeys, locked);
+      return fallback ? [fallback] : [];
+    });
+  }, [assumptionKeys, locked]);
+
+  const activeSelected = selected.filter((key) => !locked.has(key));
+  const activeSelectedKey = activeSelected.join("|");
+  useEffect(() => {
+    setBounds((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const key of activeSelectedKey.split("|").filter(Boolean)) {
+        if (!next[key]) {
+          next[key] = defaultBounds(key, scenario);
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [activeSelectedKey, scenario]);
+
   const running = state.status === "running" || state.status === "cancelling";
   const spec = surfaceMetricSpec(metric);
   const result = state.result;
+  // Le résultat porte sa propre métrique : changer le formulaire après coup
+  // ne doit pas réétiqueter les chiffres déjà produits par le moteur.
+  const resultMetric = result?.metric ?? metric;
+  const resultSpec = surfaceMetricSpec(resultMetric);
 
   const toggleLever = (key: string, checked: boolean) => {
+    if (locked.has(key)) return;
     setSelected((current) => {
       if (checked) {
         if (current.includes(key) || current.length >= 3) return current;
@@ -167,12 +206,12 @@ export function GoalSeekPanel({
       setFormError("La cible doit être un nombre.");
       return;
     }
-    if (selected.length === 0) {
-      setFormError("Choisissez au moins un levier.");
+    if (activeSelected.length === 0) {
+      setFormError("Choisissez au moins un levier non verrouillé.");
       return;
     }
     const levers: GoalLever[] = [];
-    for (const key of selected) {
+    for (const key of activeSelected) {
       const current = bounds[key];
       const minimum = Number((current?.min ?? "").replace(",", "."));
       const maximum = Number((current?.max ?? "").replace(",", "."));
@@ -227,9 +266,9 @@ export function GoalSeekPanel({
 
   const apply = () => {
     if (!result) return;
-    const label = `Objectif ${spec.label} ${
+    const label = `Objectif ${resultSpec.label} ${
       result.feasible ? "atteint" : "compromis"
-    } · ${formatMetricValue(metric, result.achieved, currency)}`;
+    } · ${formatMetricValue(resultMetric, result.achieved, currency)}`;
     onApply(result, label);
   };
 
@@ -288,7 +327,8 @@ export function GoalSeekPanel({
           {assumptionKeys.map((key) => {
             const hypothesis = scenario.assumptions?.[key];
             const leverSpec = ASSUMPTION_BY_KEY.get(key);
-            const checked = selected.includes(key);
+            const isLocked = locked.has(key);
+            const checked = selected.includes(key) && !isLocked;
             return (
               <div key={key} className="goal-seek__lever">
                 <label className="goal-seek__lever-toggle">
@@ -296,9 +336,10 @@ export function GoalSeekPanel({
                     type="checkbox"
                     checked={checked}
                     onChange={(event) => toggleLever(key, event.target.checked)}
-                    disabled={!checked && selected.length >= 3}
+                    disabled={isLocked || (!checked && activeSelected.length >= 3)}
                   />
                   <span>{leverSpec?.label ?? key}</span>
+                  {isLocked ? <span className="ui-muted">verrouillé</span> : null}
                   {hypothesis ? (
                     <span className="ui-muted">
                       actuel {formatNumber(hypothesis.value, 4)}
@@ -421,15 +462,15 @@ export function GoalSeekPanel({
           <dl className="goal-seek__figures">
             <div>
               <dt>Valeur atteinte</dt>
-              <dd>{formatMetricValue(metric, result.achieved, currency)}</dd>
+              <dd>{formatMetricValue(resultMetric, result.achieved, currency)}</dd>
             </div>
             <div>
               <dt>Cible</dt>
-              <dd>{formatMetricValue(metric, result.target, currency)}</dd>
+              <dd>{formatMetricValue(resultMetric, result.target, currency)}</dd>
             </div>
             <div>
               <dt>Écart signé</dt>
-              <dd>{formatGap(metric, result.gap, currency)}</dd>
+              <dd>{formatGap(resultMetric, result.gap, currency)}</dd>
             </div>
             <div>
               <dt>Évaluations</dt>
@@ -474,7 +515,7 @@ export function GoalSeekPanel({
                         )
                         .join(" · ")}
                     </td>
-                    <td>{formatMetricValue(metric, entry.value, currency)}</td>
+                    <td>{formatMetricValue(resultMetric, entry.value, currency)}</td>
                     <td>{entry.feasible ? "oui" : "non"}</td>
                   </tr>
                 ))}

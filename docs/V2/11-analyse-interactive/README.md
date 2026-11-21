@@ -38,12 +38,12 @@ Grâce aux tirages communs, la métrique est **déterministe à graine fixée**.
 
 ## 3. Livrables
 
-- [ ] `engine/surface.py` et `engine/goal_seek.py`.
-- [ ] Protocole `1.12.0`, types générés.
-- [ ] `sidecar` : handlers asynchrones surface/goalseek.
-- [ ] `components/cockpit/Heatmap.tsx`, `Tornado.tsx`, `GoalSeekPanel.tsx`.
-- [ ] Tests moteur, sidecar, UI.
-- [ ] `docs/perf/surface-goalseek.md` avec les mesures.
+- [x] `engine/surface.py` et `engine/goal_seek.py`.
+- [x] Protocole `1.12.0`, types générés.
+- [x] `sidecar` : handlers asynchrones surface/goalseek.
+- [x] `components/cockpit/Heatmap.tsx`, `Tornado.tsx`, `GoalSeekPanel.tsx`, `SurfacePanel.tsx`.
+- [x] Tests moteur, sidecar, UI.
+- [x] `docs/perf/surface-goalseek.md` avec les mesures.
 
 ## 4. Tâches détaillées
 
@@ -64,14 +64,14 @@ def surface(
 ) -> SurfaceResult: ...
 ```
 
-- [ ] `AxisSpec` : clé d'hypothèse, min, max, échelle (`linear` uniquement en V3).
-- [ ] Valeurs de grille : `linspace` inclusif, 15 valeurs par défaut.
-- [ ] Pour chaque point, réutiliser la **même banque de tirages** (CRN) et remplacer les paramètres de l'axe.
-- [ ] Métriques supportées : `profit_p50`, `profit_p10`, `profit_p90`, `break_even_months_p50`, `financing_need_p90`, `loss_probability`.
-- [ ] Retour : `xValues`, `yValues`, `zP50` (matrice), `zP10`/`zP90` optionnels, point courant, `metric`, `runs`, `seed`.
-- [ ] Progression : notification par ligne ou tous les 10 points ; annulation entre points.
-- [ ] Budget par défaut : 15×15 × 200 = 45 000 runs ; mesurer.
-- [ ] Ne pas appeler `simulate()` par point si le coût de setup domine : boucle interne sur la grille, agrégats allégés.
+- [x] `AxisSpec` : clé d'hypothèse, min, max, échelle (`linear` uniquement en V3).
+- [x] Valeurs de grille : `linspace` inclusif, 15 valeurs par défaut.
+- [x] Pour chaque point, réutiliser la **même banque de tirages** (CRN) et remplacer les paramètres de l'axe.
+- [x] Métriques supportées : `profit_p50`, `profit_p10`, `profit_p90`, `break_even_months_p50`, `financing_need_p90`, `loss_probability`.
+- [x] Retour : `xValues`, `yValues`, `zP50` (matrice), `zP10`/`zP90` optionnels, point courant, `metric`, `runs`, `seed`.
+- [x] Progression : notification par ligne ou tous les 10 points ; annulation entre points.
+- [x] Budget par défaut : 15×15 × 200 = 45 000 runs ; mesuré à 1,504 s.
+- [x] Ne pas appeler `simulate()` par point si le coût de setup domine : boucle interne sur la grille, agrégats allégés.
 
 ### Lot B — Recherche d'objectif
 
@@ -101,16 +101,16 @@ def goal_seek(
 ) -> GoalSeekResult: ...
 ```
 
-- [ ] La métrique est évaluée par le moteur, jamais par l'UI.
-- [ ] **Un levier** :
+- [x] La métrique est évaluée par le moteur, jamais par l'UI.
+- [x] **Un levier** :
   - tester les bornes ; si la cible n'est pas encadrée, retourner le meilleur point ;
   - si la métrique est monotone sur l'intervalle (vérifié par échantillons), dichotomie ;
   - sinon, balayage grossier (10 points) puis raffinement local.
-- [ ] **Plusieurs leviers** : recherche par coordonnées avec pas décroissant (compass search), pas de Nelder-Mead.
-- [ ] Contraintes : bornes du modèle (`InputSpec`) ∩ bornes de l'hypothèse ; verrous exclus.
-- [ ] Qualité : évaluations en `draft` (500 runs), confirmation en `final` (5 000) sur le meilleur point.
-- [ ] Budget strict `max_evaluations` ; arrêt anticipé si tolérance atteinte.
-- [ ] Retour :
+- [x] **Plusieurs leviers** : recherche par coordonnées avec pas décroissant (compass search), pas de Nelder-Mead.
+- [x] Contraintes : bornes du modèle (`InputSpec`) ∩ bornes de l'hypothèse ; verrous exclus.
+- [x] Qualité : évaluations en `draft` (500 runs), confirmation en `final` (5 000) sur le meilleur point.
+- [x] Budget strict `max_evaluations` ; arrêt anticipé si tolérance atteinte.
+- [x] Retour :
   ```ts
   type GoalSeekResult = {
     feasible: boolean;
@@ -122,58 +122,58 @@ def goal_seek(
     trace: Array<{ point: Record<string, number>; value: number }>;
   };
   ```
-- [ ] Si infaisable : message clair, meilleur compromis, ne pas prétendre avoir réussi.
-- [ ] Annulation entre évaluations.
+- [x] Si infaisable : message clair, meilleur compromis, ne pas prétendre avoir réussi.
+- [x] Annulation entre évaluations.
 
 ### Lot C — Protocole et sidecar
 
-- [ ] `simulation.surface` : `{projectId, scenario, axisX, axisY, metric, grid, runs, seed}` → `{jobId}`.
-- [ ] `simulation.goalseek` : `{projectId, scenario, objective, levers, locked, seed}` → `{jobId}`.
-- [ ] Notifications : `simulation.progress` (jobId), `simulation.surface.partial` (lignes calculées), `simulation.done` (résultat), `simulation.cancelled`, `simulation.error`.
-- [ ] Budget mémoire : pas de stockage de toutes les trajectoires.
-- [ ] Job de surface/goalseek **annulable** et **remplaçable** par un nouveau job du même projet.
-- [ ] Bump protocole `1.12.0`.
+- [x] `simulation.surface` : `{projectId, scenario, axisX, axisY, metric, grid, runs, seed}` → `{jobId}`.
+- [x] `simulation.goalseek` : `{projectId, scenario, objective, levers, locked, seed}` → `{jobId}`.
+- [x] Notifications : `simulation.progress` (jobId), `simulation.surface.partial` (lignes calculées), `simulation.done` (résultat), `simulation.cancelled`, `simulation.error`.
+- [x] Budget mémoire : pas de stockage de toutes les trajectoires.
+- [x] Job de surface/goalseek **annulable** et **remplaçable** par un nouveau job du même projet.
+- [x] Bump protocole `1.12.0`.
 
 ### Lot D — Heatmap 2D
 
-- [ ] `Heatmap` : canvas ou SVG, axes X/Y avec unités et bornes, échelle de couleur issue des tokens.
-- [ ] Couleurs séquentielles accessibles (pas rouge/vert seuls) ; légende avec valeurs.
-- [ ] Point courant marqué et libellé.
-- [ ] Survol : valeur de la métrique, coordonnées.
-- [ ] Clic : règle les deux paramètres via une **commande** (phase 08) ; confirmation visuelle.
-- [ ] Isolignes optionnelles (marching squares) ; pas obligatoires pour le jalon B.
-- [ ] Bouton « recalculer la surface » ; jamais de calcul automatique à chaque pixel.
-- [ ] Afficher le coût : `grille × runs`, graine, date.
-- [ ] Tableau alternatif pour l'accessibilité.
+- [x] `Heatmap` : grille HTML accessible, axes X/Y avec unités et bornes, échelle de couleur issue des tokens.
+- [x] Couleurs séquentielles accessibles (pas rouge/vert seuls) ; légende avec valeurs.
+- [x] Point courant marqué et libellé.
+- [x] Survol : valeur de la métrique, coordonnées.
+- [x] Clic : règle les deux paramètres via une **commande** (phase 08) ; confirmation visuelle.
+- [ ] Isolignes optionnelles (marching squares) — non retenues pour le jalon B.
+- [x] Bouton « recalculer la surface » ; jamais de calcul automatique à chaque pixel.
+- [x] Afficher le coût : `grille × runs`, graine, durée moteur du résultat.
+- [x] Tableau alternatif pour l'accessibilité.
 
 ### Lot E — Tornado interactif
 
-- [ ] Réutiliser `sensitivity` du résultat ; libellé par hypothèse, contribution en %.
-- [ ] Clic sur une barre : focus et scroll du panneau d'hypothèses ; pas de modification.
-- [ ] Trier par contribution décroissante ; afficher la corrélation et la contribution.
-- [ ] Avertir que la sensibilité est une corrélation, pas une causalité (info-bulle).
+- [x] Réutiliser `sensitivity` du résultat ; libellé par hypothèse, contribution en %.
+- [x] Clic sur une barre : focus et scroll du panneau d'hypothèses ; pas de modification.
+- [x] Trier par contribution décroissante ; afficher la corrélation et la contribution.
+- [x] Avertir que la sensibilité est une corrélation, pas une causalité (description et info-bulle).
 
 ### Lot F — UI objectif
 
-- [ ] Formulaire : métrique, comparateur, cible, leviers (cases + bornes), affichage des verrous.
-- [ ] Progression et annulation.
-- [ ] Résultat : valeurs proposées, métrique obtenue, faisabilité, écart.
-- [ ] « Appliquer comme nouvelle branche » : crée une branche (phase 07) avec les valeurs proposées, même graine, et lance un `final`.
-- [ ] Si infaisable : message explicite + bouton « appliquer le meilleur compromis ».
-- [ ] Aucun nombre proposé n'est calculé hors moteur.
+- [x] Formulaire : métrique, comparateur, cible, leviers (cases + bornes), affichage des verrous.
+- [x] Progression et annulation.
+- [x] Résultat : valeurs proposées, métrique obtenue, faisabilité, écart.
+- [x] « Appliquer comme nouvelle branche » : crée une branche (phase 07) avec les valeurs proposées, même graine, et lance un `final`.
+- [x] Si infaisable : message explicite + bouton « appliquer le meilleur compromis ».
+- [x] Aucun nombre proposé n'est calculé hors moteur.
 
 ### Lot G — Tests
 
-- [ ] Surface déterministe : même graine → même matrice.
-- [ ] Surface : point courant présent, dimensions correctes, annulation.
-- [ ] Goal seek analytique : métrique linéaire `a·prix + b·coût`, solution connue.
-- [ ] Goal seek monotone : dichotomie converge en < budget.
-- [ ] Goal seek non monotone : balayage + raffinement.
-- [ ] Infeasible : `feasible=false`, gap correct.
-- [ ] Budget : jamais plus d'évaluations que demandé.
-- [ ] Annulation : < 200 ms.
-- [ ] Heatmap : mapping valeur → couleur, clic → commande.
-- [ ] Contrat : protocole `1.12.0`.
+- [x] Surface déterministe : même graine → même matrice.
+- [x] Surface : point courant présent, dimensions correctes, annulation.
+- [x] Goal seek analytique : métrique linéaire `a·prix + b·coût`, solution connue.
+- [x] Goal seek monotone : dichotomie converge en < budget.
+- [x] Goal seek non monotone : balayage + raffinement.
+- [x] Infeasible : `feasible=false`, gap correct.
+- [x] Budget : jamais plus d'évaluations que demandé.
+- [x] Annulation : jeton avant/pendant le calcul et intention honorée pendant l'attente de l'accusé de démarrage.
+- [x] Heatmap : mapping valeur → couleur, clic → commande.
+- [x] Contrat : protocole `1.12.0`.
 
 ## 5. Contrats
 
@@ -217,13 +217,13 @@ Règles :
 
 ## 7. Critères d'acceptation
 
-- [ ] Une surface 15×15 × 200 se calcule en ≤ 8 s sur machine modeste, avec progression et annulation.
-- [ ] La heatmap est lisible, accessible et cliquable.
-- [ ] Le tornado focalise le bon paramètre.
-- [ ] L'objectif converge sur un cas analytique et gère l'infaisabilité.
-- [ ] Le résultat est applicable en un clic comme nouvelle branche.
-- [ ] Aucun chiffre n'est inventé : tout vient du moteur.
-- [ ] Les budgets sont mesurés et consignés.
+- [x] Une surface 15×15 × 200 se calcule en ≤ 8 s sur machine modeste, avec progression et annulation (1,504 s mesuré).
+- [x] La heatmap est lisible, accessible et cliquable.
+- [x] Le tornado focalise le bon paramètre.
+- [x] L'objectif converge sur un cas analytique et gère l'infaisabilité.
+- [x] Le résultat est applicable en un clic comme nouvelle branche.
+- [x] Aucun chiffre n'est inventé : tout vient du moteur.
+- [x] Les budgets sont mesurés et consignés.
 
 ## 8. Performance
 
@@ -247,8 +247,46 @@ Règles :
 
 ## 10. Definition of Done
 
-- [ ] Surface, goal seek, heatmap et tornado livrés.
-- [ ] Protocole `1.12.0` généré.
-- [ ] Tests analytiques et budgets verts.
-- [ ] « Appliquer comme branche » fonctionne.
-- [ ] Jalon B validé.
+- [x] Surface, goal seek, heatmap et tornado livrés.
+- [x] Protocole `1.12.0` généré.
+- [x] Tests analytiques et budgets verts.
+- [x] « Appliquer comme branche » fonctionne.
+- [x] Jalon B validé sur le parcours de démonstration et les tests d'intégration.
+
+## 11. Mise en œuvre
+
+### Moteur
+
+- `engine/surface.py` : `surface()` balaye la grille avec la même banque de tirages (CRN), remplace les deux hypothèses par `{ value }` et produit `zP50`, `zP10`/`zP90` selon la métrique. `z[ligneY][colonneX]` ; `current` vient des hypothèses du scénario.
+- `engine/goal_seek.py` : un levier → balayage/dichotomie, plusieurs leviers → compass search. Aucun Nelder-Mead. Le budget ne compte que les évaluations de recherche ; la confirmation `final` est hors budget. `budgetExhausted` et `feasible` sont distincts, et `message` est produit par le moteur.
+
+### Protocole et sidecar
+
+- Protocole `1.12.0` : `simulation.surface`, `simulation.goalseek`, `simulation.cancel` (accepte `runId` ou `jobId`), `project.scenario.branch`.
+- Notifications d'analyse : `simulation.progress`, `simulation.surface.partial`, `simulation.done`, `simulation.cancelled`, `simulation.error`, toutes identifiées par `jobId`.
+- `analysis_service.py` : un job surface et un job objectif par projet, annulables et remplaçables. Les événements d'un job remplacé n'atteignent plus l'UI.
+- `ipc.ts` : routage par `jobId`, rejeu des événements arrivés avant l'abonnement, abonnement créé avant l'invoke pour ne perdre aucun partiel.
+
+### UI
+
+- Cockpit : bouton « Analyse interactive », onglets « Surface 2D » et « Recherche d'objectif ». Les deux panneaux restent montés et masqués (`hidden`) : formulaires et résultats survivent aux changements d'onglet et à la fermeture/réouverture.
+- Surface : coût `grille × runs`, graine, progression, annulation, heatmap cliquable avec tableau alternatif. Une cellule applique les deux valeurs au scénario comme le moteur (`{ value }`).
+- Objectif : leviers verrouillés désactivés et exclus, repli automatique sur un levier disponible, budget `évaluations × runs` visible, résultat moteur affiché sans reformulation. Un objectif non atteint propose le meilleur compromis, jamais un faux « atteint ».
+- Application : crée une branche via `project.scenario.branch`, applique le scénario puis lance `live.runFinal()` avec la graine du cockpit.
+- Tornado : tri par contribution, corrélation en info-bulle, avertissement corrélation ≠ causalité, clic pour cibler l'hypothèse.
+
+### Correctif de clôture — annulation pendant le démarrage
+
+Un démarrage de surface ou d'objectif reste en attente de l'accusé `{ jobId }`. Une annulation demandée dans cet intervalle est désormais mémorisée : l'état passe à `cancelling`, puis le job est annulé dès que son `jobId` est connu, sans abonnement ni partiel tardif. Des générations par type d'analyse empêchent un démarrage remplacé d'écraser l'état du plus récent, et les mises à jour sont ignorées après démontage.
+
+### Validation
+
+| Suite | Résultat |
+|---|---|
+| Moteur (`pytest`) | 155 tests |
+| Sidecar (`pytest`) | 60 tests |
+| Desktop (`vitest`) | 168 tests |
+| Tauri (`cargo test`) | 9 tests |
+| `protocol:check`, `typecheck`, `lint`, `ui:check`, build web | verts |
+
+Mesures détaillées : [`docs/perf/surface-goalseek.md`](../../perf/surface-goalseek.md).

@@ -28,7 +28,9 @@ Ce dossier contient la spécification de la V3 et son découpage d'implémentati
 | 07 — Persistance, versions & branches | **terminée** (2026-11-18), revue senior en attente | [`07-persistance-runs-versions/README.md`](07-persistance-runs-versions/README.md), migration `0006`, branches/versions, runs épinglés, purge 200 runs / 15 MiB, `.simproj` v6 + lecture v5 |
 | 08 — Session UI & commandes | **terminée** (2026-11-18), revue senior en attente | [`08-ui-session-commandes/README.md`](08-ui-session-commandes/README.md), Zustand 5.1, store/slices, `CommandStack` (undo/redo, coalescence 400 ms), `useLiveSimulation` (draft 50 ms / final 400 ms), `PanelGrid` + presets persistés, 46 tests |
 | 09 — Cockpit 2D | **terminée** (2026-11-18), test utilisateur en attente | [`09-cockpit-2d/README.md`](09-cockpit-2d/README.md), route `cockpit`, `FanChart` (P10–P90, seuil CDF, fantômes), `KpiBar`, `TriHandleSlider`, `useLiveSimulation` drafts pendant geste, 44 tests ajoutés (107 desktop) |
-| 10 à 16 | à démarrer | voir le plan maître |
+| 10 — Temps & événements UI | **terminée** (2026-11-21), revue senior consignée dans [`REVUE-PHASE-10.md`](10-temps-et-evenements-ui/REVUE-PHASE-10.md) | frise, catalogue, éditeur d'événements, palette de commandes, protocole `1.11.0` |
+| 11 — Analyse interactive | **terminée** (2026-11-21) | [`11-analyse-interactive/README.md`](11-analyse-interactive/README.md), surface 2D CRN, recherche d'objectif, heatmap/tornado, protocole `1.12.0`, [`docs/perf/surface-goalseek.md`](../perf/surface-goalseek.md) |
+| 12 à 16 | à démarrer | voir le plan maître |
 
 ## Règle d'or
 

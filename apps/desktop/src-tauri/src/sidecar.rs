@@ -17,7 +17,8 @@ use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter};
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
-const PING_TIMEOUT: Duration = Duration::from_secs(5);
+// Le premier ping inclut les imports Python/NumPy sur la machine modeste.
+const PING_TIMEOUT: Duration = Duration::from_secs(30);
 const SIMULATION_START_TIMEOUT: Duration = Duration::from_secs(10);
 const SIMULATION_CANCEL_TIMEOUT: Duration = Duration::from_secs(2);
 const PROVIDER_TIMEOUT: Duration = Duration::from_secs(120);
@@ -625,7 +626,7 @@ mod tests {
             .expect("le sidecar doit répondre au health");
 
         assert_eq!(result["status"], json!("ok"));
-        assert_eq!(result["protocolVersion"], json!("1.11.0"));
+        assert_eq!(result["protocolVersion"], json!("1.12.0"));
         manager.shutdown();
     }
 

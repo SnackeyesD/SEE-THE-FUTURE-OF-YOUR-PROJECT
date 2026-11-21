@@ -15,6 +15,11 @@ const ipc = vi.hoisted(() => ({
   startSimulation: vi.fn(),
   cancelSimulation: vi.fn(),
   onSimulationEvent: vi.fn(),
+  startSurface: vi.fn(),
+  startGoalSeek: vi.fn(),
+  cancelAnalysis: vi.fn(),
+  onAnalysisEvent: vi.fn(),
+  branchProjectScenario: vi.fn(),
   createProject: vi.fn(),
   saveProjectBrief: vi.fn(),
   saveProjectScenario: vi.fn(),
@@ -63,6 +68,11 @@ beforeEach(() => {
   ipc.listRoles.mockResolvedValue({ assignments: [] });
   ipc.onSimulationProgress.mockResolvedValue(() => undefined);
   ipc.onSimulationEvent.mockResolvedValue(() => undefined);
+  ipc.onAnalysisEvent.mockResolvedValue(() => undefined);
+  ipc.startSurface.mockResolvedValue({ jobId: "surface-1", accepted: true });
+  ipc.startGoalSeek.mockResolvedValue({ jobId: "goal-1", accepted: true });
+  ipc.cancelAnalysis.mockResolvedValue(undefined);
+  ipc.branchProjectScenario.mockResolvedValue({ scenario: scenarioRecord });
   ipc.startSimulation.mockResolvedValue({ runId: "live-1", accepted: true });
   ipc.cancelSimulation.mockResolvedValue(undefined);
   ipc.simulateProject.mockImplementation(async () => {

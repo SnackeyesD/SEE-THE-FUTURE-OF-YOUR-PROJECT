@@ -14,6 +14,7 @@ import {
   EmptyState,
   InlineAlert,
   ProgressBar,
+  Tabs,
 } from "@see/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -193,6 +194,7 @@ function CockpitBody({
   const [mode, setMode] = useState<FanMode>("cash");
   const [thresholdOverride, setThresholdOverride] = useState<number | null>(null);
   const [locks, setLocks] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const [focusedHypothesis, setFocusedHypothesis] = useState<string | null>(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -627,13 +629,14 @@ function CockpitBody({
         scenario: store.getState().session.scenario,
         objective: values.objective,
         levers: values.levers,
+        locked: [...locks],
         maxEvaluations: values.maxEvaluations,
         runs: values.runs,
         seed: store.getState().session.seed,
         confirmQuality: values.confirmQuality,
       });
     },
-    [analysis, project.id, store],
+    [analysis, locks, project.id, store],
   );
 
   /** Clic sur une cellule : applique les deux axes comme toute autre entrée. */
@@ -683,7 +686,8 @@ function CockpitBody({
     [mutateScenario, project.id, record.id, session.seed, store],
   );
 
-  const toggleLock = (key: string): void => {    setLocks((current) => {
+  const toggleLock = (key: string): void => {
+    setLocks((current) => {
       const next = new Set(current);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -909,7 +913,12 @@ function CockpitBody({
       <Card>
         <CardHeader title="Sensibilité" description="Contribution à la variance du profit" />
         {sensitivity.length > 0 ? (
-          <SensitivityTornado entries={sensitivity} currency={currency} />
+          <Tornado
+            entries={sensitivity}
+            currency={currency}
+            selected={focusedHypothesis}
+            onSelect={setFocusedHypothesis}
+          />
         ) : (
           <p className="ui-muted">Analyse disponible après un calcul final.</p>
         )}
@@ -938,6 +947,7 @@ function CockpitBody({
         locks={locks}
         benchmarks={benchmarkReferences}
         disabled={running}
+        focusKey={focusedHypothesis}
         onToggleLock={toggleLock}
         onChange={(key, hypothesis, commit) => handleHypothesis(key, hypothesis, commit)}
         onResetToBenchmark={resetToBenchmark}
@@ -945,6 +955,7 @@ function CockpitBody({
     ),
     [
       benchmarkReferences,
+      focusedHypothesis,
       handleHypothesis,
       locks,
       resetToBenchmark,
@@ -969,6 +980,14 @@ function CockpitBody({
           <Badge tone="neutral">{formatNumber(monthly.length)} points</Badge>
           <Button variant="ghost" size="small" onClick={() => setPaletteOpen(true)}>
             Commandes (Ctrl+K)
+          </Button>
+          <Button
+            variant={analysisOpen ? "secondary" : "ghost"}
+            size="small"
+            aria-expanded={analysisOpen}
+            onClick={() => setAnalysisOpen((current) => !current)}
+          >
+            Analyse interactive
           </Button>
           <Button variant="ghost" size="small" onClick={onOpenHypotheses}>
             Hypothèses
@@ -1010,6 +1029,44 @@ function CockpitBody({
         }
         right={right}
       />
+
+      <section className="cockpit-analysis" aria-label="Analyse interactive" hidden={!analysisOpen}>
+        <Tabs
+          items={[
+            { id: "surface", label: "Surface 2D" },
+            { id: "objective", label: "Recherche d'objectif" },
+          ]}
+          value={analysisTab}
+          onChange={(id) => setAnalysisTab(id === "objective" ? "objective" : "surface")}
+          ariaLabel="Type d'analyse interactive"
+        />
+        <div hidden={analysisTab !== "surface"}>
+          <SurfacePanel
+            scenario={session.scenario}
+            currency={currency}
+            state={analysis.surface}
+            seed={session.seed}
+            disabled={running}
+            onRun={handleRunSurface}
+            onCancel={analysis.cancelSurface}
+            onApplyPoint={handleApplySurfacePoint}
+          />
+        </div>
+        <div hidden={analysisTab !== "objective"}>
+          <GoalSeekPanel
+            scenario={session.scenario}
+            currency={currency}
+            state={analysis.goal}
+            seed={session.seed}
+            disabled={running}
+            locked={locks}
+            applyState={applyState}
+            onRun={handleRunGoalSeek}
+            onCancel={analysis.cancelGoalSeek}
+            onApply={(goalResult, label) => void handleApplyGoal(goalResult, label)}
+          />
+        </div>
+      </section>
 
       {catalogOpen ? (
         <EventCatalog

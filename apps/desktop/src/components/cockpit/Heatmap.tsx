@@ -198,6 +198,39 @@ export function Heatmap({
         ))}
       </div>
 
+      <details className="heatmap__table">
+        <summary>Tableau des valeurs</summary>
+        <div className="heatmap__table-scroll">
+          <table aria-label="Valeurs de la surface">
+            <thead>
+              <tr>
+                <th scope="col">{yLabel} \ {xLabel}</th>
+                {Array.from({ length: columns }, (_, xIndex) => (
+                  <th key={`table-x-${xIndex}`} scope="col">
+                    {labelForX(xValues?.[xIndex], xIndex)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, yIndex) => (
+                <tr key={`table-row-${yIndex}`}>
+                  <th scope="row">{labelForY(yValues?.[yIndex], yIndex)}</th>
+                  {Array.from({ length: columns }, (_, xIndex) => {
+                    const value = row[xIndex] ?? null;
+                    return (
+                      <td key={`table-cell-${yIndex}-${xIndex}`}>
+                        {value === null ? "en attente" : formatMetricValue(metric, value, currency)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+
       <div className="heatmap__footer">
         <div className="heatmap__legend" aria-hidden="true">
           {Array.from({ length: HEAT_STEPS }, (_, index) => (
