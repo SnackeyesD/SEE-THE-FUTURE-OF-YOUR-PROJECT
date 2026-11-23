@@ -109,7 +109,7 @@ La spec V3 a été écrite sans audit du code. Plusieurs affirmations sont fauss
 
 ### 5.3 Versions
 
-- Protocole : `1.8.0` en phase 02, `1.9.0` en phase 05, `1.10.0` en phase 06, `1.11.0` en phase 10, `1.12.0` en phase 11, `1.13.0` en phase 12.
+- Protocole : `1.8.0` en phase 02, `1.9.0` en phase 05, `1.10.0` en phase 06, `1.11.0` en phase 10, `1.12.0` en phase 11, `1.13.0` en phase 12, `1.14.0` en phase 13.
 - Scénario : `1.0.0` → `1.1.0` en phase 05.
 - Base : migration `0006` en phase 07.
 

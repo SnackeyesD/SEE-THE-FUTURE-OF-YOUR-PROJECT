@@ -1,9 +1,9 @@
 // AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 // Source: packages/protocol/schema/messages.schema.json
-// Protocol version: 1.12.0
+// Protocol version: 1.14.0
 // Regenerate with: npm run protocol:generate
 
-export const PROTOCOL_VERSION = "1.12.0";
+export const PROTOCOL_VERSION = "1.14.0";
 
 export type RequestId = number | string;
 
@@ -27,7 +27,7 @@ export interface JSONRPCResponse {
   error?: JSONRPCErrorObject;
 }
 
-export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "project.list" | "project.create" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.scenario.branch" | "project.simulate" | "simulation.start" | "simulation.cancel" | "simulation.surface" | "simulation.goalseek" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools" | "benchmark.lookup" | "benchmark.pack.list" | "benchmark.pack.import";
+export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "project.list" | "project.create" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.scenario.branch" | "project.scenario.list" | "project.scenario.get" | "project.scenario.rename" | "project.scenario.archive" | "project.scenario.unarchive" | "project.run.list" | "project.run.pin" | "project.run.compare" | "project.version.create" | "project.version.list" | "project.version.restore" | "project.version.delete" | "project.simulate" | "simulation.start" | "simulation.cancel" | "simulation.surface" | "simulation.goalseek" | "simulation.trajectories" | "simulation.run_params" | "simulation.provenance" | "simulation.explain" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools" | "benchmark.lookup" | "benchmark.pack.list" | "benchmark.pack.import";
 
 export type NotificationName = "simulate.progress" | "simulation.progress" | "simulation.partial" | "simulation.surface.partial" | "simulation.done" | "simulation.cancelled" | "simulation.error";
 
@@ -351,6 +351,7 @@ export interface ScenarioRecord {
   version?: number;
   createdAt: string;
   updatedAt: string;
+  archivedAt: string | null;
 }
 
 export interface SimulationRunRecord {
@@ -392,6 +393,7 @@ export interface ProjectScenarioSaveParams {
   name: string;
   model?: string;
   scenario: Scenario;
+  scenarioId?: string;
 }
 
 export interface ProjectScenarioSaveResult {
@@ -408,6 +410,166 @@ export interface ProjectScenarioBranchParams {
 
 export interface ProjectScenarioBranchResult {
   scenario: ScenarioRecord;
+}
+
+export interface BranchRef {
+  scenarioId: string;
+  name: string;
+  branchLabel: string | null;
+  parentId: string | null;
+  updatedAt: string;
+  archivedAt: string | null;
+  lastFinalRunId: string | null;
+  seed: number | null;
+}
+
+export interface ProjectScenarioListParams {
+  projectId: string;
+  includeArchived?: boolean;
+}
+
+export interface ProjectScenarioListResult {
+  branches: BranchRef[];
+}
+
+export interface ProjectScenarioGetParams {
+  projectId: string;
+  scenarioId: string;
+}
+
+export interface ProjectScenarioGetResult {
+  scenario: ScenarioRecord;
+}
+
+export interface ProjectScenarioRenameParams {
+  projectId: string;
+  scenarioId: string;
+  name: string;
+  branchLabel?: string | null;
+}
+
+export interface ProjectScenarioRenameResult {
+  scenario: ScenarioRecord;
+}
+
+export interface ProjectScenarioArchiveParams {
+  projectId: string;
+  scenarioId: string;
+  confirmPinned?: boolean;
+}
+
+export interface ProjectScenarioArchiveResult {
+  scenario: ScenarioRecord;
+  archived: boolean;
+  pinnedRuns: number;
+}
+
+export interface ProjectScenarioUnarchiveParams {
+  projectId: string;
+  scenarioId: string;
+}
+
+export interface ProjectScenarioUnarchiveResult {
+  scenario: ScenarioRecord;
+}
+
+export interface RunRef {
+  id: string;
+  scenarioId: string | null;
+  seed: number | null;
+  engineVersion: string;
+  runs: number;
+  pinned: boolean;
+  createdAt: string;
+  summary: Record<string, unknown>;
+}
+
+export interface ProjectRunListParams {
+  projectId: string;
+  scenarioId?: string;
+  seed?: number;
+  limit?: number;
+}
+
+export interface ProjectRunListResult {
+  runs: RunRef[];
+}
+
+export interface ProjectRunPinParams {
+  projectId: string;
+  runId: string;
+  pinned: boolean;
+}
+
+export interface ProjectRunPinResult {
+  run: RunRef;
+}
+
+export interface RunComparison {
+  id: string;
+  scenarioId: string | null;
+  seed: number | null;
+  engineVersion: string;
+  result: SimulationResult;
+}
+
+export interface ProjectRunCompareParams {
+  projectId: string;
+  runIds: string[];
+}
+
+export interface ProjectRunCompareResult {
+  runs: RunComparison[];
+  sameSeed: boolean;
+  sameEngineVersion: boolean;
+}
+
+export interface ScenarioVersionRef {
+  id: string;
+  projectId: string;
+  scenarioId: string | null;
+  label: string;
+  seed: number | null;
+  engineVersion: string | null;
+  createdAt: string;
+}
+
+export interface ProjectVersionCreateParams {
+  projectId: string;
+  label: string;
+  scenarioId?: string;
+  seed?: number;
+}
+
+export interface ProjectVersionCreateResult {
+  version: ScenarioVersionRef;
+}
+
+export interface ProjectVersionListParams {
+  projectId: string;
+}
+
+export interface ProjectVersionListResult {
+  versions: ScenarioVersionRef[];
+}
+
+export interface ProjectVersionRestoreParams {
+  projectId: string;
+  versionId: string;
+  label?: string;
+}
+
+export interface ProjectVersionRestoreResult {
+  scenario: ScenarioRecord;
+}
+
+export interface ProjectVersionDeleteParams {
+  projectId: string;
+  versionId: string;
+}
+
+export interface ProjectVersionDeleteResult {
+  deleted: boolean;
 }
 
 export interface ProjectSimulateParams {
@@ -432,6 +594,7 @@ export interface SimulationStartParams {
   quality: SimulationQuality;
   seed: number;
   runToken?: string;
+  scenarioId?: string;
 }
 
 export interface SimulationStartResult {
@@ -1235,4 +1398,121 @@ export interface BenchmarkPackImportParams {
 export interface BenchmarkPackImportResult {
   pack: BenchmarkPackInfo;
   replaced?: boolean;
+}
+
+export interface Trajectory {
+  index: number;
+  profitMonthly: number[];
+  cashMonthly: number[];
+  revenueMonthly: number[];
+}
+
+export interface SimulationTrajectoriesParams {
+  runId: string;
+  count?: number;
+  indices?: number[];
+}
+
+export interface SimulationTrajectoriesResult {
+  runId: string;
+  seed: number;
+  engineVersion: string;
+  runs: number;
+  runsRetained: number;
+  horizonMonths: number;
+  currency: string;
+  truncated: boolean;
+  trajectories: Trajectory[];
+}
+
+export interface SimulationRunParamsParams {
+  runId: string;
+  index: number;
+}
+
+export interface SimulationRunParamsResult {
+  runId: string;
+  index: number;
+  seed: number;
+  engineVersion: string;
+  scenariosHash: string;
+  parameters: Record<string, number>;
+}
+
+export interface ProvenanceBenchmark {
+  label: string;
+  source?: string | null;
+  url?: string | null;
+  date?: string | null;
+}
+
+export interface ProvenanceInput {
+  key: string;
+  label: string;
+  value: number;
+  drawnRange: number[];
+  source: "user" | "benchmark" | "estimate";
+  confidence?: number | null;
+  benchmark?: ProvenanceBenchmark | null;
+  correlation: number;
+  contribution: number;
+}
+
+export interface Provenance {
+  runId: string;
+  metric: string;
+  point: number | null;
+  definition: string;
+  formula: string;
+  value: number;
+  unit: string;
+  range?: number[] | null;
+  seed: number;
+  engineVersion: string;
+  runs: number;
+  scenariosHash: string;
+  inputs: ProvenanceInput[];
+  caveats: string[];
+}
+
+export interface SimulationProvenanceParams {
+  runId: string;
+  metric: string;
+  point?: number | null;
+}
+
+export interface SimulationProvenanceResult {
+  provenance: Provenance;
+}
+
+export interface ExplanationPoint {
+  text: string;
+  references: string[];
+}
+
+export interface Explanation {
+  summary: string;
+  points: ExplanationPoint[];
+  caveats: string[];
+}
+
+export interface SimulationExplainParams {
+  projectId: string;
+  runId: string;
+  metric: string;
+  point?: number | null;
+  profile?: ProviderProfile;
+  apiKey?: string | null;
+  model?: string | null;
+}
+
+export interface SimulationExplainResult {
+  explanation: Explanation;
+  source: "llm" | "fallback";
+  model?: string | null;
+  promptVersion: string;
+  cached: boolean;
+  repaired: boolean;
+  reason?: string | null;
+  provenance: Provenance;
 }

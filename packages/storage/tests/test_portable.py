@@ -210,7 +210,7 @@ def test_import_rejects_newer_schema(store: ProjectStore, tmp_path: Path) -> Non
         if name != "manifest.json":
             return data
         manifest = json.loads(data)
-        manifest["schemaVersion"] = 7
+        manifest["schemaVersion"] = LATEST_SCHEMA_VERSION + 1
         return json.dumps(manifest).encode("utf-8")
 
     _rewrite(archive, newer, transform)

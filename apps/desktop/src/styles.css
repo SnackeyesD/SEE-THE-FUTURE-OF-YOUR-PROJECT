@@ -1653,6 +1653,87 @@ textarea:focus {
   gap: var(--sp-2);
 }
 
+.provenance-panel {
+  width: min(880px, 100%);
+}
+
+.cockpit-kpi__source {
+  margin-top: var(--sp-1);
+  font-size: var(--fs-12);
+}
+
+.provenance-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  margin: 0;
+}
+
+.provenance-values dt {
+  color: var(--muted);
+  font-size: var(--fs-12);
+}
+
+.provenance-values dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.provenance-table {
+  overflow-x: auto;
+}
+
+.provenance-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-13);
+}
+
+.provenance-table th,
+.provenance-table td {
+  padding: var(--sp-1) var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.provenance-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.provenance-explanation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.provenance-explanation__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.provenance-explanation ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.provenance-payload {
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-inset);
+  font-size: var(--fs-12);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .cockpit-catalog {
   display: flex;
   flex-direction: column;
@@ -2061,4 +2142,313 @@ textarea:focus {
   border-color: var(--accent);
   outline: 2px solid var(--accent-a35);
   outline-offset: 1px;
+}
+
+/* Phase 13 — branches, diff, comparaison et versions.
+   Le rendu reste piloté par les payloads du sidecar : ces styles ne calculent
+   rien, ils organisent la lecture (liste plate, tableaux scrollables). */
+.branches-screen__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.branches-screen__panel {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.branches-screen__diff {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.branches-screen__diff h2 {
+  margin: 0;
+  font-size: var(--fs-18);
+}
+
+.branch-list__items,
+.version-list__items {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.branch-list__item,
+.version-list__item {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--surface);
+}
+
+.branch-list__item[data-active="true"] {
+  border-color: var(--accent);
+}
+
+.branch-list__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.branch-list__head strong,
+.version-list__item strong {
+  margin-right: var(--sp-2);
+}
+
+.branch-list__meta {
+  display: flex;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  font-size: var(--fs-12);
+}
+
+.branch-list__form,
+.version-list__create {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.branch-list__form label,
+.version-list__create label {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.branch-diff {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.branch-diff h3 {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-14);
+}
+
+.branch-diff__table,
+.comparison-view__table {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+}
+
+.branch-diff table,
+.comparison-view table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-12);
+}
+
+.branch-diff th,
+.branch-diff td,
+.comparison-view th,
+.comparison-view td {
+  padding: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.branch-diff tbody th,
+.comparison-view tbody th {
+  font-weight: 500;
+}
+
+.branch-diff__path {
+  display: block;
+  font-family: var(--font-data);
+  font-size: var(--fs-11);
+}
+
+.comparison-view {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.comparison-view__pickers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--sp-3);
+}
+
+.comparison-view__picker {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.comparison-view__pin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.comparison-view__badges {
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.comparison-view td[data-tone="ok"] {
+  color: var(--ok);
+}
+
+.comparison-view td[data-tone="danger"] {
+  color: var(--danger);
+}
+
+/* Phase 14 — vue 3D et repli 2D.
+   La scène Three.js est chargée à la demande ; ces styles ne définissent que
+   l'agencement, jamais les couleurs de données (tokens --heat-*). */
+.surface-panel__result {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.surface-panel__view-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.surface3d {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+}
+
+.surface3d__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.surface3d__modes,
+.surface3d__camera {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.surface3d__stage {
+  position: relative;
+  min-height: 18rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.scene3d__canvas {
+  width: 100%;
+  height: clamp(18rem, 42vh, 32rem);
+  touch-action: none;
+}
+
+.surface3d__legend,
+.surface3d__axes {
+  position: absolute;
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-2);
+  background: var(--surface-soft);
+  font-size: var(--fs-11);
+  pointer-events: none;
+}
+
+.surface3d__legend {
+  left: var(--sp-2);
+  bottom: var(--sp-2);
+  flex-wrap: wrap;
+  max-width: calc(100% - var(--sp-4));
+}
+
+.surface3d__legend-scale {
+  display: flex;
+}
+
+.surface3d__swatch {
+  width: 22px;
+  height: 9px;
+}
+
+.surface3d__range {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.surface3d__axes {
+  right: var(--sp-2);
+  top: var(--sp-2);
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.surface3d__caption {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  font-size: var(--fs-12);
+}
+
+.surface3d__hover {
+  min-height: 1.2em;
+  font-size: var(--fs-12);
+}
+
+.surface3d__selection {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--surface-soft);
+}
+
+.surface3d__selection h3 {
+  margin: 0;
+  font-size: var(--fs-14);
+}
+
+.surface3d__params {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--sp-2);
+  margin: 0;
+}
+
+.surface3d__params div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-size: var(--fs-12);
+}
+
+.surface3d__params dt {
+  color: var(--muted);
+}
+
+.surface3d__params dd {
+  margin: 0;
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
 }

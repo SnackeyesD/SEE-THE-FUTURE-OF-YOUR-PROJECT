@@ -31,12 +31,36 @@ import type {
   ProjectDataParams,
   ProjectDataResult,
   ProjectResult,
+  ProjectRunCompareParams,
+  ProjectRunCompareResult,
+  ProjectRunListParams,
+  ProjectRunListResult,
+  ProjectRunPinParams,
+  ProjectRunPinResult,
+  ProjectScenarioArchiveParams,
+  ProjectScenarioArchiveResult,
   ProjectScenarioBranchParams,
   ProjectScenarioBranchResult,
+  ProjectScenarioGetParams,
+  ProjectScenarioGetResult,
+  ProjectScenarioListParams,
+  ProjectScenarioListResult,
+  ProjectScenarioRenameParams,
+  ProjectScenarioRenameResult,
   ProjectScenarioSaveParams,
   ProjectScenarioSaveResult,
+  ProjectScenarioUnarchiveParams,
+  ProjectScenarioUnarchiveResult,
   ProjectSimulateParams,
   ProjectSimulateResult,
+  ProjectVersionCreateParams,
+  ProjectVersionCreateResult,
+  ProjectVersionDeleteParams,
+  ProjectVersionDeleteResult,
+  ProjectVersionListParams,
+  ProjectVersionListResult,
+  ProjectVersionRestoreParams,
+  ProjectVersionRestoreResult,
   ProviderCatalogResult,
   ProviderChatParams,
   ProviderChatResult,
@@ -63,13 +87,21 @@ import type {
   SimulationCancelled,
   SimulationDone,
   SimulationError,
+  SimulationExplainParams,
+  SimulationExplainResult,
   SimulationGoalSeekParams,
   SimulationPartial,
   SimulationProgress,
+  SimulationProvenanceParams,
+  SimulationProvenanceResult,
   SimulationResult,
+  SimulationRunParamsParams,
+  SimulationRunParamsResult,
   SimulationStartParams,
   SimulationStartResult,
   SimulationSurfaceParams,
+  SimulationTrajectoriesParams,
+  SimulationTrajectoriesResult,
   SurfacePartial,
 } from "@see/protocol";
 import { invoke, isTauri } from "@tauri-apps/api/core";
@@ -125,6 +157,84 @@ export function branchProjectScenario(
   params: ProjectScenarioBranchParams,
 ): Promise<ProjectScenarioBranchResult> {
   return invoke("project_scenario_branch", { params });
+}
+
+function projectCall<T>(method: string, params: object): Promise<T> {
+  return invoke<T>("project_call", { method, params });
+}
+
+/** Liste plate des branches d'un projet (archivées exclues par défaut). */
+export function listBranches(
+  params: ProjectScenarioListParams,
+): Promise<ProjectScenarioListResult> {
+  return projectCall("project.scenario.list", params);
+}
+
+/** Scénario complet d'une branche, pour le diff et la comparaison. */
+export function getScenario(
+  params: ProjectScenarioGetParams,
+): Promise<ProjectScenarioGetResult> {
+  return projectCall("project.scenario.get", params);
+}
+
+export function renameScenario(
+  params: ProjectScenarioRenameParams,
+): Promise<ProjectScenarioRenameResult> {
+  return projectCall("project.scenario.rename", params);
+}
+
+export function archiveScenario(
+  params: ProjectScenarioArchiveParams,
+): Promise<ProjectScenarioArchiveResult> {
+  return projectCall("project.scenario.archive", params);
+}
+
+export function unarchiveScenario(
+  params: ProjectScenarioUnarchiveParams,
+): Promise<ProjectScenarioUnarchiveResult> {
+  return projectCall("project.scenario.unarchive", params);
+}
+
+/** Runs finaux persistés, filtrables par branche ou graine. */
+export function listRuns(
+  params: ProjectRunListParams,
+): Promise<ProjectRunListResult> {
+  return projectCall("project.run.list", params);
+}
+
+export function pinRun(params: ProjectRunPinParams): Promise<ProjectRunPinResult> {
+  return projectCall("project.run.pin", params);
+}
+
+/** Charge les deux résultats sélectionnés et signale les graines divergentes. */
+export function compareRuns(
+  params: ProjectRunCompareParams,
+): Promise<ProjectRunCompareResult> {
+  return projectCall("project.run.compare", params);
+}
+
+export function createVersion(
+  params: ProjectVersionCreateParams,
+): Promise<ProjectVersionCreateResult> {
+  return projectCall("project.version.create", params);
+}
+
+export function listVersions(
+  params: ProjectVersionListParams,
+): Promise<ProjectVersionListResult> {
+  return projectCall("project.version.list", params);
+}
+
+export function restoreVersion(
+  params: ProjectVersionRestoreParams,
+): Promise<ProjectVersionRestoreResult> {
+  return projectCall("project.version.restore", params);
+}
+
+export function deleteVersion(
+  params: ProjectVersionDeleteParams,
+): Promise<ProjectVersionDeleteResult> {
+  return projectCall("project.version.delete", params);
 }
 
 export function simulateProject(
@@ -363,6 +473,40 @@ export function startGoalSeek(
 
 export function cancelAnalysis(jobId: string): Promise<void> {
   return invoke<unknown>("simulation_cancel", { jobId }).then(() => undefined);
+}
+
+/**
+ * Trajectoires brutes d'un run, uniquement sur demande explicite.
+ * Le sidecar borne la réponse à 200 runs et signale les échantillons évincés.
+ */
+export function getTrajectories(
+  params: SimulationTrajectoriesParams,
+): Promise<SimulationTrajectoriesResult> {
+  return invoke<SimulationTrajectoriesResult>("simulation_trajectories", { params });
+}
+
+/** Paramètres effectivement tirés pour un run de l'échantillon conservé. */
+export function getRunParams(
+  params: SimulationRunParamsParams,
+): Promise<SimulationRunParamsResult> {
+  return invoke<SimulationRunParamsResult>("simulation_run_params", { params });
+}
+
+/** Provenance d'une métrique agrégée ou d'un point mensuel. */
+export function getProvenance(
+  params: SimulationProvenanceParams,
+): Promise<SimulationProvenanceResult> {
+  return invoke<SimulationProvenanceResult>("simulation_provenance", { params });
+}
+
+/**
+ * Explication à la demande. Sans profil fournisseur, le sidecar renvoie le
+ * repli déterministe ; la clé API est injectée par le shell Tauri.
+ */
+export function explainMetric(
+  params: SimulationExplainParams,
+): Promise<SimulationExplainResult> {
+  return invoke<SimulationExplainResult>("simulation_explain", { params });
 }
 
 function zeroConvergence() {

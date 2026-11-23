@@ -186,6 +186,37 @@ fn project_simulate(
     handle.request("project.simulate", params)
 }
 
+const PROJECT_CALL_METHODS: &[&str] = &[
+    "project.scenario.list",
+    "project.scenario.get",
+    "project.scenario.rename",
+    "project.scenario.archive",
+    "project.scenario.unarchive",
+    "project.run.list",
+    "project.run.pin",
+    "project.run.compare",
+    "project.version.create",
+    "project.version.list",
+    "project.version.restore",
+    "project.version.delete",
+];
+
+/// Passerelle explicite pour les méthodes de gestion de branches et versions.
+/// Seules les méthodes listées sont joignables : le shell n'expose pas le
+/// dispatcher JSON-RPC complet à l'interface.
+#[tauri::command]
+fn project_call(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    method: String,
+    params: Value,
+) -> Result<Value, String> {
+    if !PROJECT_CALL_METHODS.contains(&method.as_str()) {
+        return Err(format!("méthode projet non autorisée: {method}"));
+    }
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request(&method, params)
+}
+
 #[tauri::command]
 fn simulation_start(
     state: tauri::State<'_, Mutex<SidecarManager>>,
@@ -228,6 +259,43 @@ fn simulation_goalseek(
 ) -> Result<Value, String> {
     let handle = state.lock().map_err(|error| error.to_string())?.handle();
     handle.request("simulation.goalseek", params)
+}
+
+#[tauri::command]
+fn simulation_trajectories(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.trajectories", params)
+}
+
+#[tauri::command]
+fn simulation_run_params(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.run_params", params)
+}
+
+#[tauri::command]
+fn simulation_provenance(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.provenance", params)
+}
+
+#[tauri::command]
+fn simulation_explain(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let params = inject_api_key(params)?;
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.explain", params)
 }
 
 #[tauri::command]
@@ -451,10 +519,15 @@ pub fn run() {
             project_scenario_save,
             project_scenario_branch,
             project_simulate,
+            project_call,
             simulation_start,
             simulation_cancel,
             simulation_surface,
             simulation_goalseek,
+            simulation_trajectories,
+            simulation_run_params,
+            simulation_provenance,
+            simulation_explain,
             agent_call,
             agent_turn,
             sandbox_call,

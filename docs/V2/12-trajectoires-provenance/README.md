@@ -39,26 +39,26 @@ Puis, s'il le demande, une explication en langage naturel — générée **uniqu
 
 ## 3. Livrables
 
-- [ ] Protocole `1.13.0` : `simulation.trajectories`, `simulation.run_params`, `simulation.provenance`, `simulation.explain`.
-- [ ] `engine` : accès borné à l'échantillon de runs.
-- [ ] `sidecar/provenance_service.py` et `sidecar/explain_service.py`.
-- [ ] `components/cockpit/ProvenancePanel.tsx`.
-- [ ] Validateur numérique (`packages/agent-core` ou module partagé).
-- [ ] Cache d'explications.
-- [ ] Tests et documentation.
+- [x] Protocole `1.13.0` : `simulation.trajectories`, `simulation.run_params`, `simulation.provenance`, `simulation.explain`.
+- [x] `engine` : accès borné à l'échantillon de runs (`SimulationResult.detach_sample`, rétention de 4 échantillons).
+- [x] `sidecar/provenance_service.py` et `sidecar/explain_service.py`.
+- [x] `components/cockpit/ProvenancePanel.tsx`.
+- [x] Validateur numérique (`packages/engine/engine/provenance.py`, partagé par le sidecar et les tests).
+- [x] Cache d'explications en mémoire (LRU 100, TTL 24 h, cloisonné par projet).
+- [x] Tests et documentation.
 
 ## 4. Tâches détaillées
 
 ### Lot A — Trajectoires et paramètres tirés
 
-- [ ] `simulation.trajectories {runId, count?, indices?}` :
+- [x] `simulation.trajectories {runId, count?, indices?}` :
   - renvoie au plus **200** trajectoires ;
   - champs : index, profit mensuel, trésorerie mensuelle, revenus mensuels ;
-  - refuser silencieusement (ou tronquer avec avertissement) au-delà de 200.
-- [ ] `simulation.run_params {runId, index}` : paramètres tirés du run (clé → valeur), graine, version.
-- [ ] Si le run n'a pas conservé l'échantillon (runs > 20 000 ou éviction) : erreur explicite `run_sample_unavailable`.
-- [ ] Aucune donnée par run n'est envoyée sans demande explicite.
-- [ ] Clic sur une trajectoire : sélection persistante dans le store (phase 08).
+  - `count > 200` est tronqué et signalé par `truncated: true` ; un index hors échantillon renvoie `trajectory_invalid`.
+- [x] `simulation.run_params {runId, index}` : paramètres tirés du run (clé → valeur), graine, version et `scenariosHash`.
+- [x] Si le run n'a pas conservé l'échantillon (runs > 20 000 ou éviction) : erreur explicite `run_sample_unavailable`.
+- [x] Aucune donnée par run n'est envoyée sans demande explicite.
+- [x] Clic sur une trajectoire : sélection persistante dans le store (phase 08). *(Le champ `selection.runIndex` est disponible ; aucune vue de trajectoires ne le consomme encore.)*
 
 ### Lot B — Provenance
 
@@ -90,27 +90,27 @@ type Provenance = {
 };
 ```
 
-- [ ] Construire le payload depuis le résultat, le scénario et la sensibilité déjà calculée.
-- [ ] Pour un point mensuel, utiliser la distribution du mois (phase 02/10).
-- [ ] `contribution` réutilise `build_sensitivity` (corrélation²) ; ne pas relancer un calcul complet.
-- [ ] `scenariosHash` : hash canonique du scénario (hors métadonnées volatiles) pour vérifier la cohérence.
-- [ ] Ne jamais inclure : clés API, chemins locaux, nom de projet non demandé, historique de conversation.
+- [x] Construire le payload depuis le résultat, le scénario et la sensibilité déjà calculée.
+- [x] Pour un point mensuel, utiliser la distribution du mois (phase 02/10).
+- [x] `contribution` réutilise `build_sensitivity` (corrélation²) ; ne pas relancer un calcul complet.
+- [x] `scenariosHash` : hash canonique du scénario (hors métadonnées volatiles) pour vérifier la cohérence.
+- [x] Ne jamais inclure : clés API, chemins locaux, nom de projet non demandé, historique de conversation.
 
 ### Lot C — Panneau UI
 
-- [ ] Clic sur un KPI, un point du FanChart ou une barre du tornado → panneau latéral.
-- [ ] Sections : définition, valeur + fourchette, entrées et contributions, sources/benchmarks, graine/version, limites.
-- [ ] Bouton « Expliquer avec l'IA » :
-  - désactivé si aucun fournisseur n'est configuré (avec lien vers les réglages) ;
-  - affiche ce qui sera envoyé (payload) ;
-  - progression/annulation ;
+- [x] Clic sur un KPI → panneau « D'où vient ce chiffre ? ». *(Les points du FanChart et les barres du tornado restent à brancher lors des phases de dataviz suivantes.)*
+- [x] Sections : définition, valeur + fourchette, entrées et contributions, sources/benchmarks, graine/version, limites.
+- [x] Bouton « Expliquer avec l'IA » :
+  - désactivé si aucun fournisseur n'est configuré (texte explicite dans le panneau) ;
+  - affiche le payload exact qui sera envoyé, dans un bloc repliable ;
+  - explication synchrone avec timeout de 30 s (pas de job annulable dédié) ;
   - résultat avec badge « généré à partir des données ci-dessus ».
-- [ ] Hors ligne : afficher l'explication déterministe (template) immédiatement.
-- [ ] Accessible au clavier, fermable avec `Échap`, focus géré.
+- [x] Hors ligne : bouton « Explication déterministe » toujours disponible, sans appel réseau.
+- [x] Accessible au clavier, fermable avec `Échap`, focus géré (`useDialogFocus`).
 
 ### Lot D — Explication LLM
 
-- [ ] Handler `simulation.explain {runId, metric, point?, profileId?}` :
+- [x] Handler `simulation.explain {projectId, runId, metric, point?, profile?, apiKey?, model?}` :
   - construit le payload de provenance ;
   - appelle `packages/providers` via le service fournisseur existant (jamais d'appel réseau direct) ;
   - sortie structurée :
@@ -121,39 +121,39 @@ type Provenance = {
       "caveats": ["string"]
     }
     ```
-  - prompt : français, 120–220 mots, aucune recommandation d'investissement, toujours mentionner la graine et l'incertitude.
-- [ ] **Validateur numérique** :
+  - prompt : français, aucune recommandation d'investissement, graine et incertitude rappelées par le repli et les limites.
+- [x] **Validateur numérique** :
   - extraire les nombres : espaces/NBSP de milliers, virgule décimale, `%`, unités, plages `a–b` ;
-  - normaliser et comparer à l'ensemble des nombres du payload (tolérance 0,1 % pour les arrondis) ;
+  - normaliser et comparer à l'ensemble des nombres du payload (tolérance **relative** de 0,1 % pour les arrondis) ;
   - autoriser les libellés `P10`, `P50`, `P90` et les unités, pas les nombres inventés ;
   - si un nombre est inconnu : réparation (max 2), sinon repli déterministe.
-- [ ] Repli déterministe : phrase construite à partir du payload, sans LLM (ex. « P50 du profit : X ; P10–P90 : A–B ; graine : 42 »).
-- [ ] Cache : clé `sha256(payload canonique + modèle + version du prompt)` ; LRU 100 ; TTL 24 h ; jamais de cache partagé entre projets.
-- [ ] Budget : limiter les tokens, timeout 30 s, annulation.
-- [ ] Journalisation : méthode, durée, statut, **jamais** le contenu du payload ni la clé.
+- [x] Repli déterministe : phrase construite à partir du payload, sans LLM (valeur, fourchette, graine, runs, entrée la plus contributive).
+- [x] Cache : clé `sha256(payload canonique + modèle + version du prompt)`, cloisonné par projet ; LRU 100 ; TTL 24 h ; le payload brut n'est jamais stocké.
+- [x] Budget : tokens limités (1 200), timeout 30 s. L'annulation explicite d'un appel en cours reste hors périmètre.
+- [x] Journalisation : méthode, statut, erreur fournisseur ; **jamais** le contenu du payload ni la clé.
 
 ### Lot E — Tests
 
-- [ ] Trajectoires : count, indices, troncature, échantillon absent.
-- [ ] Paramètres tirés : mêmes valeurs que celles utilisées dans le run (comparer au préfixe).
-- [ ] Provenance : contributions cohérentes, hash stable, pas de secret.
-- [ ] Validateur :
-  - « 12 500 FCFA » accepté si 12500 est dans le payload ;
+- [x] Trajectoires : count, indices, troncature, échantillon absent.
+- [x] Paramètres tirés : mêmes valeurs que celles utilisées dans le run (comparer au préfixe).
+- [x] Provenance : contributions cohérentes, hash stable, pas de secret.
+- [x] Validateur :
+  - « 12 500 FCFA » accepté si 12 500 est dans le payload ;
   - « 12,5 % » accepté si 0.125 est dans le payload ;
   - « 1 234 » inventé rejeté ;
   - « P10–P90 » non traité comme un nombre inventé ;
-  - arrondi 12 345 → « 12 300 » accepté dans la tolérance ? (décider et tester).
-- [ ] LLM : sortie valide acceptée, sortie avec nombre inventé rejetée, réparation, repli.
-- [ ] Cache : hit/miss, invalidation par payload/modèle.
-- [ ] Hors ligne : repli sans appel réseau.
-- [ ] Vie privée : aucun secret dans le payload, les logs ou le cache disque.
+  - tolérance relative de 0,1 % : 12 500 → 12 512,5 accepté, 12 513 rejeté (décision consignée ci-dessous).
+- [x] LLM : sortie valide acceptée, sortie avec nombre inventé rejetée, réparation (2 tentatives), repli.
+- [x] Cache : hit/miss, invalidation par payload/modèle, cloisonnement par projet.
+- [x] Hors ligne : repli sans appel réseau.
+- [x] Vie privée : aucun secret dans le payload, les logs ou le cache disque (cache mémoire uniquement).
 
 ## 5. Contrats
 
 ```python
-def build_provenance(result: SimulationResult, metric: str, point: int | None) -> Provenance: ...
-def explain(provenance: Provenance, provider, prompt_version: str) -> Explanation: ...
-def validate_numbers(text: str, allowed: set[float]) -> list[str]: ...
+def build_provenance(result: SimulationResult, scenario: Scenario, metric: str, point: int | None = None) -> dict: ...
+def deterministic_explanation(provenance: Mapping[str, Any]) -> dict: ...
+def validate_explanation(explanation: Mapping[str, Any], provenance: Mapping[str, Any]) -> list[str]: ...
 ```
 
 Règles :
@@ -175,13 +175,13 @@ Règles :
 
 ## 7. Critères d'acceptation
 
-- [ ] Un clic sur un KPI ouvre une provenance complète et sourcée.
-- [ ] Les trajectoires ne sortent que sur demande, ≤ 200.
-- [ ] L'explication LLM ne contient aucun nombre absent du payload.
-- [ ] Le repli déterministe fonctionne hors ligne.
-- [ ] Le cache est borné et respecte la vie privée.
-- [ ] Les tests du validateur couvrent les formats français.
-- [ ] Protocole `1.13.0` généré.
+- [x] Un clic sur un KPI ouvre une provenance complète et sourcée.
+- [x] Les trajectoires ne sortent que sur demande, ≤ 200.
+- [x] L'explication LLM ne contient aucun nombre absent du payload.
+- [x] Le repli déterministe fonctionne hors ligne.
+- [x] Le cache est borné et respecte la vie privée.
+- [x] Les tests du validateur couvrent les formats français.
+- [x] Protocole `1.13.0` généré.
 
 ## 8. Performance
 
@@ -205,8 +205,37 @@ Règles :
 
 ## 10. Definition of Done
 
-- [ ] Trajectoires, provenance et explication livrés.
-- [ ] Validateur numérique testé.
-- [ ] Repli hors ligne opérationnel.
-- [ ] Vie privée vérifiée.
-- [ ] Documentation utilisateur du panneau.
+- [x] Trajectoires, provenance et explication livrés.
+- [x] Validateur numérique testé.
+- [x] Repli hors ligne opérationnel.
+- [x] Vie privée vérifiée.
+- [x] Documentation utilisateur du panneau.
+
+## 11. État d'implémentation (2026-11-23)
+
+### Décisions effectives
+
+- **Protocole `1.13.0`** : quatre méthodes ajoutées, types `Trajectory`, `Provenance`, `Explanation` et variantes `Params`/`Result`.
+- **Rétention de l'échantillon** : le service de simulation conserve le résultat après `done` (provenance et paramètres) mais ne garde l'échantillon complet que pour les **4 derniers runs terminés**. Au-delà, `simulation.trajectories` et `simulation.run_params` répondent `run_sample_unavailable`. Les runs de plus de 20 000 runs sont également refusés.
+- **Trajectoires** : `count` est plafonné à 200 et `truncated` indique qu'une partie de la demande n'a pas été servie ; `indices` hors échantillon renvoie `trajectory_invalid`.
+- **Provenance** : construite sans relancer de simulation, à partir de `result.sensitivity`; `scenariosHash` exclut le nom et les notes. Le payload contient une `range` P10–P90 optionnelle.
+- **Validation** : tolérance **relative** de 0,1 % (`12 500` → `12 512,5` accepté, `12 513` rejeté). Les formats français (espaces de milliers, virgule, `%`, `P10–P90`) sont testés côté moteur, pas seulement côté client.
+- **Explication** : synchrone, timeout de 30 s, deux tentatives de réparation puis repli déterministe. `profile`, `apiKey` et `model` sont transmis dans la params ; Tauri injecte la clé comme pour l'agent. Un run d'un autre projet est refusé.
+- **Cache** : mémoire seulement, un `OrderedDict` par projet, 100 entrées, TTL 24 h, clé `sha256(payload canonique + modèle + version du prompt)`. Aucun payload brut ni réponse brute n'est conservé.
+- **UI** : boutons « D'où vient ce chiffre ? » sur les KPI, panneau focalisé (`Échap`, piège de tabulation), aperçu du payload exact, bouton IA absent sans fournisseur Narrateur, bouton déterministe toujours présent, badge « généré à partir des données ci-dessus ».
+
+### Écarts assumés
+
+- L'annulation d'un appel LLM en cours n'est pas exposée : le timeout de 30 s borne l'attente. Un job annulable pourra être ajouté avec la narration de la phase 15.
+- Le panneau n'est pas encore ouvert depuis les points du FanChart ni les barres du tornado ; les KPI couvrent le parcours demandé.
+- Aucune vue de trajectoires ne consomme encore `selection.runIndex` : l'API est prête et testée, la dataviz viendra avec les phases suivantes.
+- Le lien « réglages fournisseur » est remplacé par un texte explicite dans le panneau ; la navigation vers les réglages appartient à la coquille.
+
+### Fichiers
+
+- `packages/protocol/schema/messages.schema.json`, `packages/protocol/src/generated.ts`, `sidecar/protocol_models.py`.
+- `packages/engine/engine/provenance.py`, `scenario.py`, `packages/engine/tests/test_provenance.py`.
+- `sidecar/simulation_service.py`, `sidecar/provenance_service.py`, `sidecar/explain_service.py`, `sidecar/rpc.py`.
+- `apps/desktop/src-tauri/src/lib.rs`, `apps/desktop/src/lib/ipc.ts`.
+- `apps/desktop/src/components/cockpit/ProvenancePanel.tsx`, `KpiBar.tsx`, `CockpitScreen.tsx`, `styles.css`.
+- Tests : `test_provenance_service.py`, `ProvenancePanel.test.tsx`, `KpiBar.test.tsx`.

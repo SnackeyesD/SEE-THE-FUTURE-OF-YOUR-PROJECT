@@ -42,6 +42,7 @@ export const scenarioRecord: ScenarioRecord = {
   scenario,
   createdAt: "2026-01-10T08:05:00.000Z",
   updatedAt: "2026-01-10T08:05:00.000Z",
+  archivedAt: null,
 };
 
 export const simulationResult: SimulationResult = {

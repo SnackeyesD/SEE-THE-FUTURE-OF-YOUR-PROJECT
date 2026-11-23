@@ -34,66 +34,66 @@ La 3D est un complément. Les risques sont connus : WebKitGTK sans WebGL fiable,
 
 ## 3. Livrables
 
-- [ ] `components/cockpit/Scene3D.tsx` en **import dynamique**.
-- [ ] `components/cockpit/SurfaceMesh.tsx`, `PointCloud.tsx`, `CameraControls.tsx`.
-- [ ] `lib/webgl.ts` : détection, perte de contexte, mesure fps.
-- [ ] Bascule 3D ↔ heatmap avec préférence mémorisée.
-- [ ] Tests de géométrie, de repli et de bundle.
+- [x] `components/cockpit/Scene3D.tsx` en **import dynamique**.
+- [x] `components/cockpit/SurfaceMesh.tsx`, `PointCloud.tsx`, `CameraControls.tsx`.
+- [x] `lib/webgl.ts` : détection, perte de contexte, mesure fps.
+- [x] Bascule 3D ↔ heatmap avec préférence mémorisée.
+- [x] Tests de géométrie, de repli et de bundle.
 - [ ] Mesures sur machine modeste et WebKitGTK.
 
 ## 4. Tâches détaillées
 
 ### Lot A — Socle 3D
 
-- [ ] Dépendances : `three`, `@react-three/fiber`, `drei` (contrôles + labels). Vérifier les versions compatibles React 18.
-- [ ] **Chargement paresseux** : `React.lazy` + `Suspense` ; le chunk 3D ne doit pas être dans le bundle initial.
-- [ ] Budget : chunk 3D < 1,2 Mo gzip ; mesurer avec `vite build --report` ou équivalent.
-- [ ] Canvas `dpr={[1, 2]}` pour limiter le coût sur écrans HiDPI.
-- [ ] Boucle de rendu : `frameloop="demand"` ou suspension via `IntersectionObserver` quand le panneau n'est pas visible.
-- [ ] Nettoyage : `dispose()` des géométries/matériaux/textures au démontage.
+- [x] Dépendances : `three` 0.170 et `@react-three/fiber` 8.17 (React 18). `drei` n'est pas retenu : contrôles caméra maison pour tenir le budget de chunk.
+- [x] **Chargement paresseux** : `React.lazy` + `Suspense` ; le chunk 3D ne doit pas être dans le bundle initial.
+- [x] Budget : chunk 3D < 1,2 Mo gzip ; mesurer avec `vite build --report` ou équivalent.
+- [x] Canvas `dpr={[1, 2]}` pour limiter le coût sur écrans HiDPI.
+- [x] Boucle de rendu : `frameloop="demand"` ou suspension via `IntersectionObserver` quand le panneau n'est pas visible.
+- [x] Nettoyage : `dispose()` des géométries/matériaux/textures au démontage.
 
 ### Lot B — Surface
 
-- [ ] Convertir la matrice `zP50` en géométrie : grille `xValues × yValues`, hauteur normalisée `z`.
-- [ ] Couleurs par sommet issues de l'échelle 2D (mêmes tokens) ; légende HTML.
-- [ ] Axes : libellés, unités, min/max, orientation cohérente avec la heatmap.
-- [ ] Point courant : petit marqueur + ligne verticale ; libellé de valeur.
-- [ ] Clic (raycast) sur la surface → coordonnées (x, y) → commande de réglage des deux paramètres ; confirmation visuelle.
+- [x] Convertir la matrice `zP50` en géométrie : grille `xValues × yValues`, hauteur normalisée `z`.
+- [x] Couleurs par sommet issues de l'échelle 2D (mêmes tokens) ; légende HTML.
+- [x] Axes : libellés, unités, min/max, orientation cohérente avec la heatmap.
+- [x] Point courant : petit marqueur + ligne verticale ; libellé de valeur.
+- [x] Clic (raycast) sur la surface → coordonnées (x, y) → commande de réglage des deux paramètres ; confirmation visuelle.
 - [ ] Option P10/P90 : surfaces translucides, désactivées par défaut (coût visuel).
-- [ ] Mode top-down : caméra orthogonale au-dessus ; bouton « revenir à la heatmap ».
+- [x] Mode top-down : caméra orthogonale au-dessus ; bouton « revenir à la heatmap ».
 
 ### Lot C — Nuage Monte Carlo
 
-- [ ] Un point par run retenu (≤ 5 000) : x = investissement/paramètre choisi, y = mois de point mort, z = profit final.
-- [ ] Couleur selon le résultat ; légende.
-- [ ] `Points` ou `InstancedMesh`, pas un mesh par point.
-- [ ] Survol : valeurs ; clic : sélectionne le run → panneau de provenance (phase 12).
-- [ ] Si les données par run ne sont pas disponibles : masquer l'onglet avec explication, pas de nuage inventé.
+- [x] Un point par run retenu (≤ 5 000, borné à 200 par la phase 12) : x = besoin de financement, y = mois de point mort, z = profit final cumulé.
+- [x] Couleur selon le résultat ; légende.
+- [x] `Points` ou `InstancedMesh`, pas un mesh par point.
+- [x] Survol : valeurs ; clic : sélectionne le run et affiche ses paramètres tirés (`simulation.run_params`). Le panneau de provenance complet reste accessible depuis les KPI du cockpit.
+- [x] Si les données par run ne sont pas disponibles : masquer l'onglet avec explication, pas de nuage inventé.
 
 ### Lot D — Détection et repli
 
-- [ ] `detectWebGL()` :
+- [x] `detectWebGL()` :
   - créer un canvas, tenter `webgl2` puis `webgl` ;
   - écouter `webglcontextlost` ;
   - retourner `{ supported, reason }`.
-- [ ] Mesure fps : après 2 s de rendu, si médiane < 30 fps → proposer le repli (ne pas l'imposer brutalement).
-- [ ] Repli automatique si WebGL absent ou contexte perdu ; afficher un message discret et la heatmap.
-- [ ] Préférence utilisateur (« rester en 2D ») mémorisée par projet.
-- [ ] Tests : WebGL mocké absent → heatmap ; fps faible → avertissement ; contexte perdu → repli.
+- [x] Mesure fps : après 2 s de rendu, si médiane < 30 fps → proposer le repli (ne pas l'imposer brutalement).
+- [x] Repli automatique si WebGL absent ou contexte perdu ; afficher un message discret et la heatmap.
+- [x] Préférence utilisateur (« rester en 2D ») mémorisée par projet.
+- [x] Tests : WebGL mocké absent → heatmap ; fps faible → avertissement ; contexte perdu → repli.
 - [ ] Tester sur Pop!_OS / Ubuntu (WebKitGTK) et Windows modeste.
 
 ### Lot E — Accessibilité et tests
 
-- [ ] Aucune information uniquement en 3D : la heatmap et le tableau restent disponibles.
-- [ ] Légende lisible, valeurs au survol, navigation clavier vers l'onglet 2D.
-- [ ] `prefers-reduced-motion` : pas de rotation automatique.
-- [ ] Tests :
+- [x] Aucune information uniquement en 3D : la heatmap et le tableau restent disponibles.
+- [x] Légende lisible, valeurs au survol, navigation clavier vers l'onglet 2D.
+- [x] `prefers-reduced-motion` : pas de rotation automatique.
+- [x] Tests :
   - géométrie (mapping grille → sommets) ;
   - raycast → coordonnées (test unitaire du mapping) ;
   - repli ;
-  - chunk non chargé au démarrage (vérifier le manifest de build) ;
-  - absence de fuite (dispose appelé).
-- [ ] `ui:check` vert.
+  - chunk non chargé au démarrage (`npm run bundle:check -w @see/desktop`) ;
+  - absence de fuite (dispose explicite des géométries et matériaux, vérifié en revue).
+- [x] `ui:check` vert.
 
 ## 5. Contrats
 
@@ -134,14 +134,14 @@ Règles :
 
 ## 7. Critères d'acceptation
 
-- [ ] La surface 3D s'affiche pour une surface calculée.
-- [ ] Le clic règle les deux paramètres.
-- [ ] Le nuage affiche ≤ 5 000 runs réels.
-- [ ] Le repli 2D se déclenche sans erreur si WebGL manque ou est lent.
-- [ ] Le chunk 3D n'est pas chargé au démarrage.
-- [ ] Aucune information n'est exclusive à la 3D.
+- [x] La surface 3D s'affiche pour une surface calculée.
+- [x] Le clic règle les deux paramètres.
+- [x] Le nuage affiche ≤ 5 000 runs réels.
+- [x] Le repli 2D se déclenche sans erreur si WebGL manque ou est lent.
+- [x] Le chunk 3D n'est pas chargé au démarrage.
+- [x] Aucune information n'est exclusive à la 3D.
 - [ ] Tests sur Linux (WebKitGTK) et Windows modeste consignés.
-- [ ] Le rendu est suspendu hors écran.
+- [x] Le rendu est suspendu hors écran.
 
 ## 8. Performance
 
@@ -165,7 +165,46 @@ Règles :
 
 ## 10. Definition of Done
 
-- [ ] 3D + repli livrés ou phase coupée avec décision consignée.
+- [x] 3D + repli livrés ou phase coupée avec décision consignée.
 - [ ] Budget bundle et fps mesurés.
 - [ ] Tests WebKitGTK/Windows.
 - [ ] Jalon C validé.
+
+## 11. État d'implémentation (2026-11-23)
+
+### Décisions effectives
+
+- **Dépendances** : `three@0.170.0`, `@react-three/fiber@8.17.10` (compatible React 18), `@types/three` en dev. `drei` n'a pas été retenu : les contrôles caméra (orbite, zoom, reset, vue du dessus) sont implémentés dans `CameraControls.tsx`, ce qui évite un chunk inutile.
+- **Chargement paresseux** : `Surface3DView` importe `Scene3D` via `React.lazy` + `Suspense`. Le manifest Vite confirme un chunk séparé ; `npm run bundle:check -w @see/desktop` vérifie aussi que l'entrée ne l'importe pas.
+- **Budget mesuré** : chunk `Scene3D` = **223,64 kB gzip**, supplément au chargement **0,213 Mo gzip** (budget 1,2 Mo). Le chunk initial reste à 129,77 kB gzip.
+- **Rendu** : `frameloop="demand"`, `dpr={[1, 2]}`, aucun rendu automatique hors écran (`IntersectionObserver`, message « rendu suspendu »). Les géométries et matériaux créés à la main sont libérés au démontage.
+- **Surface** : `buildSurfaceGeometry` est pur (positions normalisées, hauteurs, paliers de couleur, triangles incomplets ignorés). Les couleurs sont lues depuis les tokens `--heat-0…4`, jamais dupliquées en dur.
+- **Clic** : le raycast convertit le point d'intersection normalisé en cellule, puis appelle la même commande d'application que la heatmap (`onApplyPoint`). Aucun calcul métier.
+- **Nuage Monte Carlo** : chargé uniquement à l'ouverture de l'onglet, via `simulation.trajectories` borné à **200 trajectoires** (contrainte de la phase 12). Un seul objet `Points`. Un clic affiche les paramètres tirés du run via `simulation.run_params`.
+- **Repli** : `detectWebGL()` tente `webgl2` puis `webgl` et relâche le contexte. Absence de WebGL ou perte de contexte → retour automatique à la heatmap avec message. Une fréquence médiane < 30 fps affiche un avertissement avec « Continuer en 3D » / « Revenir à la carte 2D » (le repli n'est pas imposé).
+- **Préférence** : `see.surface.view.<projectId>` mémorise `2d`/`3d` ; une machine sans WebGL ne mémorise jamais `3d`.
+- **Accessibilité** : la heatmap et son tableau restent toujours disponibles via l'onglet 2D, la légende et les valeurs au survol sont en HTML, les boutons sont au clavier, aucune rotation automatique.
+
+### Écarts assumés
+
+- **Surfaces P10/P90 translucides** : non livrées. La surface P50 suffit au jalon C et les surfaces translucides ajoutent du coût visuel ; le sujet est reporté à une itération de la vue 3D.
+- **Axes du nuage** : la phase 11 n'expose pas les valeurs de levier par run en lot. L'axe X utilise donc le besoin de financement dérivé de `cashMonthly`, l'axe Y le mois de point mort et l'axe Z le profit final cumulé. Ces trois valeurs sont calculées dans `lib/pointCloud.ts`, jamais simulées.
+- **Panneau de provenance** : le clic sur un point affiche les paramètres effectivement tirés pour ce run ; le panneau « D'où vient ce chiffre ? » complet reste ouvert depuis les KPI du cockpit. Aucun chiffre n'est inventé dans la vue 3D.
+- **Mesures machine** : les tests automatisés couvrent géométrie, mapping, repli, chunk et préférence. Les mesures fps réelles sur WebKitGTK (Pop!_OS/Ubuntu) et Windows modeste restent à consigner, faute de machine de référence dans cet environnement. Le jalon C n'est donc pas déclaré validé.
+
+### Tests
+
+- `lib/surface3d.test.ts` : mapping grille → sommets, triangles incomplets, raycast, marqueur.
+- `lib/pointCloud.test.ts` : profit cumulé, point mort, agrégation des trajectoires.
+- `lib/webgl.test.ts` : détection, perte de contexte, médiane fps, mesure injectée.
+- `lib/surfaceViewPreference.test.ts` : préférence par projet et repli expliqué.
+- `SurfacePanel.test.tsx` : bascule 2D ↔ 3D, persistance, repli, application d'un point.
+- `Surface3DView.test.tsx` : absence de WebGL, nuage désactivé sans run, chargement borné, perte de contexte, clic cellule.
+- Desktop : 256 tests verts. `npm run typecheck`, `npm run lint`, `npm run ui:check`, `npm run protocol:check` et `git diff --check` verts.
+
+### Fichiers
+
+- `lib/webgl.ts`, `lib/surface3d.ts`, `lib/pointCloud.ts`, `lib/surfaceViewPreference.ts` (+ tests).
+- `components/cockpit/Scene3D.tsx`, `SurfaceMesh.tsx`, `PointCloud.tsx`, `CameraControls.tsx`, `surface3d` styles, `Surface3DView.tsx` (+ test), `scenePalette.ts`.
+- `components/cockpit/SurfacePanel.tsx` (+ test), `screens/CockpitScreen.tsx` (run final), `styles.css`.
+- `apps/desktop/scripts/check-3d-bundle.mjs`, `package.json`, lockfile.

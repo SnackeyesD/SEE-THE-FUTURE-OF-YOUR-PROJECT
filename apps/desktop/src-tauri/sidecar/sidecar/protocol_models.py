@@ -1,6 +1,6 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 # Source: packages/protocol/schema/messages.schema.json
-# Protocol version: 1.12.0
+# Protocol version: 1.14.0
 # Regenerate with: npm run protocol:generate
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-PROTOCOL_VERSION = "1.12.0"
+PROTOCOL_VERSION = "1.14.0"
 
 RequestId = int | str
 
@@ -62,11 +62,27 @@ MethodName = Literal[
     "project.brief.save",
     "project.scenario.save",
     "project.scenario.branch",
+    "project.scenario.list",
+    "project.scenario.get",
+    "project.scenario.rename",
+    "project.scenario.archive",
+    "project.scenario.unarchive",
+    "project.run.list",
+    "project.run.pin",
+    "project.run.compare",
+    "project.version.create",
+    "project.version.list",
+    "project.version.restore",
+    "project.version.delete",
     "project.simulate",
     "simulation.start",
     "simulation.cancel",
     "simulation.surface",
     "simulation.goalseek",
+    "simulation.trajectories",
+    "simulation.run_params",
+    "simulation.provenance",
+    "simulation.explain",
     "integrity.check",
     "storage.backup",
     "provider.catalog",
@@ -519,6 +535,7 @@ class ScenarioRecord(BaseModel):
     version: int | None = None
     createdAt: str
     updatedAt: str
+    archivedAt: str | None
 
 
 class SimulationRunRecord(BaseModel):
@@ -572,6 +589,7 @@ class ProjectScenarioSaveParams(BaseModel):
     name: str
     model: str | None = None
     scenario: Scenario
+    scenarioId: str | None = None
 
 
 class ProjectScenarioSaveResult(BaseModel):
@@ -594,6 +612,222 @@ class ProjectScenarioBranchResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     scenario: ScenarioRecord
+
+
+class BranchRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenarioId: str
+    name: str
+    branchLabel: str | None
+    parentId: str | None
+    updatedAt: str
+    archivedAt: str | None
+    lastFinalRunId: str | None
+    seed: int | None
+
+
+class ProjectScenarioListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    includeArchived: bool | None = None
+
+
+class ProjectScenarioListResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    branches: list[BranchRef]
+
+
+class ProjectScenarioGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenarioId: str
+
+
+class ProjectScenarioGetResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario: ScenarioRecord
+
+
+class ProjectScenarioRenameParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenarioId: str
+    name: str
+    branchLabel: str | None = None
+
+
+class ProjectScenarioRenameResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario: ScenarioRecord
+
+
+class ProjectScenarioArchiveParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenarioId: str
+    confirmPinned: bool | None = None
+
+
+class ProjectScenarioArchiveResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario: ScenarioRecord
+    archived: bool
+    pinnedRuns: int
+
+
+class ProjectScenarioUnarchiveParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenarioId: str
+
+
+class ProjectScenarioUnarchiveResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario: ScenarioRecord
+
+
+class RunRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    scenarioId: str | None
+    seed: int | None
+    engineVersion: str
+    runs: int
+    pinned: bool
+    createdAt: str
+    summary: dict[str, Any]
+
+
+class ProjectRunListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenarioId: str | None = None
+    seed: int | None = None
+    limit: int | None = None
+
+
+class ProjectRunListResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runs: list[RunRef]
+
+
+class ProjectRunPinParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    runId: str
+    pinned: bool
+
+
+class ProjectRunPinResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run: RunRef
+
+
+class RunComparison(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    scenarioId: str | None
+    seed: int | None
+    engineVersion: str
+    result: SimulationResult
+
+
+class ProjectRunCompareParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    runIds: list[str]
+
+
+class ProjectRunCompareResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runs: list[RunComparison]
+    sameSeed: bool
+    sameEngineVersion: bool
+
+
+class ScenarioVersionRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    projectId: str
+    scenarioId: str | None
+    label: str
+    seed: int | None
+    engineVersion: str | None
+    createdAt: str
+
+
+class ProjectVersionCreateParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    label: str
+    scenarioId: str | None = None
+    seed: int | None = None
+
+
+class ProjectVersionCreateResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: ScenarioVersionRef
+
+
+class ProjectVersionListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+
+
+class ProjectVersionListResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    versions: list[ScenarioVersionRef]
+
+
+class ProjectVersionRestoreParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    versionId: str
+    label: str | None = None
+
+
+class ProjectVersionRestoreResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario: ScenarioRecord
+
+
+class ProjectVersionDeleteParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    versionId: str
+
+
+class ProjectVersionDeleteResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    deleted: bool
 
 
 class ProjectSimulateParams(BaseModel):
@@ -628,6 +862,7 @@ class SimulationStartParams(BaseModel):
     quality: SimulationQuality
     seed: int
     runToken: str | None = None
+    scenarioId: str | None = None
 
 
 class SimulationStartResult(BaseModel):
@@ -1724,3 +1959,148 @@ class BenchmarkPackImportResult(BaseModel):
 
     pack: BenchmarkPackInfo
     replaced: bool | None = None
+
+
+class Trajectory(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    index: int
+    profitMonthly: list[float]
+    cashMonthly: list[float]
+    revenueMonthly: list[float]
+
+
+class SimulationTrajectoriesParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    count: int | None = None
+    indices: list[int] | None = None
+
+
+class SimulationTrajectoriesResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    seed: int
+    engineVersion: str
+    runs: int
+    runsRetained: int
+    horizonMonths: int
+    currency: str
+    truncated: bool
+    trajectories: list[Trajectory]
+
+
+class SimulationRunParamsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    index: int
+
+
+class SimulationRunParamsResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    index: int
+    seed: int
+    engineVersion: str
+    scenariosHash: str
+    parameters: dict[str, float]
+
+
+class ProvenanceBenchmark(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str
+    source: str | None = None
+    url: str | None = None
+    date: str | None = None
+
+
+class ProvenanceInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    label: str
+    value: float
+    drawnRange: list[float]
+    source: Literal["user", "benchmark", "estimate"]
+    confidence: float | None = None
+    benchmark: ProvenanceBenchmark | None = None
+    correlation: float
+    contribution: float
+
+
+class Provenance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    metric: str
+    point: int | None
+    definition: str
+    formula: str
+    value: float
+    unit: str
+    range: list[float] | None = None
+    seed: int
+    engineVersion: str
+    runs: int
+    scenariosHash: str
+    inputs: list[ProvenanceInput]
+    caveats: list[str]
+
+
+class SimulationProvenanceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    metric: str
+    point: int | None = None
+
+
+class SimulationProvenanceResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provenance: Provenance
+
+
+class ExplanationPoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+    references: list[str]
+
+
+class Explanation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    summary: str
+    points: list[ExplanationPoint]
+    caveats: list[str]
+
+
+class SimulationExplainParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    runId: str
+    metric: str
+    point: int | None = None
+    profile: ProviderProfile | None = None
+    apiKey: str | None = None
+    model: str | None = None
+
+
+class SimulationExplainResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    explanation: Explanation
+    source: Literal["llm", "fallback"]
+    model: str | None = None
+    promptVersion: str
+    cached: bool
+    repaired: bool
+    reason: str | None = None
+    provenance: Provenance

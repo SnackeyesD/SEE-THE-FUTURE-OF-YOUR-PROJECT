@@ -8,17 +8,20 @@
     "dev:web": "vite",
     "build": "tauri build",
     "build:web": "tsc --noEmit && vite build",
+    "bundle:check": "vite build --manifest && node scripts/check-3d-bundle.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@react-three/fiber": "^8.17.10",
     "@see/protocol": "*",
     "@see/sandbox": "*",
     "@see/ui": "*",
     "@tauri-apps/api": "^2.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "three": "^0.170.0",
     "zustand": "^5.1.0"
   },
   "devDependencies": {
@@ -29,6 +32,7 @@
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.170.0",
     "@vitejs/plugin-react": "^4.3.4",
     "jsdom": "^26.1.0",
     "typescript": "^5.7.2",

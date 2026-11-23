@@ -30,7 +30,10 @@ Ce dossier contient la spécification de la V3 et son découpage d'implémentati
 | 09 — Cockpit 2D | **terminée** (2026-11-18), test utilisateur en attente | [`09-cockpit-2d/README.md`](09-cockpit-2d/README.md), route `cockpit`, `FanChart` (P10–P90, seuil CDF, fantômes), `KpiBar`, `TriHandleSlider`, `useLiveSimulation` drafts pendant geste, 44 tests ajoutés (107 desktop) |
 | 10 — Temps & événements UI | **terminée** (2026-11-21), revue senior consignée dans [`REVUE-PHASE-10.md`](10-temps-et-evenements-ui/REVUE-PHASE-10.md) | frise, catalogue, éditeur d'événements, palette de commandes, protocole `1.11.0` |
 | 11 — Analyse interactive | **terminée** (2026-11-21) | [`11-analyse-interactive/README.md`](11-analyse-interactive/README.md), surface 2D CRN, recherche d'objectif, heatmap/tornado, protocole `1.12.0`, [`docs/perf/surface-goalseek.md`](../perf/surface-goalseek.md) |
-| 12 à 16 | à démarrer | voir le plan maître |
+| 12 — Trajectoires, provenance & explication | **terminée** (2026-11-23) | [`12-trajectoires-provenance/README.md`](12-trajectoires-provenance/README.md), accès borné aux trajectoires/paramètres, payload de provenance, panneau « D'où vient ce chiffre ? », explication LLM vérifiée + repli déterministe, cache mémoire, protocole `1.13.0` |
+| 13 — Branches & comparaison | **terminée** (2026-11-23) | [`13-branches-comparaison/README.md`](13-branches-comparaison/README.md), migration `0007` (`archived_at`), branches (liste plate, duplication, renommage, archivage, limite 20), diff pur hypothèses/événements, comparaison de runs avec avertissement graine/moteur, versions nommées et restauration non destructive, protocole `1.14.0` |
+| 14 — Vue 3D & repli | **terminée** (2026-11-23), mesures machine en attente | [`14-vue-3d/README.md`](14-vue-3d/README.md), surface 3D et nuage Monte Carlo (≤ 200 trajectoires), contrôles caméra maison, chunk 3D paresseux à 223 kB gzip, détection WebGL/perte de contexte, repli 2D automatique et expliqué, préférence par projet, tests et `bundle:check` |
+| 15 à 16 | à démarrer | voir le plan maître |
 
 ## Règle d'or
 

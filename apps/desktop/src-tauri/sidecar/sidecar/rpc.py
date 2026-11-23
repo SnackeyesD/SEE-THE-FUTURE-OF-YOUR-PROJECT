@@ -25,7 +25,9 @@ from . import (
     agent_service,
     analysis_service,
     benchmark_service,
+    explain_service,
     project_service,
+    provenance_service,
     provider_service,
     sandbox_service,
     simulation_service,
@@ -66,11 +68,13 @@ class RequestContext:
         *,
         service: simulation_service.SimulationService | None = None,
         analysis: analysis_service.AnalysisService | None = None,
+        explain: explain_service.ExplainService | None = None,
         diagnostics: Callable[[], dict[str, Any]] | None = None,
     ) -> None:
         self._notifier = notifier
         self.service = service
         self.analysis = analysis
+        self.explain = explain
         self._diagnostics = diagnostics
 
     def notify(self, method: str, params: dict[str, Any]) -> None:
@@ -277,6 +281,75 @@ def simulation_goalseek(
             exc.message,
             {"code": exc.code, "retryable": exc.retryable},
         ) from exc
+
+
+def _simulation_access_error(
+    exc: simulation_service.SimulationServiceError
+    | provenance_service.ProvenanceServiceError,
+) -> RpcError:
+    code = NOT_FOUND if exc.code in {"run_not_found"} else SIMULATION_ERROR
+    return RpcError(code, exc.message, {"code": exc.code, "retryable": exc.retryable})
+
+
+def simulation_trajectories(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    service = _simulation_service(context)
+    try:
+        return service.trajectories(params)
+    except simulation_service.SimulationServiceError as exc:
+        raise _simulation_access_error(exc) from exc
+
+
+def simulation_run_params(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    service = _simulation_service(context)
+    try:
+        return service.run_params(params)
+    except simulation_service.SimulationServiceError as exc:
+        raise _simulation_access_error(exc) from exc
+
+
+def simulation_provenance(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    service = _simulation_service(context)
+    try:
+        return provenance_service.build(service, params)
+    except provenance_service.ProvenanceServiceError as exc:
+        raise _simulation_access_error(exc) from exc
+
+
+def simulation_explain(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    project_id = params.get("projectId")
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise RpcError(
+            SIMULATION_ERROR,
+            "projectId doit être une chaîne non vide",
+            {"code": "explanation_invalid"},
+        )
+    try:
+        get_store().projects.require(project_id.strip())
+    except ProjectNotFound as exc:
+        raise RpcError(NOT_FOUND, str(exc)) from exc
+    except StorageValidationError as exc:
+        raise RpcError(INVALID_PARAMS, str(exc)) from exc
+
+    service = _simulation_service(context)
+    explain = context.explain
+    if explain is None:
+        raise RpcError(INTERNAL_ERROR, "service d'explication indisponible")
+    try:
+        return explain.explain(get_store(), service, params)
+    except provenance_service.ProvenanceServiceError as exc:
+        raise _simulation_access_error(exc) from exc
+    except ProjectNotFound as exc:
+        raise RpcError(NOT_FOUND, str(exc)) from exc
+    except StorageValidationError as exc:
+        raise RpcError(INVALID_PARAMS, str(exc)) from exc
 
 
 def _storage_handler(handler: Handler) -> Handler:
@@ -512,6 +585,78 @@ def project_scenario_branch(
 
 
 @_storage_handler
+def project_scenario_list(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.list_branches(get_store(), params)
+
+
+@_storage_handler
+def project_scenario_get(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.get_scenario(get_store(), params)
+
+
+@_storage_handler
+def project_scenario_rename(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.rename_scenario(get_store(), params)
+
+
+@_storage_handler
+def project_scenario_archive(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.archive_scenario(get_store(), params)
+
+
+@_storage_handler
+def project_scenario_unarchive(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.unarchive_scenario(get_store(), params)
+
+
+@_storage_handler
+def project_run_list(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.list_runs(get_store(), params)
+
+
+@_storage_handler
+def project_run_pin(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.pin_run(get_store(), params)
+
+
+@_storage_handler
+def project_run_compare(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.compare_runs(get_store(), params)
+
+
+@_storage_handler
+def project_version_create(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.create_version(get_store(), params)
+
+
+@_storage_handler
+def project_version_list(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.list_versions(get_store(), params)
+
+
+@_storage_handler
+def project_version_restore(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.restore_version(get_store(), params)
+
+
+@_storage_handler
+def project_version_delete(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.delete_version(get_store(), params)
+
+
+@_storage_handler
 def project_simulate(params: dict[str, Any], context: RequestContext) -> dict[str, Any]:
     progress = None
     if _optional_bool(params, "progress"):
@@ -718,11 +863,27 @@ def default_handlers() -> dict[str, Handler]:
         "project.brief.save": project_brief_save,
         "project.scenario.save": project_scenario_save,
         "project.scenario.branch": project_scenario_branch,
+        "project.scenario.list": project_scenario_list,
+        "project.scenario.get": project_scenario_get,
+        "project.scenario.rename": project_scenario_rename,
+        "project.scenario.archive": project_scenario_archive,
+        "project.scenario.unarchive": project_scenario_unarchive,
+        "project.run.list": project_run_list,
+        "project.run.pin": project_run_pin,
+        "project.run.compare": project_run_compare,
+        "project.version.create": project_version_create,
+        "project.version.list": project_version_list,
+        "project.version.restore": project_version_restore,
+        "project.version.delete": project_version_delete,
         "project.simulate": project_simulate,
         "simulation.start": simulation_start,
         "simulation.cancel": simulation_cancel,
         "simulation.surface": simulation_surface,
         "simulation.goalseek": simulation_goalseek,
+        "simulation.trajectories": simulation_trajectories,
+        "simulation.run_params": simulation_run_params,
+        "simulation.provenance": simulation_provenance,
+        "simulation.explain": simulation_explain,
         "integrity.check": integrity_check,
         "storage.backup": storage_backup,
         "provider.catalog": provider_catalog,
@@ -769,6 +930,7 @@ class RpcServer:
         writer: simulation_service.OutboundWriter | None = None,
         simulation: simulation_service.SimulationService | None = None,
         analysis: analysis_service.AnalysisService | None = None,
+        explain: explain_service.ExplainService | None = None,
     ) -> None:
         self.handlers = dict(handlers or default_handlers())
         self.max_message_bytes = max_message_bytes
@@ -779,6 +941,7 @@ class RpcServer:
             persist=self._persist_result
         )
         self.analysis = analysis or analysis_service.AnalysisService()
+        self.explain = explain or explain_service.ExplainService()
 
     def _persist_result(
         self,
@@ -788,7 +951,11 @@ class RpcServer:
         """Persistance ``final`` : exécutée uniquement sur le thread principal."""
 
         project_service.persist_result(
-            get_store(), job.project_id, job.scenario, result
+            get_store(),
+            job.project_id,
+            job.scenario,
+            result,
+            scenario_id=job.scenario_id,
         )
 
     def serve(self) -> int:
@@ -913,6 +1080,7 @@ class RpcServer:
             self._notify,
             service=self.simulation,
             analysis=self.analysis,
+            explain=self.explain,
             diagnostics=lambda: {
                 "droppedMessages": self._writer.dropped,
                 **self.simulation.health_stats(),

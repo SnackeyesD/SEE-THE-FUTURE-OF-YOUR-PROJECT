@@ -139,7 +139,7 @@ def test_health_exposes_versions(sidecar: SidecarProcess) -> None:
     response = sidecar.call("health")
     result = response["result"]
     assert result["status"] == "ok"
-    assert result["protocolVersion"] == "1.12.0"
+    assert result["protocolVersion"] == "1.14.0"
     assert isinstance(result["pid"], int)
     assert result["sidecarVersion"]
 
@@ -1605,3 +1605,234 @@ def test_surface_rejects_an_unknown_axis(sidecar: SidecarProcess) -> None:
     )
     assert terminal["method"] == "simulation.error"
     assert terminal["params"]["code"] == "analysis_invalid"
+
+
+# ---------------------------------------------------------------------------
+# Phase 12 — trajectoires, provenance et explication
+# ---------------------------------------------------------------------------
+
+
+def test_provenance_trajectories_and_explain_flow(sidecar: SidecarProcess) -> None:
+    project_id = _create_project(sidecar, "Provenance")
+    started = sidecar.call(
+        "simulation.start",
+        {
+            "projectId": project_id,
+            "scenario": SIMULATION_SCENARIO,
+            "quality": "draft",
+            "seed": 4,
+            "config": {"runs": 30, "batchSize": 10},
+        },
+        request_id=1400,
+    )
+    assert started["result"]["accepted"] is True
+    run_id = started["result"]["runId"]
+
+    _, terminal = _read_until(sidecar, _is_terminal)
+    assert terminal["method"] == "simulation.done"
+    assert terminal["params"]["runId"] == run_id
+
+    provenance = sidecar.call(
+        "simulation.provenance",
+        {"runId": run_id, "metric": "profit_p50"},
+        request_id=1401,
+    )
+    assert "error" not in provenance
+    payload = provenance["result"]["provenance"]
+    assert payload["runId"] == run_id
+    assert payload["metric"] == "profit_p50"
+    assert payload["seed"] == 4
+    assert payload["runs"] == 30
+    # Aucun nom de projet ni secret dans le payload transmis au modèle.
+    assert project_id not in json.dumps(payload)
+
+    trajectories = sidecar.call(
+        "simulation.trajectories",
+        {"runId": run_id, "count": 2},
+        request_id=1402,
+    )
+    assert "error" not in trajectories
+    served = trajectories["result"]
+    assert served["runId"] == run_id
+    assert served["runs"] == 30
+    assert len(served["trajectories"]) == 2
+    assert served["trajectories"][0]["index"] == 0
+    assert len(served["trajectories"][0]["profitMonthly"]) == 2
+
+    run_params = sidecar.call(
+        "simulation.run_params",
+        {"runId": run_id, "index": 0},
+        request_id=1403,
+    )
+    assert "error" not in run_params
+    drawn = run_params["result"]
+    assert drawn["runId"] == run_id
+    assert drawn["index"] == 0
+    assert drawn["scenariosHash"]
+    assert drawn["parameters"]
+
+    explanation = sidecar.call(
+        "simulation.explain",
+        {"projectId": project_id, "runId": run_id, "metric": "profit_p50"},
+        request_id=1404,
+    )
+    assert "error" not in explanation
+    result = explanation["result"]
+    assert result["source"] == "fallback"
+    assert result["reason"] == "no_provider"
+    assert result["cached"] is False
+    assert result["explanation"]["summary"]
+
+
+def test_branch_versions_and_comparison_workflow(sidecar: SidecarProcess) -> None:
+    created = sidecar.call("project.create", {"name": "Branches RPC"}, request_id=1000)
+    project_id = created["result"]["project"]["id"]
+    saved = sidecar.call(
+        "project.scenario.save",
+        {
+            "projectId": project_id,
+            "name": "Base RPC",
+            "scenario": SIMULATION_SCENARIO,
+        },
+        request_id=1001,
+    )
+    base_id = saved["result"]["scenario"]["id"]
+
+    first = sidecar.call(
+        "project.scenario.branch",
+        {"projectId": project_id, "scenarioId": base_id, "label": "Variante A"},
+        request_id=1002,
+    )
+    first_id = first["result"]["scenario"]["id"]
+    second = sidecar.call(
+        "project.scenario.branch",
+        {"projectId": project_id, "scenarioId": base_id, "label": "Variante B"},
+        request_id=1003,
+    )
+    second_id = second["result"]["scenario"]["id"]
+    assert first["result"]["scenario"]["parentId"] == base_id
+    assert first["result"]["scenario"]["branchLabel"] == "Variante A"
+
+    listed = sidecar.call(
+        "project.scenario.list", {"projectId": project_id}, request_id=1004
+    )
+    assert {item["scenarioId"] for item in listed["result"]["branches"]} == {
+        base_id,
+        first_id,
+        second_id,
+    }
+
+    renamed = sidecar.call(
+        "project.scenario.rename",
+        {
+            "projectId": project_id,
+            "scenarioId": second_id,
+            "name": "Variante B renommée",
+            "branchLabel": "Variante B2",
+        },
+        request_id=1005,
+    )
+    assert renamed["result"]["scenario"]["branchLabel"] == "Variante B2"
+
+    run_a = sidecar.call(
+        "project.simulate",
+        {
+            "projectId": project_id,
+            "scenarioId": first_id,
+            "config": {"runs": 20, "seed": 7},
+        },
+        request_id=1006,
+    )
+    run_b = sidecar.call(
+        "project.simulate",
+        {
+            "projectId": project_id,
+            "scenarioId": second_id,
+            "config": {"runs": 20, "seed": 7},
+        },
+        request_id=1007,
+    )
+    assert run_a["result"]["run"]["scenarioId"] == first_id
+    assert run_b["result"]["run"]["scenarioId"] == second_id
+
+    comparison = sidecar.call(
+        "project.run.compare",
+        {
+            "projectId": project_id,
+            "runIds": [run_a["result"]["run"]["id"], run_b["result"]["run"]["id"]],
+        },
+        request_id=1008,
+    )
+    assert comparison["result"]["sameSeed"] is True
+    assert comparison["result"]["sameEngineVersion"] is True
+
+    pinned = sidecar.call(
+        "project.run.pin",
+        {
+            "projectId": project_id,
+            "runId": run_a["result"]["run"]["id"],
+            "pinned": True,
+        },
+        request_id=1009,
+    )
+    assert pinned["result"]["run"]["pinned"] is True
+
+    refused = sidecar.call(
+        "project.scenario.archive",
+        {"projectId": project_id, "scenarioId": first_id},
+        request_id=1010,
+    )
+    assert refused["error"]["code"] == -32602
+    assert "confirmez" in refused["error"]["message"]
+
+    archived = sidecar.call(
+        "project.scenario.archive",
+        {
+            "projectId": project_id,
+            "scenarioId": first_id,
+            "confirmPinned": True,
+        },
+        request_id=1011,
+    )
+    assert archived["result"]["scenario"]["archivedAt"] is not None
+    visible = sidecar.call(
+        "project.scenario.list", {"projectId": project_id}, request_id=1012
+    )
+    assert first_id not in {item["scenarioId"] for item in visible["result"]["branches"]}
+
+    restored_branch = sidecar.call(
+        "project.scenario.unarchive",
+        {"projectId": project_id, "scenarioId": first_id},
+        request_id=1013,
+    )
+    assert restored_branch["result"]["scenario"]["archivedAt"] is None
+
+    version = sidecar.call(
+        "project.version.create",
+        {"projectId": project_id, "scenarioId": first_id, "label": "Référence", "seed": 7},
+        request_id=1014,
+    )
+    version_id = version["result"]["version"]["id"]
+    versions = sidecar.call(
+        "project.version.list", {"projectId": project_id}, request_id=1015
+    )
+    assert [item["id"] for item in versions["result"]["versions"]] == [version_id]
+
+    restored = sidecar.call(
+        "project.version.restore",
+        {"projectId": project_id, "versionId": version_id},
+        request_id=1016,
+    )
+    assert restored["result"]["scenario"]["id"] != first_id
+    assert restored["result"]["scenario"]["parentId"] == first_id
+
+    deleted = sidecar.call(
+        "project.version.delete",
+        {"projectId": project_id, "versionId": version_id},
+        request_id=1017,
+    )
+    assert deleted["result"]["deleted"] is True
+    remaining = sidecar.call(
+        "project.version.list", {"projectId": project_id}, request_id=1018
+    )
+    assert remaining["result"]["versions"] == []

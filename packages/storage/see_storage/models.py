@@ -104,6 +104,7 @@ class ScenarioRecord(Model):
     version: int
     created_at: str
     updated_at: str
+    archived_at: str | None
 
     @classmethod
     def from_row(cls, row: Any) -> ScenarioRecord:
@@ -118,6 +119,7 @@ class ScenarioRecord(Model):
             version=int(row["version"]),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
+            archived_at=row["archived_at"],
         )
 
 

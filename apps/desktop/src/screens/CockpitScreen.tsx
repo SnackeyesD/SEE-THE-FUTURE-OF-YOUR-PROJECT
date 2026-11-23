@@ -41,6 +41,10 @@ import {
 import { KpiBar } from "../components/cockpit/KpiBar";
 import { MonthInspector } from "../components/cockpit/MonthInspector";
 import {
+  ProvenancePanel,
+  type ProvenanceTarget,
+} from "../components/cockpit/ProvenancePanel";
+import {
   SurfacePanel,
   type SurfaceFormValues,
 } from "../components/cockpit/SurfacePanel";
@@ -66,6 +70,8 @@ export interface CockpitScreenProps {
   onOpenHypotheses: () => void;
   /** Enregistre le scénario complet (hypothèses, événements, saisonnalité). */
   onSaveScenario: (name: string, scenario: Scenario) => Promise<boolean>;
+  /** Branche ouverte depuis l'écran Branches : force un store séparé. */
+  branchKey?: string | null;
   /** Signale les modifications non enregistrées au shell (garde de navigation). */
   onDirtyChange?: (dirty: boolean) => void;
 }
@@ -118,6 +124,7 @@ export function CockpitScreen({
   onBack,
   onOpenHypotheses,
   onSaveScenario,
+  branchKey,
   onDirtyChange,
 }: CockpitScreenProps) {
   const initialLayout = useMemo(() => loadLayout(project.id), [project.id]);
@@ -140,8 +147,9 @@ export function CockpitScreen({
     <CockpitProvider
       // Clé stable : un enregistrement crée un nouveau `ScenarioRecord`, mais
       // ne doit pas remonter le provider (l'historique des runs serait perdu).
-      key={project.id}
+      key={branchKey ?? project.id}
       projectId={project.id}
+      scenarioId={scenario.id}
       scenario={scenario.scenario}
       seed={seed}
       initialLayout={initialLayout}
@@ -200,6 +208,7 @@ function CockpitBody({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [provenanceTarget, setProvenanceTarget] = useState<ProvenanceTarget | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [monthNotice, setMonthNotice] = useState("");
@@ -230,6 +239,15 @@ function CockpitBody({
   const active = session.activeRunId ? runs[session.activeRunId] ?? null : null;
   const latest = useMemo(() => latestResult(runs), [runs]);
   const display = active ?? latest;
+  const finalRunId = useMemo(() => {
+    const finals = Object.values(runs).filter(
+      (run) => run.quality === "final" && run.status === "done" && run.result !== null,
+    );
+    if (finals.length === 0) return null;
+    return finals.sort((left, right) =>
+      (right.computedAt ?? "").localeCompare(left.computedAt ?? ""),
+    )[0].runId;
+  }, [runs]);
   const result = display?.result ?? null;
   const aggregates = display?.aggregates ?? null;
 
@@ -290,6 +308,10 @@ function CockpitBody({
     onMonthChange: changeMonth,
     disabled: session.activeRunId !== null,
   });
+
+  const handleExplainMetric = useCallback((metric: string, point: number | null) => {
+    setProvenanceTarget({ metric, point });
+  }, []);
 
   const pinnedRuns = useMemo(
     () => pinned.map((runId) => runs[runId]).filter((run): run is RunState => Boolean(run?.result)),
@@ -787,6 +809,7 @@ function CockpitBody({
         month={selectedMonth}
         onMonthChange={changeMonth}
         onSeedChange={handleSeed}
+        onExplain={result?.runId ? handleExplainMetric : undefined}
       />
       <div className="cockpit-save" aria-live="polite">
         {dirty ? (
@@ -1043,9 +1066,11 @@ function CockpitBody({
         <div hidden={analysisTab !== "surface"}>
           <SurfacePanel
             scenario={session.scenario}
+            projectId={project.id}
             currency={currency}
             state={analysis.surface}
             seed={session.seed}
+            finalRunId={finalRunId}
             disabled={running}
             onRun={handleRunSurface}
             onCancel={analysis.cancelSurface}
@@ -1092,6 +1117,15 @@ function CockpitBody({
       ) : null}
 
       {helpOpen ? <ShortcutsHelp onClose={() => setHelpOpen(false)} /> : null}
+
+      {provenanceTarget && result?.runId ? (
+        <ProvenancePanel
+          projectId={project.id}
+          runId={result.runId}
+          target={provenanceTarget}
+          onClose={() => setProvenanceTarget(null)}
+        />
+      ) : null}
     </div>
   );
 }

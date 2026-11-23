@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from engine import (
+    SAMPLE_LIMIT,
     CancelToken,
     ConvergenceState,
     PartialAggregates,
@@ -38,6 +39,7 @@ from engine import (
     SimulationConfig,
     SimulationResult,
     resolve_execution,
+    scenario_hash,
     simulate,
 )
 from pydantic import ValidationError
@@ -54,6 +56,13 @@ RUN_TTL_SECONDS = 15 * 60
 THROTTLE_SECONDS = 0.05
 MAX_PARTIAL_BYTES = 500_000
 MAX_MESSAGE_BYTES = 1_000_000
+MAX_TRAJECTORIES = 200
+MAX_RETAINED_SAMPLES = 4
+"""Nombre de runs dont l'échantillon complet reste disponible pour les trajectoires.
+
+Au-delà, seuls les agrégats du résultat sont conservés : la demande de
+trajectoires renvoie explicitement ``run_sample_unavailable``.
+"""
 
 TERMINAL_STATUSES = frozenset({"done", "cancelled", "error"})
 ACTIVE_STATUSES = frozenset({"queued", "running", "cancelling"})
@@ -211,6 +220,7 @@ class Job:
         )
     )
     run_token: str | None = None
+    scenario_id: str | None = None
 
 
 class SimulationService:
@@ -248,7 +258,9 @@ class SimulationService:
     # API publique
     # ------------------------------------------------------------------
     def start(self, params: dict[str, Any], notify: Notifier) -> dict[str, Any]:
-        scenario, config, quality, seed, project_id, run_token = _validate_start(params)
+        scenario, config, quality, seed, project_id, run_token, scenario_id = _validate_start(
+            params
+        )
         now = self._clock()
         notifications: list[tuple[str, dict[str, Any]]] = []
 
@@ -292,6 +304,7 @@ class SimulationService:
                 created_at=now,
                 updated_at=now,
                 run_token=run_token,
+                scenario_id=scenario_id,
             )
             self._runs[run_id] = job
             self._order.append(run_id)
@@ -330,6 +343,129 @@ class SimulationService:
                 notifications.append(notification)
         self._send_all(notifications)
         return {"cancelled": True}
+
+    # ------------------------------------------------------------------
+    # Accès à la demande (trajectoires, paramètres, provenance)
+    # ------------------------------------------------------------------
+    def job_for(self, run_id: str) -> Job:
+        with self._lock:
+            job = self._runs.get(run_id)
+        if job is None:
+            raise SimulationServiceError(
+                "run_not_found",
+                f"run inconnu ou expiré: {run_id}",
+            )
+        return job
+
+    def _sample_for(self, run_id: str) -> tuple[Job, Any]:
+        job = self.job_for(run_id)
+        result = job.result
+        if result is None:
+            raise SimulationServiceError(
+                "run_sample_unavailable",
+                "l'échantillon de ce run n'est plus disponible; relancez un calcul",
+            )
+        if result.runs > SAMPLE_LIMIT:
+            raise SimulationServiceError(
+                "run_sample_unavailable",
+                f"le run dépasse {SAMPLE_LIMIT} runs : seuls les agrégats sont conservés",
+            )
+        sample = result.run_sample
+        if sample is None or int(sample.indices.size) == 0:
+            raise SimulationServiceError(
+                "run_sample_unavailable",
+                "l'échantillon de ce run a été évincé; relancez un calcul",
+            )
+        return job, sample
+
+    def trajectories(self, params: dict[str, Any]) -> dict[str, Any]:
+        run_id = _required_text(params, "runId")
+        job, sample = self._sample_for(run_id)
+        result = job.result
+        assert result is not None
+        retained = int(sample.indices.size)
+
+        raw_indices = params.get("indices")
+        truncated = False
+        if raw_indices is not None:
+            if not isinstance(raw_indices, list):
+                raise SimulationServiceError(
+                    "trajectory_invalid", "indices doit être une liste d'entiers"
+                )
+            if len(raw_indices) > MAX_TRAJECTORIES:
+                truncated = True
+            selected: list[int] = []
+            for value in raw_indices[:MAX_TRAJECTORIES]:
+                if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                    raise SimulationServiceError(
+                        "trajectory_invalid", "chaque index doit être un entier positif"
+                    )
+                if value >= retained:
+                    raise SimulationServiceError(
+                        "trajectory_invalid",
+                        f"index {value} hors de l'échantillon conservé ({retained} runs)",
+                    )
+                if value not in selected:
+                    selected.append(value)
+        else:
+            count = params.get("count", MAX_TRAJECTORIES)
+            if isinstance(count, bool) or not isinstance(count, int) or count < 1:
+                raise SimulationServiceError(
+                    "trajectory_invalid", "count doit être un entier positif"
+                )
+            if count > MAX_TRAJECTORIES:
+                count = MAX_TRAJECTORIES
+                truncated = True
+            selected = list(range(min(count, retained)))
+            truncated = truncated or count > len(selected)
+
+        trajectories = [
+            {
+                "index": index,
+                "profitMonthly": sample.profit_monthly[index].tolist(),
+                "cashMonthly": sample.cash_monthly[index].tolist(),
+                "revenueMonthly": sample.revenue_monthly[index].tolist(),
+            }
+            for index in selected
+        ]
+        return {
+            "runId": run_id,
+            "seed": result.seed,
+            "engineVersion": result.engine_version,
+            "runs": result.runs,
+            "runsRetained": retained,
+            "horizonMonths": result.horizon_months,
+            "currency": result.currency,
+            "truncated": truncated,
+            "trajectories": trajectories,
+        }
+
+    def run_params(self, params: dict[str, Any]) -> dict[str, Any]:
+        run_id = _required_text(params, "runId")
+        index = params.get("index")
+        if isinstance(index, bool) or not isinstance(index, int) or index < 0:
+            raise SimulationServiceError(
+                "trajectory_invalid", "index doit être un entier positif"
+            )
+        job, sample = self._sample_for(run_id)
+        result = job.result
+        assert result is not None
+        retained = int(sample.indices.size)
+        if index >= retained:
+            raise SimulationServiceError(
+                "trajectory_invalid",
+                f"index {index} hors de l'échantillon conservé ({retained} runs)",
+            )
+        return {
+            "runId": run_id,
+            "index": index,
+            "seed": result.seed,
+            "engineVersion": result.engine_version,
+            "scenariosHash": scenario_hash(job.scenario),
+            "parameters": {
+                key: float(values[index]) for key, values in sample.parameters.items()
+            },
+        }
 
     def process_completed(self) -> int:
         """Persiste et termine les runs calculés (appelé sur le thread principal)."""
@@ -567,8 +703,35 @@ class SimulationService:
             job.notified = True
             job.status = "done"
             job.updated_at = self._clock()
-            job.result = None
+            # Le résultat reste disponible pour la provenance et les
+            # trajectoires demandées après la fin du run. Seuls les
+            # échantillons des derniers runs sont conservés.
+            self._trim_samples_locked()
         job.notify("simulation.done", payload)
+
+    def _trim_samples_locked(self) -> None:
+        """Évince les échantillons des runs terminés les plus anciens.
+
+        Le résultat et ses agrégats restent disponibles : seule la matière
+        brute des trajectoires est libérée. Un run évincé répond
+        ``run_sample_unavailable`` plutôt que de renvoyer un échantillon
+        partiel ou incohérent.
+        """
+
+        with_samples = sorted(
+            (
+                job
+                for job in self._runs.values()
+                if job.status in TERMINAL_STATUSES
+                and job.result is not None
+                and job.result.run_sample is not None
+            ),
+            key=lambda job: job.updated_at,
+        )
+        excess = len(with_samples) - MAX_RETAINED_SAMPLES
+        for job in with_samples[: max(0, excess)]:
+            if job.result is not None:
+                job.result.detach_sample()
 
     def _emit_error(
         self,
@@ -654,7 +817,7 @@ class SimulationService:
             and now - job.updated_at > self._ttl_seconds
         ]
         for job in expired:
-            self._runs.pop(job.run_id, None)
+            self._drop_locked(job.run_id)
 
         if len(self._runs) < self._max_runs:
             return
@@ -668,13 +831,20 @@ class SimulationService:
         )
         while len(self._runs) >= self._max_runs and removable:
             victim = removable.pop(0)
-            self._runs.pop(victim.run_id, None)
+            self._drop_locked(victim.run_id)
         if len(self._runs) >= self._max_runs:
             raise SimulationServiceError(
                 "simulation_busy",
                 "limite de runs simultanés atteinte; attendez la fin d'un calcul",
                 retryable=True,
             )
+
+    def _drop_locked(self, run_id: str) -> None:
+        """Retire un run du registre et libère son échantillon."""
+
+        job = self._runs.pop(run_id, None)
+        if job is not None and job.result is not None:
+            job.result.detach_sample()
 
 
 def _payload_size(payload: dict[str, Any]) -> int:
@@ -683,9 +853,18 @@ def _payload_size(payload: dict[str, Any]) -> int:
     )
 
 
+def _required_text(params: dict[str, Any], key: str) -> str:
+    value = params.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise SimulationServiceError(
+            "simulation_invalid", f"{key} doit être une chaîne non vide"
+        )
+    return value.strip()
+
+
 def _validate_start(
     params: dict[str, Any],
-) -> tuple[Scenario, SimulationConfig, str, int, str, str | None]:
+) -> tuple[Scenario, SimulationConfig, str, int, str, str | None, str | None]:
     project_id = params.get("projectId")
     if not isinstance(project_id, str) or not project_id.strip():
         raise SimulationServiceError(
@@ -739,6 +918,15 @@ def _validate_start(
             "simulation_invalid", "runToken doit être une chaîne"
         )
 
+    raw_scenario_id = params.get("scenarioId")
+    scenario_id: str | None = None
+    if raw_scenario_id is not None:
+        if not isinstance(raw_scenario_id, str) or not raw_scenario_id.strip():
+            raise SimulationServiceError(
+                "simulation_invalid", "scenarioId doit être une chaîne non vide"
+            )
+        scenario_id = raw_scenario_id.strip()
+
     config = config.model_copy(
         update={
             "seed": seed,
@@ -747,7 +935,7 @@ def _validate_start(
             "include_monthly_histograms": quality == "final",
         }
     )
-    return scenario, config, quality, seed, project_id.strip(), run_token
+    return scenario, config, quality, seed, project_id.strip(), run_token, scenario_id
 
 
 def _validation_details(exc: ValidationError) -> str:

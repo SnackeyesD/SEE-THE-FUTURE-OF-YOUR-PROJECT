@@ -17,6 +17,19 @@ function currencyValue(value: number | null | undefined, currency: string): stri
   return value === null || value === undefined ? NOT_AVAILABLE : formatCurrency(value, currency);
 }
 
+function SourceButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="ui-link-like cockpit-kpi__source"
+      aria-label={`D'où vient ce chiffre ? — ${label}`}
+      onClick={onClick}
+    >
+      D'où vient ce chiffre ?
+    </button>
+  );
+}
+
 /**
  * Barre KPI du cockpit. Aucun chiffre n'est calculé ici : tout vient des
  * agrégats du moteur (`Metrics`, `MonthlyAverages`, `ConvergenceState`).
@@ -39,6 +52,7 @@ export function KpiBar({
   onMonthChange,
   onSeedChange,
   onRerollSeed,
+  onExplain,
 }: {
   currency: string;
   metrics: Metrics | null;
@@ -56,6 +70,8 @@ export function KpiBar({
   onMonthChange: (month: number) => void;
   onSeedChange: (seed: number) => void;
   onRerollSeed?: () => void;
+  /** Ouvre « D'où vient ce chiffre ? » pour une métrique du moteur. */
+  onExplain?: (metric: string, point: number | null) => void;
 }) {
   const horizon = monthly.length > 0 ? monthly[monthly.length - 1].index : 0;
   const candidates = new Set([6, 12, 18, horizon]);
@@ -110,6 +126,12 @@ export function KpiBar({
           value={formatProbability(breakEvenProbability)}
           hint={runsLabel}
         />
+        {onExplain && selectedMonth > 0 ? (
+          <SourceButton
+            label="Point mort"
+            onClick={() => onExplain("break_even_probability", selectedMonth)}
+          />
+        ) : null}
       </div>
 
       <div
@@ -125,6 +147,12 @@ export function KpiBar({
               : `P90 ${formatCurrency(metrics.financingNeedP90, currency)}`
           }
         />
+        {onExplain && metrics ? (
+          <SourceButton
+            label="Besoin de financement"
+            onClick={() => onExplain("financing_need_p50", null)}
+          />
+        ) : null}
       </div>
 
       <div
@@ -142,6 +170,12 @@ export function KpiBar({
           }
           hint={runsLabel}
         />
+        {onExplain && metrics ? (
+          <SourceButton
+            label="Probabilité de trésorerie négative"
+            onClick={() => onExplain("cash_negative_probability", null)}
+          />
+        ) : null}
       </div>
 
       <div
@@ -160,6 +194,9 @@ export function KpiBar({
                 )}`
           }
         />
+        {onExplain && metrics ? (
+          <SourceButton label="Profit P50" onClick={() => onExplain("profit_p50", null)} />
+        ) : null}
       </div>
 
       <div className="cockpit-kpi__item cockpit-kpi__item--status" title="Convergence observée du calcul.">

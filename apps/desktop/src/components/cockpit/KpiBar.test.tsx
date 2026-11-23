@@ -151,4 +151,33 @@ describe("KpiBar", () => {
     fireEvent.change(screen.getByLabelText("Graine"), { target: { value: "777" } });
     expect(onSeedChange).toHaveBeenCalledWith(777);
   });
+
+  it("ouvre la provenance de la métrique demandée", () => {
+    const onExplain = vi.fn();
+    render(
+      <ControlledKpi
+        currency="XOF"
+        metrics={simulationResult.metrics}
+        monthly={monthly}
+        status="idle"
+        seed={42}
+        onSeedChange={() => undefined}
+        onExplain={onExplain}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "D'où vient ce chiffre ? — Profit P50",
+      }),
+    );
+    expect(onExplain).toHaveBeenCalledWith("profit_p50", null);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "D'où vient ce chiffre ? — Point mort",
+      }),
+    );
+    expect(onExplain).toHaveBeenCalledWith("break_even_probability", 12);
+  });
 });

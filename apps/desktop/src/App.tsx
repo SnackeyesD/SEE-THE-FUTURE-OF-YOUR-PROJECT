@@ -43,6 +43,7 @@ import {
 } from "./components/SandboxReviewPanel";
 import { useViewHotkeys } from "./hooks/useViewHotkeys";
 import { BriefScreen } from "./screens/BriefScreen";
+import { BranchesScreen } from "./screens/BranchesScreen";
 import { TokenBoard } from "./components/TokenBoard";
 import { ComponentsShowcase } from "./components/ComponentsShowcase";
 import { CockpitScreen } from "./screens/CockpitScreen";
@@ -58,6 +59,7 @@ import {
   createProject,
   deleteAgentPermission,
   getProjectData,
+  getScenario,
   getSidecarHealth,
   getSidecarStatus,
   ipcAvailable,
@@ -82,6 +84,7 @@ type View =
   | "simulation"
   | "results"
   | "cockpit"
+  | "branches"
   | "settings";
 
 const VIEW_IDS: View[] = [
@@ -92,6 +95,7 @@ const VIEW_IDS: View[] = [
   "simulation",
   "results",
   "cockpit",
+  "branches",
   "settings",
 ];
 
@@ -103,6 +107,7 @@ const NAV: Array<{ id: View; fr: string; en: string }> = [
   { id: "simulation", fr: "Simulation", en: "Simulation" },
   { id: "results", fr: "Résultats", en: "Results" },
   { id: "cockpit", fr: "Cockpit", en: "Cockpit" },
+  { id: "branches", fr: "Branches", en: "Branches" },
   { id: "settings", fr: "Réglages", en: "Settings" },
 ];
 
@@ -164,6 +169,10 @@ export function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [data, setData] = useState<ProjectDataResult | null>(null);
+  /** Branche ouverte depuis l'écran Branches ; null = scénario courant du projet. */
+  const [openedScenario, setOpenedScenario] = useState<
+    NonNullable<ProjectDataResult["scenario"]> | null
+  >(null);
   const [session, setSession] = useState<AgentSession | null>(null);
   const [roles, setRoles] = useState<RoleName[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -232,6 +241,7 @@ export function App() {
     async (project: Project) => {
       setActiveProject(project);
       setSandboxProposal(null);
+      setOpenedScenario(null);
       localStorage.setItem("seefuture.project", project.id);
       setBusy(true);
       setError("");
@@ -346,6 +356,7 @@ export function App() {
   const navigate = useCallback(
     (next: View) => {
       setError("");
+      if (next === "cockpit") setOpenedScenario(null);
       setView((current) => {
         if (current === "cockpit" && next !== "cockpit") {
           if (!confirmDiscardCockpit()) return current;
@@ -541,12 +552,14 @@ export function App() {
       setBusy(true);
       setError("");
       try {
-        await saveProjectScenario({
+        const saved = await saveProjectScenario({
           projectId: activeProject.id,
           name,
           model: scenario.model ?? "retail_depot",
           scenario,
+          ...(openedScenario ? { scenarioId: openedScenario.id } : {}),
         });
+        if (openedScenario) setOpenedScenario(saved.scenario);
         await refreshWorkspace(activeProject.id);
         pushLog("success", `Scénario « ${name} » enregistré.`);
         return true;
@@ -557,7 +570,28 @@ export function App() {
         setBusy(false);
       }
     },
-    [activeProject, pushLog, refreshWorkspace],
+    [activeProject, openedScenario, pushLog, refreshWorkspace],
+  );
+
+  const openBranchFromList = useCallback(
+    async (scenarioId: string) => {
+      if (!activeProject) return;
+      setBusy(true);
+      setError("");
+      try {
+        const result = await getScenario({
+          projectId: activeProject.id,
+          scenarioId,
+        });
+        setOpenedScenario(result.scenario);
+        setView("cockpit");
+      } catch (reason) {
+        setError(humanize(reason));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [activeProject],
   );
 
   const handleSimulate = useCallback(
@@ -774,13 +808,28 @@ export function App() {
       {view === "cockpit" && activeProject ? (
         <CockpitScreen
           project={activeProject}
-          scenario={data?.scenario ?? null}
-          run={data?.run ?? null}
+          scenario={openedScenario ?? data?.scenario ?? null}
+          run={openedScenario ? null : data?.run ?? null}
+          branchKey={openedScenario ? `branch:${openedScenario.id}` : null}
           onBack={() => navigate("results")}
           onOpenHypotheses={() => navigate("hypotheses")}
           onSaveScenario={handleSaveScenario}
           onDirtyChange={(dirty) => {
             cockpitDirty.current = dirty;
+          }}
+        />
+      ) : null}
+
+      {view === "branches" && activeProject ? (
+        <BranchesScreen
+          project={activeProject}
+          activeScenarioId={openedScenario?.id ?? data?.scenario?.id ?? null}
+          currency={activeProject.currency}
+          onOpenBranch={openBranchFromList}
+          onChanged={() => {
+            void refreshWorkspace(activeProject.id).catch((reason) =>
+              setError(humanize(reason)),
+            );
           }}
         />
       ) : null}
