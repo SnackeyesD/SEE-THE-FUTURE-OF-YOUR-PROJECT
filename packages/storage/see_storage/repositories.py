@@ -443,18 +443,26 @@ class ScenarioRepository:
         ).fetchone()
         return ScenarioRecord.from_row(row) if row is not None else None
 
-    def list(self, project_id: str, *, limit: int = 100, offset: int = 0) -> list[ScenarioRecord]:
+    def list(
+        self,
+        project_id: str,
+        *,
+        limit: int = 100,
+        offset: int = 0,
+        include_archived: bool = False,
+    ) -> list[ScenarioRecord]:
+        archive_filter = "" if include_archived else "AND archived_at IS NULL"
         rows = self.conn.execute(
-            """
-            SELECT * FROM scenarios WHERE project_id = ?
-            ORDER BY created_at DESC LIMIT ? OFFSET ?
+            f"""
+            SELECT * FROM scenarios WHERE project_id = ? {archive_filter}
+            ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?
             """,
             (project_id, max(1, limit), max(0, offset)),
         ).fetchall()
         return [ScenarioRecord.from_row(row) for row in rows]
 
     def update(self, scenario_id: str, **fields: Any) -> ScenarioRecord:
-        allowed = {"name", "model", "scenario"}
+        allowed = {"name", "model", "scenario", "branch_label"}
         unknown = set(fields) - allowed
         if unknown:
             raise StorageValidationError(f"champs scénario non modifiables: {sorted(unknown)}")
@@ -474,6 +482,8 @@ class ScenarioRepository:
                 value = encoded
             elif key == "name":
                 value = ensure_text(value, "name")
+            elif key == "branch_label":
+                value = _optional_text(value, "branchLabel", max_length=200)
             elif key == "model":
                 clean_model = ensure_text(value, "model")
                 structural = structural or clean_model != current.model
@@ -490,6 +500,18 @@ class ScenarioRepository:
             )
         if cursor.rowcount == 0:
             raise StorageValidationError(f"scénario introuvable: {scenario_id}")
+        return self.get(scenario_id)  # type: ignore[return-value]
+
+    def archive(self, scenario_id: str, archived: bool = True) -> ScenarioRecord:
+        """Archive ou restaure une branche sans la supprimer."""
+        current = self.get(scenario_id)
+        if current is None:
+            raise StorageValidationError(f"scénario introuvable: {scenario_id}")
+        with _write(self.conn):
+            self.conn.execute(
+                "UPDATE scenarios SET archived_at = ?, updated_at = ? WHERE id = ?",
+                (utc_now() if archived else None, utc_now(), scenario_id),
+            )
         return self.get(scenario_id)  # type: ignore[return-value]
 
     def duplicate(self, scenario_id: str, label: str) -> ScenarioRecord:
@@ -712,7 +734,7 @@ class RunRepository:
         rows = self.conn.execute(
             """
             SELECT * FROM simulation_runs WHERE project_id = ?
-            ORDER BY created_at DESC LIMIT ? OFFSET ?
+            ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?
             """,
             (project_id, max(1, limit), max(0, offset)),
         ).fetchall()

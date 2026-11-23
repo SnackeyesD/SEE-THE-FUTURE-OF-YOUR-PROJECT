@@ -70,6 +70,8 @@ export interface CockpitScreenProps {
   onOpenHypotheses: () => void;
   /** Enregistre le scénario complet (hypothèses, événements, saisonnalité). */
   onSaveScenario: (name: string, scenario: Scenario) => Promise<boolean>;
+  /** Branche ouverte depuis l'écran Branches : force un store séparé. */
+  branchKey?: string | null;
   /** Signale les modifications non enregistrées au shell (garde de navigation). */
   onDirtyChange?: (dirty: boolean) => void;
 }
@@ -122,6 +124,7 @@ export function CockpitScreen({
   onBack,
   onOpenHypotheses,
   onSaveScenario,
+  branchKey,
   onDirtyChange,
 }: CockpitScreenProps) {
   const initialLayout = useMemo(() => loadLayout(project.id), [project.id]);
@@ -144,8 +147,9 @@ export function CockpitScreen({
     <CockpitProvider
       // Clé stable : un enregistrement crée un nouveau `ScenarioRecord`, mais
       // ne doit pas remonter le provider (l'historique des runs serait perdu).
-      key={project.id}
+      key={branchKey ?? project.id}
       projectId={project.id}
+      scenarioId={scenario.id}
       scenario={scenario.scenario}
       seed={seed}
       initialLayout={initialLayout}

@@ -119,7 +119,7 @@
 
 ## Conséquences
 
-- Le protocole `1.11.0` est la base des phases 11 (`1.12.0`) et 12 (`1.13.0`).
+- Le protocole `1.11.0` est la base des phases 11 (`1.12.0`), 12 (`1.13.0`) et 13 (`1.14.0`).
 - La CI exécute `catalog:check` avec le job Python.
 - L'éditeur et la frise introduisent une dépendance à `runFinal(): Promise<boolean>` ;
   les appelants « feu et oubli » restent valides (`void live.runFinal()`).

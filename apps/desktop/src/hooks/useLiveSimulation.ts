@@ -106,6 +106,7 @@ export function useLiveSimulation(options: LiveSimulationOptions): LiveSimulatio
       try {
         const result = await depsRef.current.start({
           projectId: session.projectId,
+          scenarioId: session.scenarioId ?? undefined,
           scenario: session.scenario,
           config: session.config,
           seed: session.seed,

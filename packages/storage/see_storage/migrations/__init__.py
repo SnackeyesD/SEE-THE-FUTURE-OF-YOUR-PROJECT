@@ -278,6 +278,13 @@ CREATE INDEX IF NOT EXISTS idx_scenarios_parent
     ON scenarios(parent_id);
 """
 
+MIGRATION_0007 = """
+ALTER TABLE scenarios ADD COLUMN archived_at TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_scenarios_archived
+    ON scenarios(project_id, archived_at);
+"""
+
 MIGRATIONS: tuple[tuple[int, str], ...] = (
     (1, MIGRATION_0001),
     (2, MIGRATION_0002),
@@ -285,6 +292,7 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
     (4, MIGRATION_0004),
     (5, MIGRATION_0005),
     (6, MIGRATION_0006),
+    (7, MIGRATION_0007),
 )
 
 LATEST_SCHEMA_VERSION = max(version for version, _ in MIGRATIONS)

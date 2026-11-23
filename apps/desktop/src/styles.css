@@ -2143,3 +2143,169 @@ textarea:focus {
   outline: 2px solid var(--accent-a35);
   outline-offset: 1px;
 }
+
+/* Phase 13 — branches, diff, comparaison et versions.
+   Le rendu reste piloté par les payloads du sidecar : ces styles ne calculent
+   rien, ils organisent la lecture (liste plate, tableaux scrollables). */
+.branches-screen__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.branches-screen__panel {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.branches-screen__diff {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.branches-screen__diff h2 {
+  margin: 0;
+  font-size: var(--fs-18);
+}
+
+.branch-list__items,
+.version-list__items {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.branch-list__item,
+.version-list__item {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--surface);
+}
+
+.branch-list__item[data-active="true"] {
+  border-color: var(--accent);
+}
+
+.branch-list__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.branch-list__head strong,
+.version-list__item strong {
+  margin-right: var(--sp-2);
+}
+
+.branch-list__meta {
+  display: flex;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  font-size: var(--fs-12);
+}
+
+.branch-list__form,
+.version-list__create {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.branch-list__form label,
+.version-list__create label {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.branch-diff {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.branch-diff h3 {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-14);
+}
+
+.branch-diff__table,
+.comparison-view__table {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+}
+
+.branch-diff table,
+.comparison-view table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-12);
+}
+
+.branch-diff th,
+.branch-diff td,
+.comparison-view th,
+.comparison-view td {
+  padding: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.branch-diff tbody th,
+.comparison-view tbody th {
+  font-weight: 500;
+}
+
+.branch-diff__path {
+  display: block;
+  font-family: var(--font-data);
+  font-size: var(--fs-11);
+}
+
+.comparison-view {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.comparison-view__pickers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--sp-3);
+}
+
+.comparison-view__picker {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.comparison-view__pin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.comparison-view__badges {
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.comparison-view td[data-tone="ok"] {
+  color: var(--ok);
+}
+
+.comparison-view td[data-tone="danger"] {
+  color: var(--danger);
+}

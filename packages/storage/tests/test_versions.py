@@ -176,3 +176,38 @@ def test_run_add_is_idempotent_by_run_id(store: ProjectStore) -> None:
     other = store.create_project("Autre")
     with pytest.raises(StorageValidationError, match="autre projet"):
         store.runs.add(other.id, "0.3.0", 10, {}, run_id="run-fixe")
+
+
+def test_archive_hides_branch_but_keeps_it(store: ProjectStore) -> None:
+    project = store.create_project("Archivage")
+    source = store.scenarios.add(project.id, "Base", "retail_depot", {"a": 1})
+    branch = store.scenarios.duplicate(source.id, "Variante")
+
+    archived = store.scenarios.archive(branch.id)
+    assert archived.archived_at is not None
+
+    visible = store.scenarios.list(project.id)
+    assert {item.id for item in visible} == {source.id}
+    everything = store.scenarios.list(project.id, include_archived=True)
+    assert {item.id for item in everything} == {source.id, branch.id}
+
+    restored = store.scenarios.archive(branch.id, archived=False)
+    assert restored.archived_at is None
+    assert {item.id for item in store.scenarios.list(project.id)} == {
+        source.id,
+        branch.id,
+    }
+
+
+def test_rename_branch_keeps_identity(store: ProjectStore) -> None:
+    project = store.create_project("Renommage")
+    branch = store.scenarios.add(project.id, "Base", "retail_depot", {"a": 1})
+
+    renamed = store.scenarios.update(
+        branch.id, name="Nouvelle base", branch_label="Variante B"
+    )
+
+    assert renamed.id == branch.id
+    assert renamed.name == "Nouvelle base"
+    assert renamed.branch_label == "Variante B"
+    assert renamed.version == branch.version

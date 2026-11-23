@@ -220,6 +220,7 @@ class Job:
         )
     )
     run_token: str | None = None
+    scenario_id: str | None = None
 
 
 class SimulationService:
@@ -257,7 +258,9 @@ class SimulationService:
     # API publique
     # ------------------------------------------------------------------
     def start(self, params: dict[str, Any], notify: Notifier) -> dict[str, Any]:
-        scenario, config, quality, seed, project_id, run_token = _validate_start(params)
+        scenario, config, quality, seed, project_id, run_token, scenario_id = _validate_start(
+            params
+        )
         now = self._clock()
         notifications: list[tuple[str, dict[str, Any]]] = []
 
@@ -301,6 +304,7 @@ class SimulationService:
                 created_at=now,
                 updated_at=now,
                 run_token=run_token,
+                scenario_id=scenario_id,
             )
             self._runs[run_id] = job
             self._order.append(run_id)
@@ -860,7 +864,7 @@ def _required_text(params: dict[str, Any], key: str) -> str:
 
 def _validate_start(
     params: dict[str, Any],
-) -> tuple[Scenario, SimulationConfig, str, int, str, str | None]:
+) -> tuple[Scenario, SimulationConfig, str, int, str, str | None, str | None]:
     project_id = params.get("projectId")
     if not isinstance(project_id, str) or not project_id.strip():
         raise SimulationServiceError(
@@ -914,6 +918,15 @@ def _validate_start(
             "simulation_invalid", "runToken doit être une chaîne"
         )
 
+    raw_scenario_id = params.get("scenarioId")
+    scenario_id: str | None = None
+    if raw_scenario_id is not None:
+        if not isinstance(raw_scenario_id, str) or not raw_scenario_id.strip():
+            raise SimulationServiceError(
+                "simulation_invalid", "scenarioId doit être une chaîne non vide"
+            )
+        scenario_id = raw_scenario_id.strip()
+
     config = config.model_copy(
         update={
             "seed": seed,
@@ -922,7 +935,7 @@ def _validate_start(
             "include_monthly_histograms": quality == "final",
         }
     )
-    return scenario, config, quality, seed, project_id.strip(), run_token
+    return scenario, config, quality, seed, project_id.strip(), run_token, scenario_id
 
 
 def _validation_details(exc: ValidationError) -> str:

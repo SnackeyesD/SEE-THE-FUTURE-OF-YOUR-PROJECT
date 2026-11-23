@@ -1,6 +1,6 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 # Source: packages/protocol/schema/messages.schema.json
-# Protocol version: 1.13.0
+# Protocol version: 1.14.0
 # Regenerate with: npm run protocol:generate
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-PROTOCOL_VERSION = "1.13.0"
+PROTOCOL_VERSION = "1.14.0"
 
 RequestId = int | str
 
@@ -62,6 +62,18 @@ MethodName = Literal[
     "project.brief.save",
     "project.scenario.save",
     "project.scenario.branch",
+    "project.scenario.list",
+    "project.scenario.get",
+    "project.scenario.rename",
+    "project.scenario.archive",
+    "project.scenario.unarchive",
+    "project.run.list",
+    "project.run.pin",
+    "project.run.compare",
+    "project.version.create",
+    "project.version.list",
+    "project.version.restore",
+    "project.version.delete",
     "project.simulate",
     "simulation.start",
     "simulation.cancel",
@@ -523,6 +535,7 @@ class ScenarioRecord(BaseModel):
     version: int | None = None
     createdAt: str
     updatedAt: str
+    archivedAt: str | None
 
 
 class SimulationRunRecord(BaseModel):
@@ -576,6 +589,7 @@ class ProjectScenarioSaveParams(BaseModel):
     name: str
     model: str | None = None
     scenario: Scenario
+    scenarioId: str | None = None
 
 
 class ProjectScenarioSaveResult(BaseModel):
@@ -598,6 +612,222 @@ class ProjectScenarioBranchResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     scenario: ScenarioRecord
+
+
+class BranchRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenarioId: str
+    name: str
+    branchLabel: str | None
+    parentId: str | None
+    updatedAt: str
+    archivedAt: str | None
+    lastFinalRunId: str | None
+    seed: int | None
+
+
+class ProjectScenarioListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    includeArchived: bool | None = None
+
+
+class ProjectScenarioListResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    branches: list[BranchRef]
+
+
+class ProjectScenarioGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenarioId: str
+
+
+class ProjectScenarioGetResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario: ScenarioRecord
+
+
+class ProjectScenarioRenameParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenarioId: str
+    name: str
+    branchLabel: str | None = None
+
+
+class ProjectScenarioRenameResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario: ScenarioRecord
+
+
+class ProjectScenarioArchiveParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenarioId: str
+    confirmPinned: bool | None = None
+
+
+class ProjectScenarioArchiveResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario: ScenarioRecord
+    archived: bool
+    pinnedRuns: int
+
+
+class ProjectScenarioUnarchiveParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenarioId: str
+
+
+class ProjectScenarioUnarchiveResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario: ScenarioRecord
+
+
+class RunRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    scenarioId: str | None
+    seed: int | None
+    engineVersion: str
+    runs: int
+    pinned: bool
+    createdAt: str
+    summary: dict[str, Any]
+
+
+class ProjectRunListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    scenarioId: str | None = None
+    seed: int | None = None
+    limit: int | None = None
+
+
+class ProjectRunListResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runs: list[RunRef]
+
+
+class ProjectRunPinParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    runId: str
+    pinned: bool
+
+
+class ProjectRunPinResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run: RunRef
+
+
+class RunComparison(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    scenarioId: str | None
+    seed: int | None
+    engineVersion: str
+    result: SimulationResult
+
+
+class ProjectRunCompareParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    runIds: list[str]
+
+
+class ProjectRunCompareResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runs: list[RunComparison]
+    sameSeed: bool
+    sameEngineVersion: bool
+
+
+class ScenarioVersionRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    projectId: str
+    scenarioId: str | None
+    label: str
+    seed: int | None
+    engineVersion: str | None
+    createdAt: str
+
+
+class ProjectVersionCreateParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    label: str
+    scenarioId: str | None = None
+    seed: int | None = None
+
+
+class ProjectVersionCreateResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: ScenarioVersionRef
+
+
+class ProjectVersionListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+
+
+class ProjectVersionListResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    versions: list[ScenarioVersionRef]
+
+
+class ProjectVersionRestoreParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    versionId: str
+    label: str | None = None
+
+
+class ProjectVersionRestoreResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario: ScenarioRecord
+
+
+class ProjectVersionDeleteParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    versionId: str
+
+
+class ProjectVersionDeleteResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    deleted: bool
 
 
 class ProjectSimulateParams(BaseModel):
@@ -632,6 +862,7 @@ class SimulationStartParams(BaseModel):
     quality: SimulationQuality
     seed: int
     runToken: str | None = None
+    scenarioId: str | None = None
 
 
 class SimulationStartResult(BaseModel):

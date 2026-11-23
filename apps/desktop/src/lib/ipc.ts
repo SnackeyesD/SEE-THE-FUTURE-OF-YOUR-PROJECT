@@ -31,12 +31,36 @@ import type {
   ProjectDataParams,
   ProjectDataResult,
   ProjectResult,
+  ProjectRunCompareParams,
+  ProjectRunCompareResult,
+  ProjectRunListParams,
+  ProjectRunListResult,
+  ProjectRunPinParams,
+  ProjectRunPinResult,
+  ProjectScenarioArchiveParams,
+  ProjectScenarioArchiveResult,
   ProjectScenarioBranchParams,
   ProjectScenarioBranchResult,
+  ProjectScenarioGetParams,
+  ProjectScenarioGetResult,
+  ProjectScenarioListParams,
+  ProjectScenarioListResult,
+  ProjectScenarioRenameParams,
+  ProjectScenarioRenameResult,
   ProjectScenarioSaveParams,
   ProjectScenarioSaveResult,
+  ProjectScenarioUnarchiveParams,
+  ProjectScenarioUnarchiveResult,
   ProjectSimulateParams,
   ProjectSimulateResult,
+  ProjectVersionCreateParams,
+  ProjectVersionCreateResult,
+  ProjectVersionDeleteParams,
+  ProjectVersionDeleteResult,
+  ProjectVersionListParams,
+  ProjectVersionListResult,
+  ProjectVersionRestoreParams,
+  ProjectVersionRestoreResult,
   ProviderCatalogResult,
   ProviderChatParams,
   ProviderChatResult,
@@ -133,6 +157,84 @@ export function branchProjectScenario(
   params: ProjectScenarioBranchParams,
 ): Promise<ProjectScenarioBranchResult> {
   return invoke("project_scenario_branch", { params });
+}
+
+function projectCall<T>(method: string, params: object): Promise<T> {
+  return invoke<T>("project_call", { method, params });
+}
+
+/** Liste plate des branches d'un projet (archivées exclues par défaut). */
+export function listBranches(
+  params: ProjectScenarioListParams,
+): Promise<ProjectScenarioListResult> {
+  return projectCall("project.scenario.list", params);
+}
+
+/** Scénario complet d'une branche, pour le diff et la comparaison. */
+export function getScenario(
+  params: ProjectScenarioGetParams,
+): Promise<ProjectScenarioGetResult> {
+  return projectCall("project.scenario.get", params);
+}
+
+export function renameScenario(
+  params: ProjectScenarioRenameParams,
+): Promise<ProjectScenarioRenameResult> {
+  return projectCall("project.scenario.rename", params);
+}
+
+export function archiveScenario(
+  params: ProjectScenarioArchiveParams,
+): Promise<ProjectScenarioArchiveResult> {
+  return projectCall("project.scenario.archive", params);
+}
+
+export function unarchiveScenario(
+  params: ProjectScenarioUnarchiveParams,
+): Promise<ProjectScenarioUnarchiveResult> {
+  return projectCall("project.scenario.unarchive", params);
+}
+
+/** Runs finaux persistés, filtrables par branche ou graine. */
+export function listRuns(
+  params: ProjectRunListParams,
+): Promise<ProjectRunListResult> {
+  return projectCall("project.run.list", params);
+}
+
+export function pinRun(params: ProjectRunPinParams): Promise<ProjectRunPinResult> {
+  return projectCall("project.run.pin", params);
+}
+
+/** Charge les deux résultats sélectionnés et signale les graines divergentes. */
+export function compareRuns(
+  params: ProjectRunCompareParams,
+): Promise<ProjectRunCompareResult> {
+  return projectCall("project.run.compare", params);
+}
+
+export function createVersion(
+  params: ProjectVersionCreateParams,
+): Promise<ProjectVersionCreateResult> {
+  return projectCall("project.version.create", params);
+}
+
+export function listVersions(
+  params: ProjectVersionListParams,
+): Promise<ProjectVersionListResult> {
+  return projectCall("project.version.list", params);
+}
+
+export function restoreVersion(
+  params: ProjectVersionRestoreParams,
+): Promise<ProjectVersionRestoreResult> {
+  return projectCall("project.version.restore", params);
+}
+
+export function deleteVersion(
+  params: ProjectVersionDeleteParams,
+): Promise<ProjectVersionDeleteResult> {
+  return projectCall("project.version.delete", params);
 }
 
 export function simulateProject(

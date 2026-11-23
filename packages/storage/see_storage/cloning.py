@@ -147,8 +147,8 @@ def clone_project(
             """
             INSERT INTO scenarios (
                 id, project_id, name, model, scenario_json, parent_id,
-                branch_label, version, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                branch_label, version, created_at, updated_at, archived_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 scenario_id,
@@ -161,6 +161,7 @@ def clone_project(
                 scenario["version"],
                 now if reset_timestamps else scenario["created_at"],
                 now if reset_timestamps else scenario["updated_at"],
+                scenario["archived_at"],
             ),
         )
     for parent_id, scenario_id in pending_parents:

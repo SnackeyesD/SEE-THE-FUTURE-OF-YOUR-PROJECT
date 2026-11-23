@@ -39,6 +39,8 @@ export interface SelectionState {
 
 export interface SessionState {
   projectId: string;
+  /** Branche ouverte dans le cockpit ; null = scénario courant du projet. */
+  scenarioId: string | null;
   scenario: Scenario;
   seed: number;
   config: SimulationConfig;
@@ -100,6 +102,7 @@ export interface CockpitState {
 
 export interface CockpitStoreOptions {
   projectId: string;
+  scenarioId?: string | null;
   scenario: Scenario;
   seed?: number;
   config?: SimulationConfig;
@@ -127,6 +130,7 @@ function cloneScenario(scenario: Scenario): Scenario {
 function initialSession(options: CockpitStoreOptions): SessionState {
   return {
     projectId: options.projectId,
+    scenarioId: options.scenarioId ?? null,
     scenario: cloneScenario(options.scenario),
     seed: options.seed ?? DEFAULT_SEED,
     config: { ...DEFAULT_CONFIG, ...options.config },

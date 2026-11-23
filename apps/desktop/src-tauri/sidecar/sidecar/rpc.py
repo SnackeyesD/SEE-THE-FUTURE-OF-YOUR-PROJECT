@@ -585,6 +585,78 @@ def project_scenario_branch(
 
 
 @_storage_handler
+def project_scenario_list(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.list_branches(get_store(), params)
+
+
+@_storage_handler
+def project_scenario_get(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.get_scenario(get_store(), params)
+
+
+@_storage_handler
+def project_scenario_rename(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.rename_scenario(get_store(), params)
+
+
+@_storage_handler
+def project_scenario_archive(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.archive_scenario(get_store(), params)
+
+
+@_storage_handler
+def project_scenario_unarchive(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.unarchive_scenario(get_store(), params)
+
+
+@_storage_handler
+def project_run_list(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.list_runs(get_store(), params)
+
+
+@_storage_handler
+def project_run_pin(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.pin_run(get_store(), params)
+
+
+@_storage_handler
+def project_run_compare(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.compare_runs(get_store(), params)
+
+
+@_storage_handler
+def project_version_create(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.create_version(get_store(), params)
+
+
+@_storage_handler
+def project_version_list(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return project_service.list_versions(get_store(), params)
+
+
+@_storage_handler
+def project_version_restore(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.restore_version(get_store(), params)
+
+
+@_storage_handler
+def project_version_delete(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return project_service.delete_version(get_store(), params)
+
+
+@_storage_handler
 def project_simulate(params: dict[str, Any], context: RequestContext) -> dict[str, Any]:
     progress = None
     if _optional_bool(params, "progress"):
@@ -791,6 +863,18 @@ def default_handlers() -> dict[str, Handler]:
         "project.brief.save": project_brief_save,
         "project.scenario.save": project_scenario_save,
         "project.scenario.branch": project_scenario_branch,
+        "project.scenario.list": project_scenario_list,
+        "project.scenario.get": project_scenario_get,
+        "project.scenario.rename": project_scenario_rename,
+        "project.scenario.archive": project_scenario_archive,
+        "project.scenario.unarchive": project_scenario_unarchive,
+        "project.run.list": project_run_list,
+        "project.run.pin": project_run_pin,
+        "project.run.compare": project_run_compare,
+        "project.version.create": project_version_create,
+        "project.version.list": project_version_list,
+        "project.version.restore": project_version_restore,
+        "project.version.delete": project_version_delete,
         "project.simulate": project_simulate,
         "simulation.start": simulation_start,
         "simulation.cancel": simulation_cancel,
@@ -867,7 +951,11 @@ class RpcServer:
         """Persistance ``final`` : exécutée uniquement sur le thread principal."""
 
         project_service.persist_result(
-            get_store(), job.project_id, job.scenario, result
+            get_store(),
+            job.project_id,
+            job.scenario,
+            result,
+            scenario_id=job.scenario_id,
         )
 
     def serve(self) -> int:

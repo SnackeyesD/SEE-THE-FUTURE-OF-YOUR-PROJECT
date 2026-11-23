@@ -39,6 +39,7 @@ function sameLayout(left: LayoutState, right: LayoutState): boolean {
 
 export interface CockpitProviderProps {
   projectId: string;
+  scenarioId?: string | null;
   scenario: Scenario;
   seed?: number;
   config?: SimulationConfig;
@@ -56,6 +57,7 @@ export interface CockpitProviderProps {
  */
 export function CockpitProvider({
   projectId,
+  scenarioId,
   scenario,
   seed,
   config,
@@ -68,6 +70,7 @@ export function CockpitProvider({
   const [store] = useState<CockpitStore>(() =>
     createCockpitStore({
       projectId,
+      scenarioId,
       scenario,
       seed,
       config,
