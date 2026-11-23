@@ -239,6 +239,15 @@ function CockpitBody({
   const active = session.activeRunId ? runs[session.activeRunId] ?? null : null;
   const latest = useMemo(() => latestResult(runs), [runs]);
   const display = active ?? latest;
+  const finalRunId = useMemo(() => {
+    const finals = Object.values(runs).filter(
+      (run) => run.quality === "final" && run.status === "done" && run.result !== null,
+    );
+    if (finals.length === 0) return null;
+    return finals.sort((left, right) =>
+      (right.computedAt ?? "").localeCompare(left.computedAt ?? ""),
+    )[0].runId;
+  }, [runs]);
   const result = display?.result ?? null;
   const aggregates = display?.aggregates ?? null;
 
@@ -1057,9 +1066,11 @@ function CockpitBody({
         <div hidden={analysisTab !== "surface"}>
           <SurfacePanel
             scenario={session.scenario}
+            projectId={project.id}
             currency={currency}
             state={analysis.surface}
             seed={session.seed}
+            finalRunId={finalRunId}
             disabled={running}
             onRun={handleRunSurface}
             onCancel={analysis.cancelSurface}

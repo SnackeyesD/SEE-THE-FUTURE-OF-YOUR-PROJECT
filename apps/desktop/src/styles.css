@@ -2309,3 +2309,146 @@ textarea:focus {
 .comparison-view td[data-tone="danger"] {
   color: var(--danger);
 }
+
+/* Phase 14 — vue 3D et repli 2D.
+   La scène Three.js est chargée à la demande ; ces styles ne définissent que
+   l'agencement, jamais les couleurs de données (tokens --heat-*). */
+.surface-panel__result {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.surface-panel__view-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.surface3d {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+}
+
+.surface3d__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.surface3d__modes,
+.surface3d__camera {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.surface3d__stage {
+  position: relative;
+  min-height: 18rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.scene3d__canvas {
+  width: 100%;
+  height: clamp(18rem, 42vh, 32rem);
+  touch-action: none;
+}
+
+.surface3d__legend,
+.surface3d__axes {
+  position: absolute;
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-2);
+  background: var(--surface-soft);
+  font-size: var(--fs-11);
+  pointer-events: none;
+}
+
+.surface3d__legend {
+  left: var(--sp-2);
+  bottom: var(--sp-2);
+  flex-wrap: wrap;
+  max-width: calc(100% - var(--sp-4));
+}
+
+.surface3d__legend-scale {
+  display: flex;
+}
+
+.surface3d__swatch {
+  width: 22px;
+  height: 9px;
+}
+
+.surface3d__range {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.surface3d__axes {
+  right: var(--sp-2);
+  top: var(--sp-2);
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.surface3d__caption {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  font-size: var(--fs-12);
+}
+
+.surface3d__hover {
+  min-height: 1.2em;
+  font-size: var(--fs-12);
+}
+
+.surface3d__selection {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--surface-soft);
+}
+
+.surface3d__selection h3 {
+  margin: 0;
+  font-size: var(--fs-14);
+}
+
+.surface3d__params {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--sp-2);
+  margin: 0;
+}
+
+.surface3d__params div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-size: var(--fs-12);
+}
+
+.surface3d__params dt {
+  color: var(--muted);
+}
+
+.surface3d__params dd {
+  margin: 0;
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
