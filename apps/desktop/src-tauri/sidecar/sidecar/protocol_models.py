@@ -1,6 +1,6 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 # Source: packages/protocol/schema/messages.schema.json
-# Protocol version: 1.12.0
+# Protocol version: 1.13.0
 # Regenerate with: npm run protocol:generate
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-PROTOCOL_VERSION = "1.12.0"
+PROTOCOL_VERSION = "1.13.0"
 
 RequestId = int | str
 
@@ -67,6 +67,10 @@ MethodName = Literal[
     "simulation.cancel",
     "simulation.surface",
     "simulation.goalseek",
+    "simulation.trajectories",
+    "simulation.run_params",
+    "simulation.provenance",
+    "simulation.explain",
     "integrity.check",
     "storage.backup",
     "provider.catalog",
@@ -1724,3 +1728,148 @@ class BenchmarkPackImportResult(BaseModel):
 
     pack: BenchmarkPackInfo
     replaced: bool | None = None
+
+
+class Trajectory(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    index: int
+    profitMonthly: list[float]
+    cashMonthly: list[float]
+    revenueMonthly: list[float]
+
+
+class SimulationTrajectoriesParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    count: int | None = None
+    indices: list[int] | None = None
+
+
+class SimulationTrajectoriesResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    seed: int
+    engineVersion: str
+    runs: int
+    runsRetained: int
+    horizonMonths: int
+    currency: str
+    truncated: bool
+    trajectories: list[Trajectory]
+
+
+class SimulationRunParamsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    index: int
+
+
+class SimulationRunParamsResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    index: int
+    seed: int
+    engineVersion: str
+    scenariosHash: str
+    parameters: dict[str, float]
+
+
+class ProvenanceBenchmark(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str
+    source: str | None = None
+    url: str | None = None
+    date: str | None = None
+
+
+class ProvenanceInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    label: str
+    value: float
+    drawnRange: list[float]
+    source: Literal["user", "benchmark", "estimate"]
+    confidence: float | None = None
+    benchmark: ProvenanceBenchmark | None = None
+    correlation: float
+    contribution: float
+
+
+class Provenance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    metric: str
+    point: int | None
+    definition: str
+    formula: str
+    value: float
+    unit: str
+    range: list[float] | None = None
+    seed: int
+    engineVersion: str
+    runs: int
+    scenariosHash: str
+    inputs: list[ProvenanceInput]
+    caveats: list[str]
+
+
+class SimulationProvenanceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    metric: str
+    point: int | None = None
+
+
+class SimulationProvenanceResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provenance: Provenance
+
+
+class ExplanationPoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+    references: list[str]
+
+
+class Explanation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    summary: str
+    points: list[ExplanationPoint]
+    caveats: list[str]
+
+
+class SimulationExplainParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    runId: str
+    metric: str
+    point: int | None = None
+    profile: ProviderProfile | None = None
+    apiKey: str | None = None
+    model: str | None = None
+
+
+class SimulationExplainResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    explanation: Explanation
+    source: Literal["llm", "fallback"]
+    model: str | None = None
+    promptVersion: str
+    cached: bool
+    repaired: bool
+    reason: str | None = None
+    provenance: Provenance

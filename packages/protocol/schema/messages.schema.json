@@ -3,7 +3,7 @@
   "$id": "https://seethefuture.local/protocol/messages.schema.json",
   "title": "See The Future IPC protocol",
   "description": "Source unique des messages JSON-RPC 2.0 échangés entre le shell Tauri et le sidecar Python.",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "$defs": {
     "RequestId": {
       "description": "Identifiant de requête JSON-RPC (entier ou chaîne).",
@@ -73,6 +73,10 @@
         "simulation.cancel",
         "simulation.surface",
         "simulation.goalseek",
+        "simulation.trajectories",
+        "simulation.run_params",
+        "simulation.provenance",
+        "simulation.explain",
         "integrity.check",
         "storage.backup",
         "provider.catalog",
@@ -2489,6 +2493,265 @@
       "properties": {
         "pack": { "$ref": "#/$defs/BenchmarkPackInfo" },
         "replaced": { "type": "boolean" }
+      }
+    },
+    "Trajectory": {
+      "description": "Une trajectoire mensuelle brute, fournie uniquement à la demande. index est l'index du run dans l'échantillon conservé.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "profitMonthly", "cashMonthly", "revenueMonthly"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "profitMonthly": { "type": "array", "items": { "type": "number" } },
+        "cashMonthly": { "type": "array", "items": { "type": "number" } },
+        "revenueMonthly": { "type": "array", "items": { "type": "number" } }
+      }
+    },
+    "SimulationTrajectoriesParams": {
+      "description": "Demande explicite de trajectoires. Au plus 200 runs sont renvoyés.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId"],
+      "properties": {
+        "runId": { "type": "string" },
+        "count": { "type": "integer", "minimum": 1, "maximum": 200 },
+        "indices": {
+          "type": "array",
+          "maxItems": 200,
+          "items": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "SimulationTrajectoriesResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runId",
+        "seed",
+        "engineVersion",
+        "runs",
+        "runsRetained",
+        "horizonMonths",
+        "currency",
+        "truncated",
+        "trajectories"
+      ],
+      "properties": {
+        "runId": { "type": "string" },
+        "seed": { "type": "integer" },
+        "engineVersion": { "type": "string" },
+        "runs": { "type": "integer" },
+        "runsRetained": { "type": "integer" },
+        "horizonMonths": { "type": "integer" },
+        "currency": { "type": "string" },
+        "truncated": { "type": "boolean" },
+        "trajectories": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Trajectory" }
+        }
+      }
+    },
+    "SimulationRunParamsParams": {
+      "description": "Paramètres tirés d'un run de l'échantillon conservé.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "index"],
+      "properties": {
+        "runId": { "type": "string" },
+        "index": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "SimulationRunParamsResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runId",
+        "index",
+        "seed",
+        "engineVersion",
+        "scenariosHash",
+        "parameters"
+      ],
+      "properties": {
+        "runId": { "type": "string" },
+        "index": { "type": "integer" },
+        "seed": { "type": "integer" },
+        "engineVersion": { "type": "string" },
+        "scenariosHash": { "type": "string" },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    },
+    "ProvenanceBenchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label"],
+      "properties": {
+        "label": { "type": "string" },
+        "source": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "url": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "date": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "ProvenanceInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "label",
+        "value",
+        "drawnRange",
+        "source",
+        "correlation",
+        "contribution"
+      ],
+      "properties": {
+        "key": { "type": "string" },
+        "label": { "type": "string" },
+        "value": { "type": "number" },
+        "drawnRange": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "number" }
+        },
+        "source": { "enum": ["user", "benchmark", "estimate"] },
+        "confidence": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "benchmark": {
+          "anyOf": [
+            { "$ref": "#/$defs/ProvenanceBenchmark" },
+            { "type": "null" }
+          ]
+        },
+        "correlation": { "type": "number" },
+        "contribution": { "type": "number" }
+      }
+    },
+    "Provenance": {
+      "description": "Payload minimal, vérifiable et sans secret, utilisé par le panneau et par l'explication.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runId",
+        "metric",
+        "point",
+        "definition",
+        "formula",
+        "value",
+        "unit",
+        "seed",
+        "engineVersion",
+        "runs",
+        "scenariosHash",
+        "inputs",
+        "caveats"
+      ],
+      "properties": {
+        "runId": { "type": "string" },
+        "metric": { "type": "string" },
+        "point": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+        "definition": { "type": "string" },
+        "formula": { "type": "string" },
+        "value": { "type": "number" },
+        "unit": { "type": "string" },
+        "range": {
+          "anyOf": [
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "type": "number" }
+            },
+            { "type": "null" }
+          ]
+        },
+        "seed": { "type": "integer" },
+        "engineVersion": { "type": "string" },
+        "runs": { "type": "integer" },
+        "scenariosHash": { "type": "string" },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ProvenanceInput" }
+        },
+        "caveats": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "SimulationProvenanceParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "metric"],
+      "properties": {
+        "runId": { "type": "string" },
+        "metric": { "type": "string" },
+        "point": { "anyOf": [{ "type": "integer" }, { "type": "null" }] }
+      }
+    },
+    "SimulationProvenanceResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provenance"],
+      "properties": {
+        "provenance": { "$ref": "#/$defs/Provenance" }
+      }
+    },
+    "ExplanationPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "references"],
+      "properties": {
+        "text": { "type": "string" },
+        "references": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Explanation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "points", "caveats"],
+      "properties": {
+        "summary": { "type": "string" },
+        "points": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ExplanationPoint" }
+        },
+        "caveats": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "SimulationExplainParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "runId", "metric"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "runId": { "type": "string" },
+        "metric": { "type": "string" },
+        "point": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+        "profile": { "$ref": "#/$defs/ProviderProfile" },
+        "apiKey": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "model": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "SimulationExplainResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "explanation",
+        "source",
+        "promptVersion",
+        "cached",
+        "repaired",
+        "provenance"
+      ],
+      "properties": {
+        "explanation": { "$ref": "#/$defs/Explanation" },
+        "source": { "enum": ["llm", "fallback"] },
+        "model": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "promptVersion": { "type": "string" },
+        "cached": { "type": "boolean" },
+        "repaired": { "type": "boolean" },
+        "reason": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "provenance": { "$ref": "#/$defs/Provenance" }
       }
     }
   }

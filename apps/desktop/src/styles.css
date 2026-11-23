@@ -1653,6 +1653,87 @@ textarea:focus {
   gap: var(--sp-2);
 }
 
+.provenance-panel {
+  width: min(880px, 100%);
+}
+
+.cockpit-kpi__source {
+  margin-top: var(--sp-1);
+  font-size: var(--fs-12);
+}
+
+.provenance-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  margin: 0;
+}
+
+.provenance-values dt {
+  color: var(--muted);
+  font-size: var(--fs-12);
+}
+
+.provenance-values dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.provenance-table {
+  overflow-x: auto;
+}
+
+.provenance-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-13);
+}
+
+.provenance-table th,
+.provenance-table td {
+  padding: var(--sp-1) var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.provenance-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.provenance-explanation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.provenance-explanation__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.provenance-explanation ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.provenance-payload {
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-inset);
+  font-size: var(--fs-12);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .cockpit-catalog {
   display: flex;
   flex-direction: column;

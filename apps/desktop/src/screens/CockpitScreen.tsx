@@ -41,6 +41,10 @@ import {
 import { KpiBar } from "../components/cockpit/KpiBar";
 import { MonthInspector } from "../components/cockpit/MonthInspector";
 import {
+  ProvenancePanel,
+  type ProvenanceTarget,
+} from "../components/cockpit/ProvenancePanel";
+import {
   SurfacePanel,
   type SurfaceFormValues,
 } from "../components/cockpit/SurfacePanel";
@@ -200,6 +204,7 @@ function CockpitBody({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [provenanceTarget, setProvenanceTarget] = useState<ProvenanceTarget | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [monthNotice, setMonthNotice] = useState("");
@@ -290,6 +295,10 @@ function CockpitBody({
     onMonthChange: changeMonth,
     disabled: session.activeRunId !== null,
   });
+
+  const handleExplainMetric = useCallback((metric: string, point: number | null) => {
+    setProvenanceTarget({ metric, point });
+  }, []);
 
   const pinnedRuns = useMemo(
     () => pinned.map((runId) => runs[runId]).filter((run): run is RunState => Boolean(run?.result)),
@@ -787,6 +796,7 @@ function CockpitBody({
         month={selectedMonth}
         onMonthChange={changeMonth}
         onSeedChange={handleSeed}
+        onExplain={result?.runId ? handleExplainMetric : undefined}
       />
       <div className="cockpit-save" aria-live="polite">
         {dirty ? (
@@ -1092,6 +1102,15 @@ function CockpitBody({
       ) : null}
 
       {helpOpen ? <ShortcutsHelp onClose={() => setHelpOpen(false)} /> : null}
+
+      {provenanceTarget && result?.runId ? (
+        <ProvenancePanel
+          projectId={project.id}
+          runId={result.runId}
+          target={provenanceTarget}
+          onClose={() => setProvenanceTarget(null)}
+        />
+      ) : null}
     </div>
   );
 }

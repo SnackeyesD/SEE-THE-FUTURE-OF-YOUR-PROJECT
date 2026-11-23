@@ -221,6 +221,10 @@ class SimulationResult(CamelModel):
     def attach_sample(self, sample: RunSample) -> None:
         self._run_sample = sample
 
+    def detach_sample(self) -> None:
+        """Libère l'échantillon tout en conservant les agrégats du résultat."""
+        self._run_sample = None
+
     def __repr_args__(self):  # type: ignore[no-untyped-def]
         for name, value in super().__repr_args__():
             if name != "run_sample":

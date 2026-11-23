@@ -25,7 +25,9 @@ from . import (
     agent_service,
     analysis_service,
     benchmark_service,
+    explain_service,
     project_service,
+    provenance_service,
     provider_service,
     sandbox_service,
     simulation_service,
@@ -66,11 +68,13 @@ class RequestContext:
         *,
         service: simulation_service.SimulationService | None = None,
         analysis: analysis_service.AnalysisService | None = None,
+        explain: explain_service.ExplainService | None = None,
         diagnostics: Callable[[], dict[str, Any]] | None = None,
     ) -> None:
         self._notifier = notifier
         self.service = service
         self.analysis = analysis
+        self.explain = explain
         self._diagnostics = diagnostics
 
     def notify(self, method: str, params: dict[str, Any]) -> None:
@@ -277,6 +281,75 @@ def simulation_goalseek(
             exc.message,
             {"code": exc.code, "retryable": exc.retryable},
         ) from exc
+
+
+def _simulation_access_error(
+    exc: simulation_service.SimulationServiceError
+    | provenance_service.ProvenanceServiceError,
+) -> RpcError:
+    code = NOT_FOUND if exc.code in {"run_not_found"} else SIMULATION_ERROR
+    return RpcError(code, exc.message, {"code": exc.code, "retryable": exc.retryable})
+
+
+def simulation_trajectories(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    service = _simulation_service(context)
+    try:
+        return service.trajectories(params)
+    except simulation_service.SimulationServiceError as exc:
+        raise _simulation_access_error(exc) from exc
+
+
+def simulation_run_params(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    service = _simulation_service(context)
+    try:
+        return service.run_params(params)
+    except simulation_service.SimulationServiceError as exc:
+        raise _simulation_access_error(exc) from exc
+
+
+def simulation_provenance(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    service = _simulation_service(context)
+    try:
+        return provenance_service.build(service, params)
+    except provenance_service.ProvenanceServiceError as exc:
+        raise _simulation_access_error(exc) from exc
+
+
+def simulation_explain(
+    params: dict[str, Any], context: RequestContext
+) -> dict[str, Any]:
+    project_id = params.get("projectId")
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise RpcError(
+            SIMULATION_ERROR,
+            "projectId doit être une chaîne non vide",
+            {"code": "explanation_invalid"},
+        )
+    try:
+        get_store().projects.require(project_id.strip())
+    except ProjectNotFound as exc:
+        raise RpcError(NOT_FOUND, str(exc)) from exc
+    except StorageValidationError as exc:
+        raise RpcError(INVALID_PARAMS, str(exc)) from exc
+
+    service = _simulation_service(context)
+    explain = context.explain
+    if explain is None:
+        raise RpcError(INTERNAL_ERROR, "service d'explication indisponible")
+    try:
+        return explain.explain(get_store(), service, params)
+    except provenance_service.ProvenanceServiceError as exc:
+        raise _simulation_access_error(exc) from exc
+    except ProjectNotFound as exc:
+        raise RpcError(NOT_FOUND, str(exc)) from exc
+    except StorageValidationError as exc:
+        raise RpcError(INVALID_PARAMS, str(exc)) from exc
 
 
 def _storage_handler(handler: Handler) -> Handler:
@@ -723,6 +796,10 @@ def default_handlers() -> dict[str, Handler]:
         "simulation.cancel": simulation_cancel,
         "simulation.surface": simulation_surface,
         "simulation.goalseek": simulation_goalseek,
+        "simulation.trajectories": simulation_trajectories,
+        "simulation.run_params": simulation_run_params,
+        "simulation.provenance": simulation_provenance,
+        "simulation.explain": simulation_explain,
         "integrity.check": integrity_check,
         "storage.backup": storage_backup,
         "provider.catalog": provider_catalog,
@@ -769,6 +846,7 @@ class RpcServer:
         writer: simulation_service.OutboundWriter | None = None,
         simulation: simulation_service.SimulationService | None = None,
         analysis: analysis_service.AnalysisService | None = None,
+        explain: explain_service.ExplainService | None = None,
     ) -> None:
         self.handlers = dict(handlers or default_handlers())
         self.max_message_bytes = max_message_bytes
@@ -779,6 +857,7 @@ class RpcServer:
             persist=self._persist_result
         )
         self.analysis = analysis or analysis_service.AnalysisService()
+        self.explain = explain or explain_service.ExplainService()
 
     def _persist_result(
         self,
@@ -913,6 +992,7 @@ class RpcServer:
             self._notify,
             service=self.simulation,
             analysis=self.analysis,
+            explain=self.explain,
             diagnostics=lambda: {
                 "droppedMessages": self._writer.dropped,
                 **self.simulation.health_stats(),

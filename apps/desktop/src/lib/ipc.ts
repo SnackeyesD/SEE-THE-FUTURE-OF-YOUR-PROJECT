@@ -63,13 +63,21 @@ import type {
   SimulationCancelled,
   SimulationDone,
   SimulationError,
+  SimulationExplainParams,
+  SimulationExplainResult,
   SimulationGoalSeekParams,
   SimulationPartial,
   SimulationProgress,
+  SimulationProvenanceParams,
+  SimulationProvenanceResult,
   SimulationResult,
+  SimulationRunParamsParams,
+  SimulationRunParamsResult,
   SimulationStartParams,
   SimulationStartResult,
   SimulationSurfaceParams,
+  SimulationTrajectoriesParams,
+  SimulationTrajectoriesResult,
   SurfacePartial,
 } from "@see/protocol";
 import { invoke, isTauri } from "@tauri-apps/api/core";
@@ -363,6 +371,40 @@ export function startGoalSeek(
 
 export function cancelAnalysis(jobId: string): Promise<void> {
   return invoke<unknown>("simulation_cancel", { jobId }).then(() => undefined);
+}
+
+/**
+ * Trajectoires brutes d'un run, uniquement sur demande explicite.
+ * Le sidecar borne la réponse à 200 runs et signale les échantillons évincés.
+ */
+export function getTrajectories(
+  params: SimulationTrajectoriesParams,
+): Promise<SimulationTrajectoriesResult> {
+  return invoke<SimulationTrajectoriesResult>("simulation_trajectories", { params });
+}
+
+/** Paramètres effectivement tirés pour un run de l'échantillon conservé. */
+export function getRunParams(
+  params: SimulationRunParamsParams,
+): Promise<SimulationRunParamsResult> {
+  return invoke<SimulationRunParamsResult>("simulation_run_params", { params });
+}
+
+/** Provenance d'une métrique agrégée ou d'un point mensuel. */
+export function getProvenance(
+  params: SimulationProvenanceParams,
+): Promise<SimulationProvenanceResult> {
+  return invoke<SimulationProvenanceResult>("simulation_provenance", { params });
+}
+
+/**
+ * Explication à la demande. Sans profil fournisseur, le sidecar renvoie le
+ * repli déterministe ; la clé API est injectée par le shell Tauri.
+ */
+export function explainMetric(
+  params: SimulationExplainParams,
+): Promise<SimulationExplainResult> {
+  return invoke<SimulationExplainResult>("simulation_explain", { params });
 }
 
 function zeroConvergence() {

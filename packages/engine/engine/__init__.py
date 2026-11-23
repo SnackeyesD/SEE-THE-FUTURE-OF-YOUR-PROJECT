@@ -38,7 +38,17 @@ from .progressive import (
     QualityProfile,
     resolve_execution,
 )
-from .run_sample import RunSample
+from .provenance import (
+    ROUNDING_TOLERANCE,
+    allowed_numbers,
+    build_provenance,
+    deterministic_explanation,
+    extract_numbers,
+    number_is_allowed,
+    scenario_hash,
+    validate_explanation,
+)
+from .run_sample import SAMPLE_LIMIT, RunSample
 from .runner import PartialCallback, ProgressCallback, simulate
 from .scenario import (
     BreakEven,
@@ -95,6 +105,8 @@ __all__ = [
     "QUALITY_PROFILES",
     "Quality",
     "QualityProfile",
+    "ROUNDING_TOLERANCE",
+    "SAMPLE_LIMIT",
     "RunSample",
     "Scenario",
     "ScenarioEvent",
@@ -105,13 +117,20 @@ __all__ = [
     "SurfaceResult",
     "SurfaceRowCallback",
     "UnknownModelError",
+    "allowed_numbers",
     "build_event_modifiers",
+    "build_provenance",
+    "deterministic_explanation",
     "draw_events",
+    "extract_numbers",
     "get_model",
     "goal_seek",
+    "number_is_allowed",
     "register_event_slots",
     "resolve_execution",
+    "scenario_hash",
     "simulate",
     "surface",
     "to_camel",
+    "validate_explanation",
 ]

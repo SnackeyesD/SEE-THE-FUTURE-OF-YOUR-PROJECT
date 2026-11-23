@@ -231,6 +231,43 @@ fn simulation_goalseek(
 }
 
 #[tauri::command]
+fn simulation_trajectories(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.trajectories", params)
+}
+
+#[tauri::command]
+fn simulation_run_params(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.run_params", params)
+}
+
+#[tauri::command]
+fn simulation_provenance(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.provenance", params)
+}
+
+#[tauri::command]
+fn simulation_explain(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let params = inject_api_key(params)?;
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("simulation.explain", params)
+}
+
+#[tauri::command]
 fn provider_call(
     state: tauri::State<'_, Mutex<SidecarManager>>,
     method: String,
@@ -455,6 +492,10 @@ pub fn run() {
             simulation_cancel,
             simulation_surface,
             simulation_goalseek,
+            simulation_trajectories,
+            simulation_run_params,
+            simulation_provenance,
+            simulation_explain,
             agent_call,
             agent_turn,
             sandbox_call,
