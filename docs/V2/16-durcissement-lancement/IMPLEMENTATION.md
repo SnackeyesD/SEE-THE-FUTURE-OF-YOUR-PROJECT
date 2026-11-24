@@ -93,9 +93,9 @@
 - **Boîte de dialogue native d'enregistrement** toujours différée : le
   téléchargement webview fonctionne et ne change ni le contenu ni le
   déterminisme.
-- **Test utilisateur final non réalisé.** Le parcours d'exemple est automatisé,
-  mais la mesure « premier résultat en moins de deux minutes » avec un inconnu
-  reste ouverte.
+- **Test utilisateur final non réalisé.** Le protocole du jalon D est prêt
+  dans `docs/V2/validation-utilisateurs.md` (installation, exemple, run final,
+  exports, hors ligne, seuils de réussite) ; il reste à recruter 3–4 personnes.
 - **Pack `2026.2` non signé.** L'exemple continue d'épingler `2026.1`.
 
 ## Vérifications exécutées

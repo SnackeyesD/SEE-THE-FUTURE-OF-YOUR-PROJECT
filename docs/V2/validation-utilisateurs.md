@@ -72,6 +72,35 @@ _(même grille)_
 
 _(même grille, inclure installation et export)_
 
+### Parcours imposé (sans aide)
+
+1. Installer l'application sur une machine où elle n'a jamais été lancée.
+2. Ouvrir le projet d'exemple `retail-depot-brazzaville` depuis **Projets**.
+3. Ignorer ou suivre le parcours guidé, puis vérifier une hypothèse.
+4. Lancer un calcul **final** (5 000 runs) et attendre le premier écran de
+   résultats.
+5. Expliquer à voix haute ce que signifient P10–P90 et la probabilité de perte.
+6. Exporter le dossier Markdown, puis le PDF.
+7. Ouvrir **Réglages**, exporter le diagnostic et expliquer ce qu'il contient.
+8. Désactiver le réseau et vérifier qu'un nouveau calcul reste possible.
+
+### Critères de réussite du jalon D
+
+| Critère | Seuil |
+|---|---|
+| Installation sans invitation administrateur surprise | oui |
+| Lancement applicatif | < 10 s |
+| Premier résultat | < 2 min |
+| Tâches réussies sans aide | ≥ 5 / 8 |
+| Explication correcte de P10–P90 | oui |
+| Aucun secret ni chemin local dans les exports | oui |
+| Confiance déclarée | ≥ 3 / 5 en médiane |
+| Intention d'usage | ≥ 3 / 5 en médiane |
+
+Consigner les verbatims, les captures et les écarts dans la grille ci-dessus.
+Les échecs bloquants (installation, export, hors ligne) passent en correctif
+avant la release ; les confusions mineures deviennent des tâches de la phase 16.
+
 ---
 
 ## Synthèse
