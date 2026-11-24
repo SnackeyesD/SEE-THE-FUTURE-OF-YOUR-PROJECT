@@ -53,7 +53,7 @@
 - [x] Rapports de crash opt-in (si activés) avec scrubbing. *Journal local sans envoi, désactivé par défaut.*
 - [x] Politique de confidentialité, CGU, mentions de transparence. *Provisoires, dans `docs/legal` et l'écran « À propos ».*
 - [ ] Suite E2E Playwright en mode web + shim IPC.
-- [ ] Tests de migration v2 → v3 sur base réelle.
+- [ ] Tests de migration v2 → v3 sur base réelle. *Migration v5 → courant et round-trip `.simproj` couverts automatiquement ; copie d'une base v2 réelle à exécuter.*
 - [x] `docs/perf/release.md` et `docs/release/checklist.md`. *Procédure livrée ; mesure de release sur machine modeste en attente.*
 - [ ] `CHANGELOG.md` et version `3.0.0`. *`CHANGELOG.md` livré ; bump de version à faire avec la release.*
 

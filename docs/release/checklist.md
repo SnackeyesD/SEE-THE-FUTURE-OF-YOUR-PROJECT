@@ -7,6 +7,7 @@
 ## 1. Portes automatiques
 
 - [ ] `npm run protocol:check` : schéma et fichiers générés identiques.
+- [ ] `npm run secrets:check` : aucun secret dans les fichiers suivis.
 - [ ] `npm run typecheck` : aucun diagnostic TypeScript.
 - [ ] `npm test` : tests protocole + UI verts.
 - [ ] `npm run sidecar:test` et `npm run sidecar:lint`.

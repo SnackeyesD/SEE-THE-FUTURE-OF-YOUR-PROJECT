@@ -40,6 +40,7 @@ npm run dev
 npm run dev:web
 npm run typecheck
 npm run protocol:check
+npm run secrets:check
 npm test
 npm run test -w @see/desktop
 npm run sidecar:test

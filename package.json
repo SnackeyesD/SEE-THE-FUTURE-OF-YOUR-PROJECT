@@ -20,6 +20,7 @@
     "test": "npm run test --workspaces --if-present",
     "protocol:generate": "npm run generate -w @see/protocol",
     "protocol:check": "npm run check -w @see/protocol",
+    "secrets:check": "node scripts/check-secrets.mjs",
     "catalog:generate": "uv run --project packages/engine python packages/engine/scripts/export_events.py --write",
     "catalog:check": "uv run --project packages/engine python packages/engine/scripts/export_events.py --check",
     "sidecar:sync": "uv sync --project apps/desktop/src-tauri/sidecar",

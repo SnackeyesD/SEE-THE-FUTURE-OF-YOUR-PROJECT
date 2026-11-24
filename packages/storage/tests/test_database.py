@@ -196,6 +196,81 @@ def test_migration_v5_to_v6_preserves_data_and_defaults(
     assert (tmp_path / "backups" / "workspace.v5.bak").is_file()
 
 
+def test_a_migrated_v5_database_is_usable_and_exportable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original_migrations = database_module.MIGRATIONS
+    original_latest = database_module.LATEST_SCHEMA_VERSION
+    store_dir = tmp_path / "data"
+    store_dir.mkdir()
+    path = store_dir / "workspace.db"
+
+    monkeypatch.setattr(database_module, "LATEST_SCHEMA_VERSION", 5)
+    monkeypatch.setattr(database_module, "MIGRATIONS", original_migrations[:5])
+    legacy = Database(path)
+    now = "2026-01-01T00:00:00+00:00"
+    legacy.conn.execute(
+        """
+        INSERT INTO projects (
+            id, name, description, currency, sector, status, created_at, updated_at,
+            schema_version, engine_version, metadata_json, deleted_at
+        ) VALUES ('p1', 'Projet v2', '', 'XAF', 'retail', 'active', ?, ?, 1, '0.2.0', '{}', NULL)
+        """,
+        (now, now),
+    )
+    legacy.conn.execute(
+        """
+        INSERT INTO scenarios (
+            id, project_id, name, model, scenario_json, created_at, updated_at
+        ) VALUES ('s1', 'p1', 'Base', 'retail_depot', '{"runs": 10}', ?, ?)
+        """,
+        (now, now),
+    )
+    legacy.conn.execute(
+        """
+        INSERT INTO simulation_runs (
+            id, project_id, scenario_id, engine_version, seed, runs, duration_ms,
+            summary_json, result_json, result_path, created_at
+        ) VALUES ('r1', 'p1', 's1', '0.2.0', 7, 10, 1.0, '{}', '{}', NULL, ?)
+        """,
+        (now,),
+    )
+    legacy.conn.commit()
+    legacy.close()
+
+    monkeypatch.setattr(database_module, "LATEST_SCHEMA_VERSION", original_latest)
+    monkeypatch.setattr(database_module, "MIGRATIONS", original_migrations)
+
+    store = ProjectStore(store_dir)
+    try:
+        project = store.projects.require("p1")
+        assert project.name == "Projet v2"
+        runs = store.runs.list("p1")
+        assert [run.id for run in runs] == ["r1"]
+        assert runs[0].quality == "final"
+        assert runs[0].pinned is False
+
+        archive = tmp_path / "projet-v2.simproj"
+        store.export_project("p1", archive)
+        assert archive.is_file()
+        assert archive.stat().st_size > 0
+    finally:
+        store.close()
+
+    imported_dir = tmp_path / "imported"
+    imported_dir.mkdir()
+    destination = ProjectStore(imported_dir)
+    try:
+        imported = destination.import_project(tmp_path / "projet-v2.simproj")
+        assert imported.name == "Projet v2"
+        imported_runs = destination.runs.list(imported.id)
+        assert len(imported_runs) == 1
+        assert imported_runs[0].seed == 7
+        assert imported_runs[0].quality == "final"
+    finally:
+        destination.close()
+
+
 def test_integrity_detects_cross_project_version(tmp_path: Path) -> None:
     store = ProjectStore(tmp_path / "data")
     try:

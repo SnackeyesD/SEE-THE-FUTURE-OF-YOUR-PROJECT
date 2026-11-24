@@ -55,7 +55,19 @@
   corriger les avis `tinypool` (critique) et `@vitest/mocker` (modéré).
   `npm audit` ne remonte plus aucune vulnérabilité.
 - Prérequis : Node `^22.12`, `^24` ou `>=26` pour Vitest 5.
-- La suite UI reste verte (273 tests) sans modification des tests existants.
+- La suite UI reste verte sans modification des tests existants.
+
+### Détection de secrets
+
+- `npm run secrets:check` parcourt uniquement les fichiers **suivis par Git**
+  (`git ls-files`) : un `.env` local ou une base ne peut donc pas fuiter dans
+  la sortie. Les tests et fixtures sont exclus car ils contiennent de fausses
+  clés destinées à vérifier le masquage.
+- Motifs : clés OpenAI/Google/GitHub/Slack, clés privées PEM, affectations
+  `api_key`/`client_secret`. La sortie indique le fichier et le motif, jamais
+  la valeur.
+- Exécuté dans le job `web` de la CI. Un test manuel avec une fausse clé a
+  confirmé le code de sortie `1` et le masquage.
 
 ## Écarts assumés
 
@@ -68,9 +80,10 @@
   pour la première fois ; le harnais existant (Vitest + Testing Library) couvre
   les parcours critiques. L'ajout de Playwright demande un shim IPC déterministe
   et une décision d'outillage qui n'a pas été prise dans cette session.
-- **Migration v2 → v3 non rejouée sur une base réelle.** Les migrations sont
-  couvertes par les tests de `packages/storage`, mais le scénario « base v2
-  réelle » reste à exécuter sur une copie.
+- **Migration v2 → v3 réelle non rejouée.** Un test automatisé couvre désormais
+  la migration d'une base v5 (projets, scénarios, runs) vers le schéma courant,
+  puis l'export et le ré-import `.simproj`. Le scénario « copie d'une base v2
+  réelle » reste à exécuter sur une machine de test.
 - **Boîte de dialogue native d'enregistrement** toujours différée : le
   téléchargement webview fonctionne et ne change ni le contenu ni le
   déterminisme.
