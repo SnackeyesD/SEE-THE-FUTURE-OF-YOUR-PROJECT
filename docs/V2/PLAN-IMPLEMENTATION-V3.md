@@ -138,7 +138,7 @@ Trois couloirs peuvent avancer en parallèle après la phase 02 :
 ### 5.1 Contrats et versionnement
 
 - **Protocole** : source unique `packages/protocol/schema/messages.schema.json` ; `npm run protocol:generate` ; `npm run protocol:check` en CI.
-- **Version protocole** : `1.7.0` aujourd'hui → `1.8.0` en phase 02 → `1.9.0` en phase 05 → `1.10.0` en phase 06 → `1.11.0` en phase 10 → `1.12.0` en phase 11 → `1.13.0` en phase 12 → `1.14.0` en phase 13. Le test Rust `sidecar.rs` qui assert `1.7.0` doit être mis à jour à chaque bump.
+- **Version protocole** : `1.7.0` aujourd'hui → `1.8.0` en phase 02 → `1.9.0` en phase 05 → `1.10.0` en phase 06 → `1.11.0` en phase 10 → `1.12.0` en phase 11 → `1.13.0` en phase 12 → `1.14.0` en phase 13 → `1.15.0` en phase 15. Le test Rust `sidecar.rs` qui assert la version courante doit être mis à jour à chaque bump.
 - **Scénario** : `schemaVersion` passe de `1.0.0` à `1.1.0` en phase 05 (événements). Le moteur doit accepter `1.0.0` et `1.1.0`.
 - **Base** : migration `0006` en phase 07 ; `LATEST_SCHEMA_VERSION` et les archives `.simproj` suivent.
 - **Moteur** : bump de version mineure à chaque changement de comportement numérique, avec régénération assumée des golden tests.

@@ -1,6 +1,6 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 # Source: packages/protocol/schema/messages.schema.json
-# Protocol version: 1.14.0
+# Protocol version: 1.15.0
 # Regenerate with: npm run protocol:generate
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-PROTOCOL_VERSION = "1.14.0"
+PROTOCOL_VERSION = "1.15.0"
 
 RequestId = int | str
 
@@ -48,6 +48,7 @@ MethodName = Literal[
     "simulate",
     "project.list",
     "project.create",
+    "project.createFromTemplate",
     "project.open",
     "project.rename",
     "project.duplicate",
@@ -75,6 +76,8 @@ MethodName = Literal[
     "project.version.restore",
     "project.version.delete",
     "project.simulate",
+    "template.list",
+    "report.build",
     "simulation.start",
     "simulation.cancel",
     "simulation.surface",
@@ -439,6 +442,67 @@ class ProjectIdParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     projectId: str
+
+
+class TemplateSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    description: str
+    currency: str
+    sector: str | None
+    horizonMonths: int
+    seed: int
+    sources: list[dict[str, Any]]
+    branchCount: int
+
+
+class TemplateListResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    templates: list[TemplateSummary]
+    errors: list[str]
+
+
+class ProjectCreateFromTemplateParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    templateId: str
+    name: str | None = None
+    currency: str | None = None
+
+
+class ProjectCreateFromTemplateResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    project: Project
+    scenario: ScenarioRecord
+    branches: list[ScenarioRecord]
+    seed: int
+    version: ScenarioVersionRef
+    templateId: str
+    importedAt: str
+
+
+class ReportBuildParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    projectId: str
+    runId: str | None = None
+    generatedAt: str | None = None
+
+
+class ReportBuildResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    format: Literal["markdown"]
+    content: str
+    filename: str
+    generatedAt: str
+    runId: str
+    seed: int | None
+    engineVersion: str
 
 
 class ProjectRenameParams(BaseModel):

@@ -10,6 +10,7 @@ import type {
   SandboxAnalysis,
   Scenario,
   SidecarStatus,
+  TemplateSummary,
 } from "@see/protocol";
 import { PROTOCOL_VERSION } from "@see/protocol";
 import { Badge, Button, InlineAlert } from "@see/ui";
@@ -41,6 +42,7 @@ import {
   SandboxReviewPanel,
   type SandboxProposal,
 } from "./components/SandboxReviewPanel";
+import { GuidedTour } from "./components/onboarding/GuidedTour";
 import { useViewHotkeys } from "./hooks/useViewHotkeys";
 import { BriefScreen } from "./screens/BriefScreen";
 import { BranchesScreen } from "./screens/BranchesScreen";
@@ -56,7 +58,9 @@ import { SimulationScreen } from "./screens/SimulationScreen";
 import {
   agentState,
   agentTurn,
+  buildReport,
   createProject,
+  createProjectFromTemplate,
   deleteAgentPermission,
   getProjectData,
   getScenario,
@@ -66,6 +70,7 @@ import {
   listAgentPermissions,
   listProjects,
   listRoles,
+  listTemplates,
   onSimulationProgress,
   pingSidecar,
   restartSidecar,
@@ -112,6 +117,26 @@ const NAV: Array<{ id: View; fr: string; en: string }> = [
 ];
 
 let nextLogId = 1;
+
+const DEMO_TEMPLATE_ID = "retail-depot-brazzaville";
+
+function downloadText(filename: string, content: string): boolean {
+  try {
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.rel = "noopener";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function timestamp(): string {
   return new Date().toLocaleTimeString("fr-FR", { hour12: false });
@@ -167,6 +192,7 @@ export function App() {
   const [status, setStatus] = useState<SidecarStatus | null>(null);
   const [health, setHealth] = useState<HealthResult | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [data, setData] = useState<ProjectDataResult | null>(null);
   /** Branche ouverte depuis l'écran Branches ; null = scénario courant du projet. */
@@ -182,6 +208,7 @@ export function App() {
   const [sandboxProposal, setSandboxProposal] = useState<SandboxProposal | null>(null);
   const [narration, setNarration] = useState("");
   const [narrationBusy, setNarrationBusy] = useState(false);
+  const [reportBusy, setReportBusy] = useState(false);
   const cockpitDirty = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -264,6 +291,12 @@ export function App() {
     return result.projects;
   }, []);
 
+  const loadTemplates = useCallback(async () => {
+    const result = await listTemplates();
+    setTemplates(result.templates);
+    return result.templates;
+  }, []);
+
   const bootstrap = useCallback(async () => {
     if (!ipcAvailable) {
       pushLog("error", "Mode navigateur : IPC Tauri indisponible.");
@@ -280,6 +313,11 @@ export function App() {
           : nextStatus.error ?? "Sidecar arrêté.",
       );
       const loaded = await loadProjects();
+      try {
+        await loadTemplates();
+      } catch {
+        /* les modèles sont optionnels : l'absence ne bloque pas le reste */
+      }
       const remembered = localStorage.getItem("seefuture.project");
       const selected =
         loaded.find((project) => project.id === remembered) ?? loaded[0] ?? null;
@@ -294,7 +332,7 @@ export function App() {
     } finally {
       setBusy(false);
     }
-  }, [loadProjects, pushLog, refreshStatus, refreshWorkspace]);
+  }, [loadProjects, loadTemplates, pushLog, refreshStatus, refreshWorkspace]);
 
   useEffect(() => {
     void bootstrap();
@@ -399,6 +437,50 @@ export function App() {
     },
     [loadProjects, openProject, pushLog],
   );
+
+  const handleCreateFromTemplate = useCallback(
+    async (templateId: string) => {
+      setBusy(true);
+      setError("");
+      try {
+        const result = await createProjectFromTemplate(templateId);
+        pushLog(
+          "success",
+          `Projet d'exemple « ${result.project.name} » importé (${result.seed}).`,
+        );
+        await loadProjects();
+        await openProject(result.project);
+        return true;
+      } catch (reason) {
+        setError(humanize(reason));
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [loadProjects, openProject, pushLog],
+  );
+
+  const handleExportReport = useCallback(async () => {
+    if (!activeProject) return;
+    setReportBusy(true);
+    setError("");
+    try {
+      const report = await buildReport({
+        projectId: activeProject.id,
+        runId: data?.run?.id,
+      });
+      if (!downloadText(report.filename, report.content)) {
+        setError("Le téléchargement du dossier n'est pas disponible dans cet environnement.");
+        return;
+      }
+      pushLog("success", `Dossier exporté : ${report.filename}.`);
+    } catch (reason) {
+      setError(humanize(reason));
+    } finally {
+      setReportBusy(false);
+    }
+  }, [activeProject, data?.run?.id, pushLog]);
 
   const handleRefreshProjects = useCallback(async () => {
     setBusy(true);
@@ -721,6 +803,13 @@ export function App() {
         ))}
       </nav>
 
+      {activeProject?.metadata?.templateId === DEMO_TEMPLATE_ID ? (
+        <GuidedTour
+          projectId={activeProject.id}
+          onNavigate={(next) => navigate(next as View)}
+        />
+      ) : null}
+
       {!ipcAvailable ? (
         <InlineAlert tone="warn" title="Application desktop requise">
           Le mode navigateur permet de prévisualiser l'interface, mais le stockage et le sidecar ne
@@ -734,9 +823,11 @@ export function App() {
         <ProjectsScreen
           projects={projects}
           activeProject={activeProject}
+          templates={templates}
           busy={busy}
           error={error}
           onCreate={handleCreateProject}
+          onCreateFromTemplate={handleCreateFromTemplate}
           onOpen={(project) => void openProject(project)}
           onRefresh={() => void handleRefreshProjects()}
         />
@@ -799,8 +890,10 @@ export function App() {
           run={data?.run ?? null}
           narration={narration}
           narrationBusy={narrationBusy}
+          reportBusy={reportBusy}
           error={error}
           onNarrate={handleNarrate}
+          onExportReport={handleExportReport}
           onBack={() => navigate("simulation")}
         />
       ) : null}

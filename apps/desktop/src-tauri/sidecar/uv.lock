@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -720,6 +720,27 @@ dev = [
 ]
 
 [[package]]
+name = "see-reporting"
+version = "0.1.0"
+source = { editable = "../../../../packages/reporting" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "see-engine" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.7,<3" },
+    { name = "see-engine", editable = "../../../../packages/engine" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.2" },
+    { name = "ruff", specifier = ">=0.7" },
+]
+
+[[package]]
 name = "see-sandbox"
 version = "0.1.0"
 source = { editable = "../../../../packages/sandbox" }
@@ -742,6 +763,7 @@ dependencies = [
     { name = "see-benchmarks" },
     { name = "see-engine" },
     { name = "see-providers" },
+    { name = "see-reporting" },
     { name = "see-sandbox" },
     { name = "see-storage" },
 ]
@@ -759,6 +781,7 @@ requires-dist = [
     { name = "see-benchmarks", editable = "../../../../packages/benchmarks" },
     { name = "see-engine", editable = "../../../../packages/engine" },
     { name = "see-providers", editable = "../../../../packages/providers" },
+    { name = "see-reporting", editable = "../../../../packages/reporting" },
     { name = "see-sandbox", editable = "../../../../packages/sandbox" },
     { name = "see-storage", editable = "../../../../packages/storage" },
 ]

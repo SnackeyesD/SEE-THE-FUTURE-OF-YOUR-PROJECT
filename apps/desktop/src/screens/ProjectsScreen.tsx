@@ -1,4 +1,4 @@
-import type { Project } from "@see/protocol";
+import type { Project, TemplateSummary } from "@see/protocol";
 import { Badge, Button, Card, CardHeader, EmptyState, Field, InlineAlert, Stat } from "@see/ui";
 import { useState } from "react";
 import { formatDateTime } from "../lib/format";
@@ -6,9 +6,11 @@ import { formatDateTime } from "../lib/format";
 interface Props {
   projects: Project[];
   activeProject: Project | null;
+  templates: TemplateSummary[];
   busy: boolean;
   error: string;
   onCreate: (name: string, description: string) => Promise<boolean>;
+  onCreateFromTemplate: (templateId: string) => Promise<boolean>;
   onOpen: (project: Project) => void;
   onRefresh: () => void;
 }
@@ -16,9 +18,11 @@ interface Props {
 export function ProjectsScreen({
   projects,
   activeProject,
+  templates,
   busy,
   error,
   onCreate,
+  onCreateFromTemplate,
   onOpen,
   onRefresh,
 }: Props) {
@@ -127,6 +131,44 @@ export function ProjectsScreen({
           )}
         </Card>
       </div>
+
+      <Card>
+        <CardHeader
+          eyebrow="Exemple"
+          title="Partir d'un projet d'exemple"
+          description="Un dépôt de revente déjà sourcé, avec sa branche « Prix -10 % ». Idéal pour découvrir le parcours en moins de deux minutes."
+        />
+        {templates.length === 0 ? (
+          <p className="ui-muted">Aucun modèle local disponible sur cet appareil.</p>
+        ) : (
+          <ul className="project-list">
+            {templates.map((template) => (
+              <li key={template.id} className="project-list__item">
+                <div>
+                  <div className="project-list__title">
+                    <strong>{template.name}</strong>
+                    <Badge tone="accent">{template.currency}</Badge>
+                    <Badge>{template.horizonMonths} mois</Badge>
+                  </div>
+                  <p>{template.description}</p>
+                  <span className="ui-muted">
+                    {template.branchCount} variante{template.branchCount > 1 ? "s" : ""} · graine{" "}
+                    {template.seed} · {template.sources.length} source
+                    {template.sources.length > 1 ? "s" : ""}
+                  </span>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => void onCreateFromTemplate(template.id)}
+                  disabled={busy}
+                >
+                  Importer l'exemple
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       <Card>
         <CardHeader

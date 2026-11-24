@@ -24,8 +24,10 @@ interface Props {
   run: ProjectDataResult["run"];
   narration: string;
   narrationBusy: boolean;
+  reportBusy: boolean;
   error: string;
   onNarrate: () => Promise<void>;
+  onExportReport: () => Promise<void>;
   onBack: () => void;
 }
 
@@ -33,8 +35,10 @@ export function ResultsScreen({
   run,
   narration,
   narrationBusy,
+  reportBusy,
   error,
   onNarrate,
+  onExportReport,
   onBack,
 }: Props) {
   const result = run?.result ?? null;
@@ -76,6 +80,9 @@ export function ResultsScreen({
         <div className="ui-actions">
           <Badge tone="accent">Moteur {result.engineVersion}</Badge>
           <Badge>{formatDateTime(run.createdAt)}</Badge>
+          <Button onClick={() => void onExportReport()} disabled={reportBusy}>
+            {reportBusy ? "Préparation…" : "Exporter le dossier"}
+          </Button>
         </div>
       </div>
 

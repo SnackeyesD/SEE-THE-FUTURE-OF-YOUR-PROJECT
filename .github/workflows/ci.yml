@@ -49,6 +49,7 @@ jobs:
       - run: uv sync --project packages/agent-core
       - run: uv sync --project packages/benchmarks
       - run: uv sync --project packages/sandbox
+      - run: uv sync --project packages/reporting
       - run: uv sync --project apps/desktop/src-tauri/sidecar
       - run: uv run --project packages/engine ruff check packages/engine
       - run: uv run --project packages/engine pytest packages/engine/tests
@@ -62,6 +63,8 @@ jobs:
       - run: uv run --project packages/benchmarks pytest packages/benchmarks/tests
       - run: uv run --project packages/sandbox ruff check packages/sandbox
       - run: uv run --project packages/sandbox pytest packages/sandbox/tests
+      - run: uv run --project packages/reporting ruff check packages/reporting
+      - run: uv run --project packages/reporting pytest packages/reporting/tests
       - run: uv run --project apps/desktop/src-tauri/sidecar ruff check apps/desktop/src-tauri/sidecar
       - run: uv run --project apps/desktop/src-tauri/sidecar pytest apps/desktop/src-tauri/sidecar/tests
 

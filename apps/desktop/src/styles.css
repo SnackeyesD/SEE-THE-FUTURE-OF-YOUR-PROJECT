@@ -2452,3 +2452,55 @@ textarea:focus {
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
 }
+
+.guided-tour {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  z-index: 40;
+  display: grid;
+  gap: var(--sp-2);
+  width: min(360px, calc(100vw - var(--sp-4) * 2));
+  padding: var(--sp-4);
+  border: 1px solid var(--accent-a35);
+  border-radius: var(--r-2);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-3);
+}
+
+.guided-tour__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.guided-tour__skip {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.guided-tour__skip:hover,
+.guided-tour__skip:focus-visible {
+  color: var(--text);
+}
+
+.guided-tour__title {
+  font-size: var(--fs-16);
+}
+
+.guided-tour p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-13);
+}
+
+.guided-tour__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}

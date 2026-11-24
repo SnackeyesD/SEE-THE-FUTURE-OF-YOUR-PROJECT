@@ -59,6 +59,9 @@ npm run agent:lint
 npm run benchmarks:sync
 npm run benchmarks:test
 npm run benchmarks:lint
+npm run reporting:sync
+npm run reporting:test
+npm run reporting:lint
 npm run sandbox:test
 npm run sandbox:lint
 npm run bench
@@ -77,7 +80,9 @@ npm run bench:ui
 - `packages/storage` : persistance SQLite, repositories et archives `.simproj`.
 - `packages/agent-core` : orchestration LLM, outils validés, permissions et traces (aucun accès réseau direct).
 - `packages/benchmarks` : chargement, vérification et lookup des référentiels signés.
+- `packages/reporting` : dossier de pitch Markdown déterministe, sans recalcul.
 - `data/benchmark-packs` : packs sourcés, schéma, clés publiques et outils de signature.
+- `data/examples` : modèles de projets importables, versionnés et documentés.
 - `docs/adr` : décisions d'architecture.
 - `docs/perf` : machine de référence, baseline et rapports `npm run bench`.
 - `scripts/perf` : bancs moteur/sidecar/UI et orchestrateur.

@@ -10,8 +10,10 @@ function renderScreen(overrides: Partial<Parameters<typeof ResultsScreen>[0]> = 
     run: runRecord,
     narration: "",
     narrationBusy: false,
+    reportBusy: false,
     error: "",
     onNarrate: vi.fn().mockResolvedValue(undefined),
+    onExportReport: vi.fn().mockResolvedValue(undefined),
     onBack: vi.fn(),
     ...overrides,
   };
@@ -52,6 +54,14 @@ describe("ResultsScreen", () => {
 
     await user.click(screen.getByRole("button", { name: "Générer la narration" }));
     expect(props.onNarrate).toHaveBeenCalledTimes(1);
+  });
+
+  it("demande l'export du dossier", async () => {
+    const user = userEvent.setup();
+    const props = renderScreen();
+
+    await user.click(screen.getByRole("button", { name: "Exporter le dossier" }));
+    expect(props.onExportReport).toHaveBeenCalledTimes(1);
   });
 
   it("affiche un état vide sans run", () => {

@@ -3,7 +3,7 @@
   "$id": "https://seethefuture.local/protocol/messages.schema.json",
   "title": "See The Future IPC protocol",
   "description": "Source unique des messages JSON-RPC 2.0 échangés entre le shell Tauri et le sidecar Python.",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "$defs": {
     "RequestId": {
       "description": "Identifiant de requête JSON-RPC (entier ou chaîne).",
@@ -54,6 +54,7 @@
         "simulate",
         "project.list",
         "project.create",
+        "project.createFromTemplate",
         "project.open",
         "project.rename",
         "project.duplicate",
@@ -81,6 +82,8 @@
         "project.version.restore",
         "project.version.delete",
         "project.simulate",
+        "template.list",
+        "report.build",
         "simulation.start",
         "simulation.cancel",
         "simulation.surface",
@@ -664,6 +667,117 @@
       "required": ["projectId"],
       "properties": {
         "projectId": { "type": "string" }
+      }
+    },
+    "TemplateSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "description",
+        "currency",
+        "sector",
+        "horizonMonths",
+        "seed",
+        "sources",
+        "branchCount"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "currency": { "type": "string" },
+        "sector": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "horizonMonths": { "type": "integer" },
+        "seed": { "type": "integer" },
+        "sources": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "branchCount": { "type": "integer" }
+      }
+    },
+    "TemplateListResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["templates", "errors"],
+      "properties": {
+        "templates": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/TemplateSummary" }
+        },
+        "errors": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "ProjectCreateFromTemplateParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["templateId"],
+      "properties": {
+        "templateId": { "type": "string" },
+        "name": { "type": "string" },
+        "currency": { "type": "string" }
+      }
+    },
+    "ProjectCreateFromTemplateResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project",
+        "scenario",
+        "branches",
+        "seed",
+        "version",
+        "templateId",
+        "importedAt"
+      ],
+      "properties": {
+        "project": { "$ref": "#/$defs/Project" },
+        "scenario": { "$ref": "#/$defs/ScenarioRecord" },
+        "branches": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ScenarioRecord" }
+        },
+        "seed": { "type": "integer" },
+        "version": { "$ref": "#/$defs/ScenarioVersionRef" },
+        "templateId": { "type": "string" },
+        "importedAt": { "type": "string" }
+      }
+    },
+    "ReportBuildParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "runId": { "type": "string" },
+        "generatedAt": { "type": "string" }
+      }
+    },
+    "ReportBuildResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "content",
+        "filename",
+        "generatedAt",
+        "runId",
+        "seed",
+        "engineVersion"
+      ],
+      "properties": {
+        "format": { "enum": ["markdown"] },
+        "content": { "type": "string" },
+        "filename": { "type": "string" },
+        "generatedAt": { "type": "string" },
+        "runId": { "type": "string" },
+        "seed": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+        "engineVersion": { "type": "string" }
       }
     },
     "ProjectRenameParams": {

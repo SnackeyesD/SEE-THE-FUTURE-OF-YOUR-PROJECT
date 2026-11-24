@@ -28,6 +28,7 @@ import type {
   Project,
   ProjectBriefSaveParams,
   ProjectBriefSaveResult,
+  ProjectCreateFromTemplateResult,
   ProjectDataParams,
   ProjectDataResult,
   ProjectResult,
@@ -70,6 +71,8 @@ import type {
   ProviderProfileSaveParams,
   ProviderTestResult,
   ProviderUsageResult,
+  ReportBuildParams,
+  ReportBuildResult,
   RoleAssignment,
   RoleAssignmentResult,
   RoleListResult,
@@ -103,6 +106,7 @@ import type {
   SimulationTrajectoriesParams,
   SimulationTrajectoriesResult,
   SurfacePartial,
+  TemplateListResult,
 } from "@see/protocol";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -135,6 +139,26 @@ export function listProjects(): Promise<{ projects: Project[] }> {
 
 export function createProject(name: string, description?: string): Promise<ProjectResult> {
   return invoke("project_create", { name, description: description ?? "" });
+}
+
+export function listTemplates(): Promise<TemplateListResult> {
+  return invoke("template_list");
+}
+
+export function createProjectFromTemplate(
+  templateId: string,
+  name?: string,
+  currency?: string,
+): Promise<ProjectCreateFromTemplateResult> {
+  return invoke("project_create_from_template", {
+    templateId,
+    name: name ?? null,
+    currency: currency ?? null,
+  });
+}
+
+export function buildReport(params: ReportBuildParams): Promise<ReportBuildResult> {
+  return invoke("report_build", { params });
 }
 
 export function getProjectData(params: ProjectDataParams): Promise<ProjectDataResult> {

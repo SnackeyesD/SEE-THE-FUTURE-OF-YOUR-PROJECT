@@ -163,6 +163,8 @@ beforeEach(() => {
   ipc.branchProjectScenario.mockResolvedValue({
     scenario: record("new-branch", { ...scenarioA, name: "Variante C" }, { branchLabel: "Variante C" }),
   });
+  ipc.deleteVersion.mockResolvedValue({ deleted: true });
+  ipc.restoreVersion.mockResolvedValue({ scenario: record("scenario-1", scenarioA) });
 });
 
 describe("BranchesScreen", () => {

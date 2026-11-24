@@ -29,8 +29,10 @@ from . import (
     project_service,
     provenance_service,
     provider_service,
+    report_service,
     sandbox_service,
     simulation_service,
+    template_service,
 )
 from .protocol_models import PROTOCOL_VERSION, JSONRPCRequest
 from .storage_service import close_store, get_store
@@ -500,6 +502,23 @@ def project_create(params: dict[str, Any], _context: RequestContext) -> dict[str
 
 
 @_storage_handler
+def template_list(_params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return template_service.get_service().list()
+
+
+@_storage_handler
+def project_create_from_template(
+    params: dict[str, Any], _context: RequestContext
+) -> dict[str, Any]:
+    return template_service.get_service().create_project(get_store(), params)
+
+
+@_storage_handler
+def report_build(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return report_service.build(get_store(), params)
+
+
+@_storage_handler
 def project_open(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
     return _project_result(get_store().open_project(_require_text(params, "projectId")))
 
@@ -849,6 +868,9 @@ def default_handlers() -> dict[str, Handler]:
         "simulate": simulate,
         "project.list": project_list,
         "project.create": project_create,
+        "project.createFromTemplate": project_create_from_template,
+        "template.list": template_list,
+        "report.build": report_build,
         "project.open": project_open,
         "project.rename": project_rename,
         "project.duplicate": project_duplicate,

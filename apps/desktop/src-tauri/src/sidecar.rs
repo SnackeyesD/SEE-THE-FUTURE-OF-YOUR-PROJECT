@@ -55,6 +55,7 @@ struct ProcessState {
     last_error: Option<String>,
     data_dir: Option<PathBuf>,
     benchmark_dir: Option<PathBuf>,
+    examples_dir: Option<PathBuf>,
 }
 
 impl ProcessState {
@@ -65,6 +66,7 @@ impl ProcessState {
             last_error: None,
             data_dir: None,
             benchmark_dir: None,
+            examples_dir: None,
         }
     }
 }
@@ -210,6 +212,12 @@ impl SidecarHandle {
         }
     }
 
+    pub fn set_examples_dir(&self, examples_dir: PathBuf) {
+        if let Ok(mut state) = self.state.lock() {
+            state.examples_dir = Some(examples_dir);
+        }
+    }
+
     pub fn supervision_enabled(&self) -> bool {
         self.supervised.load(Ordering::SeqCst)
     }
@@ -281,6 +289,9 @@ impl SidecarHandle {
         }
         if let Some(dir) = &state.benchmark_dir {
             process.env("SEE_BENCHMARK_DIR", dir);
+        }
+        if let Some(dir) = &state.examples_dir {
+            process.env("SEE_EXAMPLES_DIR", dir);
         }
 
         let mut child = process.spawn().map_err(|error| {
@@ -569,6 +580,10 @@ impl SidecarManager {
         self.handle.set_benchmark_dir(benchmark_dir);
     }
 
+    pub fn set_examples_dir(&self, examples_dir: PathBuf) {
+        self.handle.set_examples_dir(examples_dir);
+    }
+
     pub fn supervision_enabled(&self) -> bool {
         self.handle.supervision_enabled()
     }
@@ -626,7 +641,7 @@ mod tests {
             .expect("le sidecar doit répondre au health");
 
         assert_eq!(result["status"], json!("ok"));
-        assert_eq!(result["protocolVersion"], json!("1.14.0"));
+        assert_eq!(result["protocolVersion"], json!("1.15.0"));
         manager.shutdown();
     }
 

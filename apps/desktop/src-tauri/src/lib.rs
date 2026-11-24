@@ -142,6 +142,41 @@ fn project_create(
 }
 
 #[tauri::command]
+fn project_create_from_template(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    template_id: String,
+    name: Option<String>,
+    currency: Option<String>,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    let mut params = json!({ "templateId": template_id });
+    if let Some(name) = name {
+        params["name"] = json!(name);
+    }
+    if let Some(currency) = currency {
+        params["currency"] = json!(currency);
+    }
+    handle.request("project.createFromTemplate", params)
+}
+
+#[tauri::command]
+fn template_list(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("template.list", json!({}))
+}
+
+#[tauri::command]
+fn report_build(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("report.build", params)
+}
+
+#[tauri::command]
 fn project_data(
     state: tauri::State<'_, Mutex<SidecarManager>>,
     params: Value,
@@ -498,6 +533,10 @@ pub fn run() {
                     if benchmark_dir.is_dir() {
                         manager.set_benchmark_dir(benchmark_dir);
                     }
+                    let examples_dir = resource_dir.join("examples");
+                    if examples_dir.is_dir() {
+                        manager.set_examples_dir(examples_dir);
+                    }
                 }
                 if let Err(error) = manager.ensure_running() {
                     eprintln!("[sidecar] démarrage impossible: {error}");
@@ -514,6 +553,9 @@ pub fn run() {
             sidecar_shutdown,
             project_list,
             project_create,
+            project_create_from_template,
+            template_list,
+            report_build,
             project_data,
             project_brief_save,
             project_scenario_save,

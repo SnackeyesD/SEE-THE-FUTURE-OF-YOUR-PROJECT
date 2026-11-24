@@ -7,6 +7,10 @@
 **Débloque** : 16 (lancement).
 **Profil** : produit + intermédiaire UI ; 7–8 jours.
 
+> **État** : lot A, le parcours guidé et le dossier Markdown sont livrés. Voir
+> [`IMPLEMENTATION.md`](IMPLEMENTATION.md) pour les écarts assumés (PDF,
+> signature du pack `2026.2`, test utilisateur).
+
 ---
 
 ## 1. Contexte
@@ -36,13 +40,13 @@ La v2 n'a pas de parcours d'accueil ni de projet d'exemple complet. `export_repo
 
 ## 3. Livrables
 
-- [ ] `data/examples/retail-depot-brazzaville/` (scénario, brief, événements, seed, notes).
-- [ ] Commande/import « Créer le projet d'exemple ».
-- [ ] `components/onboarding/GuidedTour.tsx` + étapes.
-- [ ] `packages/reporting/` ou service `report.build` déterministe.
-- [ ] Export Markdown + PDF (via impression web ou moteur PDF local).
-- [ ] Textes de transparence et mentions légales provisoires.
-- [ ] Tests et captures.
+- [x] `data/examples/retail-depot-brazzaville/` (scénario, brief, événements, seed, notes).
+- [x] Commande/import « Créer le projet d'exemple ».
+- [x] `components/onboarding/GuidedTour.tsx` + étapes.
+- [x] `packages/reporting/` ou service `report.build` déterministe.
+- [ ] Export Markdown + PDF (via impression web ou moteur PDF local). *Markdown livré ; PDF reporté.*
+- [ ] Textes de transparence et mentions légales provisoires. *Mention de transparence livrée ; CGU/confidentialité provisoires restent en phase 16.*
+- [ ] Tests et captures. *Tests automatisés livrés ; captures et test utilisateur à faire.*
 
 ## 4. Tâches détaillées
 
@@ -51,18 +55,18 @@ La v2 n'a pas de parcours d'accueil ni de projet d'exemple complet. `export_repo
 - [ ] Utiliser le pack **`cg-brazzaville-retail-2026.1`** (retenu par D3) et vérifier sa signature/validité avec `tools/verify_pack.py`.
 - [x] Sourcing du pack CG audité : `unit_price` recalculé sur WFP/HDX, les autres `estimate` documentés et datés ; brouillon `2026.2` prêt dans `data/benchmark-packs/drafts/`. Détail : [`sourcing-pack-cg.md`](sourcing-pack-cg.md).
 - [ ] Bumper le pack en `2026.2` et le re-signer en Ed25519 (`tools/sign_pack.py`), puis vérifier les deux packs embarqués. *(brouillon prêt ; signature en attente du porteur de clé)*
-- [ ] Construire un scénario 36 mois avec :
+- [x] Construire un scénario 36 mois avec :
   - **devise `XAF`** (zone CEMAC ; ne pas conserver le défaut `XOF` du moteur) ;
   - hypothèses réalistes et **sourcées** (provenance benchmark) ;
   - fourchettes prudentes ;
   - 2–3 événements de démonstration ;
   - graine 42 ;
   - une version nommée « Scénario de départ » et une branche « Prix -10 % ».
-- [ ] Vérifier que les résultats sont pédagogiques : point mort atteignable, trésorerie tendue mais pas absurde, probabilité de perte non nulle.
-- [ ] Documenter les choix et les limites dans `data/examples/retail-depot-brazzaville/README.md`.
-- [ ] Import : `project.createFromTemplate` ou équivalent, avec IDs neufs.
-- [ ] Ne pas embarquer de données personnelles ni de secret.
-- [ ] Test : import sur profil vierge, offline, < 2 s.
+- [ ] Vérifier que les résultats sont pédagogiques : point mort atteignable, trésorerie tendue mais pas absurde, probabilité de perte non nulle. *À valider avec le métier.*
+- [x] Documenter les choix et les limites dans `data/examples/retail-depot-brazzaville/README.md`.
+- [x] Import : `project.createFromTemplate` ou équivalent, avec IDs neufs.
+- [x] Ne pas embarquer de données personnelles ni de secret.
+- [x] Test : import sur profil vierge, offline, < 2 s. *Test automatisé ; mesure manuelle à confirmer.*
 
 ### Lot B — Parcours guidé
 
@@ -72,11 +76,11 @@ La v2 n'a pas de parcours d'accueil ni de projet d'exemple complet. `export_repo
   3. « Lisez le point mort » → KPI + FanChart + graine.
   4. « Ajoutez un imprévu » → événement simple.
   5. « Exportez votre dossier » → mode pitch.
-- [ ] L'overlay ne bloque pas l'interface ; bouton « Passer ».
-- [ ] Progression mémorisée ; réinitialisable.
-- [ ] Fonctionne sans fournisseur IA.
+- [x] L'overlay ne bloque pas l'interface ; bouton « Passer ».
+- [x] Progression mémorisée ; réinitialisable.
+- [x] Fonctionne sans fournisseur IA.
 - [ ] Objectif : premier résultat en < 2 min, mesuré lors des tests utilisateurs.
-- [ ] Accessible au clavier, `Échap` ferme.
+- [x] Accessible au clavier, `Échap` ferme.
 
 ### Lot C — Rapport déterministe
 
@@ -89,27 +93,27 @@ La v2 n'a pas de parcours d'accueil ni de projet d'exemple complet. `export_repo
   - événements ;
   - méthodologie et limites ;
   - avertissement « simulation basée sur vos hypothèses, pas une prévision garantie ».
-- [ ] Aucun chiffre calculé par le rapport : uniquement formaté.
-- [ ] Aucun secret, aucun chemin local, aucune clé.
-- [ ] Export Markdown ; PDF via `window.print()` (mode webview) ou bibliothèque locale si nécessaire.
-- [ ] Si la phase 09 (rapports de la v2) n'est pas terminée, livrer la version minimale Markdown et le noter.
-- [ ] Test snapshot : mêmes entrées → même sortie (hors date).
+- [x] Aucun chiffre calculé par le rapport : uniquement formaté.
+- [x] Aucun secret, aucun chemin local, aucune clé.
+- [x] Export Markdown ; PDF via `window.print()` (mode webview) ou bibliothèque locale si nécessaire. *Markdown livré ; PDF laissé à la phase 16.*
+- [x] Si la phase 09 (rapports de la v2) n'est pas terminée, livrer la version minimale Markdown et le noter.
+- [x] Test snapshot : mêmes entrées → même sortie (hors date).
 
 ### Lot D — Transparence et contenus
 
-- [ ] Mention visible : « simulation basée sur vos hypothèses, pas une prévision garantie ».
-- [ ] Expliquer ce qui part vers le fournisseur IA choisi (phase 12).
+- [x] Mention visible : « simulation basée sur vos hypothèses, pas une prévision garantie ».
+- [x] Expliquer ce qui part vers le fournisseur IA choisi (phase 12).
 - [ ] Politique de confidentialité et CGU provisoires (phase 16 finalise).
 - [ ] Aide contextuelle : point mort, fourchette, graine, convergence.
 
 ### Lot E — Tests
 
 - [ ] Profil vierge → import → premier résultat < 2 min (test manuel chronométré).
-- [ ] Parcours skippable et accessible.
-- [ ] Rapport : contenu exact, pas de secret, mention de transparence.
-- [ ] Offline complet (pas de provider).
-- [ ] Import/export du projet d'exemple.
-- [ ] Les chiffres du rapport sont identiques à ceux du cockpit (même run).
+- [x] Parcours skippable et accessible.
+- [x] Rapport : contenu exact, pas de secret, mention de transparence.
+- [x] Offline complet (pas de provider).
+- [x] Import/export du projet d'exemple.
+- [x] Les chiffres du rapport sont identiques à ceux du cockpit (même run).
 - [ ] Test utilisateur (3–4 personnes) consigné.
 
 ## 5. Contrats
@@ -126,6 +130,12 @@ type ReportInput = {
   generatedAt: string;
 };
 ```
+
+> **Implémentation** : le contrat livré dans `packages/reporting` prend
+> directement `result: SimulationResult` (avec `seed` et `engineVersion`
+> portés par le résultat) et `generatedAt`. Le service `report.build` refuse
+> tout run non final et ne recalcule aucun agrégat. Détail :
+> [`IMPLEMENTATION.md`](IMPLEMENTATION.md).
 
 Règles :
 
@@ -147,11 +157,11 @@ Règles :
 ## 7. Critères d'acceptation
 
 - [ ] Un nouvel utilisateur obtient un résultat en < 2 min sans aide.
-- [ ] Le projet d'exemple est sourcé, cohérent et pédagogique.
-- [ ] Le parcours est accessible et skippable.
-- [ ] Le rapport contient toutes les sections et la mention de transparence.
-- [ ] Aucun secret, aucune donnée personnelle.
-- [ ] Fonctionne hors ligne.
+- [x] Le projet d'exemple est sourcé, cohérent et pédagogique. *Cohérence pédagogique à confirmer par le métier.*
+- [x] Le parcours est accessible et skippable.
+- [x] Le rapport contient toutes les sections et la mention de transparence.
+- [x] Aucun secret, aucune donnée personnelle.
+- [x] Fonctionne hors ligne.
 - [ ] Test utilisateur réalisé.
 
 ## 8. Performance
@@ -173,8 +183,8 @@ Règles :
 
 ## 10. Definition of Done
 
-- [ ] Projet d'exemple importable et documenté.
-- [ ] Parcours guidé livré.
-- [ ] Rapport déterministe Markdown (+ PDF si possible).
-- [ ] Transparence affichée.
+- [x] Projet d'exemple importable et documenté.
+- [x] Parcours guidé livré.
+- [x] Rapport déterministe Markdown (+ PDF si possible). *Markdown ; PDF reporté.*
+- [x] Transparence affichée.
 - [ ] Tests utilisateurs consignés.

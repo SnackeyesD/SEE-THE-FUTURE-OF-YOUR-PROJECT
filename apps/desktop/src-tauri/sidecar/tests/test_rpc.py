@@ -139,7 +139,7 @@ def test_health_exposes_versions(sidecar: SidecarProcess) -> None:
     response = sidecar.call("health")
     result = response["result"]
     assert result["status"] == "ok"
-    assert result["protocolVersion"] == "1.14.0"
+    assert result["protocolVersion"] == "1.15.0"
     assert isinstance(result["pid"], int)
     assert result["sidecarVersion"]
 
@@ -1836,3 +1836,21 @@ def test_branch_versions_and_comparison_workflow(sidecar: SidecarProcess) -> Non
         "project.version.list", {"projectId": project_id}, request_id=1018
     )
     assert remaining["result"]["versions"] == []
+
+
+def test_template_list_and_import_are_wired(sidecar: SidecarProcess) -> None:
+    listed = sidecar.call("template.list", {}, request_id=1100)
+    templates = listed["result"]["templates"]
+    assert "retail-depot-brazzaville" in {template["id"] for template in templates}
+    assert listed["result"]["errors"] == []
+
+    imported = sidecar.call(
+        "project.createFromTemplate",
+        {"templateId": "retail-depot-brazzaville"},
+        request_id=1101,
+    )
+    created = imported["result"]
+    assert created["project"]["metadata"]["templateId"] == "retail-depot-brazzaville"
+    assert created["project"]["currency"] == "XAF"
+    assert created["seed"] == 42
+    assert [branch["branchLabel"] for branch in created["branches"]] == ["Prix -10 %"]

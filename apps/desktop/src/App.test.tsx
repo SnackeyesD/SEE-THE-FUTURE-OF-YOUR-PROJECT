@@ -7,6 +7,9 @@ const ipc = vi.hoisted(() => ({
   getSidecarStatus: vi.fn(),
   getSidecarHealth: vi.fn(),
   listProjects: vi.fn(),
+  listTemplates: vi.fn(),
+  createProjectFromTemplate: vi.fn(),
+  buildReport: vi.fn(),
   getProjectData: vi.fn(),
   agentState: vi.fn(),
   listRoles: vi.fn(),
@@ -63,6 +66,7 @@ beforeEach(() => {
     python: "3.11",
   });
   ipc.listProjects.mockResolvedValue({ projects: [project] });
+  ipc.listTemplates.mockResolvedValue({ templates: [], errors: [] });
   ipc.getProjectData.mockResolvedValue(dataWithScenario);
   ipc.agentState.mockResolvedValue({ session });
   ipc.listRoles.mockResolvedValue({ assignments: [] });
@@ -104,8 +108,69 @@ describe("App — parcours critique", () => {
     expect(screen.getByText("Distribution du profit")).toBeInTheDocument();
   });
 
-  it("remonte une erreur de simulation sans quitter l'écran de calcul", async () => {
+  it("importe le projet d'exemple et affiche le parcours de découverte", async () => {
     const user = userEvent.setup();
+    ipc.listTemplates.mockResolvedValue({
+      templates: [
+        {
+          id: "retail-depot-brazzaville",
+          name: "Dépôt de revente à Brazzaville",
+          description: "Exemple sourcé",
+          currency: "XAF",
+          sector: "retail",
+          horizonMonths: 36,
+          seed: 42,
+          sources: [{ label: "Enquête locale" }],
+          branchCount: 1,
+        },
+      ],
+      errors: [],
+    });
+    const importedProject = {
+      ...project,
+      id: "project-demo",
+      name: "Dépôt de revente à Brazzaville",
+      metadata: { templateId: "retail-depot-brazzaville" },
+    };
+    ipc.createProjectFromTemplate.mockResolvedValue({
+      project: importedProject,
+      scenario: scenarioRecord,
+      branches: [],
+      seed: 42,
+      version: {
+        id: "version-1",
+        projectId: importedProject.id,
+        scenarioId: scenarioRecord.id,
+        label: "Scénario de départ",
+        seed: 42,
+        engineVersion: "0.4.0",
+        createdAt: "2026-11-23T00:00:00.000Z",
+      },
+      templateId: "retail-depot-brazzaville",
+      importedAt: "2026-11-23T00:00:00.000Z",
+    });
+    ipc.getProjectData.mockResolvedValue(dataWithScenario);
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Monte Carlo local" });
+    await user.click(screen.getByRole("button", { name: "Projets" }));
+
+    const importButton = await screen.findByRole("button", {
+      name: "Importer l'exemple",
+    });
+    await user.click(importButton);
+
+    expect(ipc.createProjectFromTemplate).toHaveBeenCalledWith(
+      "retail-depot-brazzaville",
+    );
+    expect(ipc.getProjectData).toHaveBeenCalledWith({ projectId: "project-demo" });
+    expect(
+      await screen.findByRole("dialog", { name: "Parcours découverte" }),
+    ).toBeInTheDocument();
+  });
+
+  it("remonte une erreur de simulation sans quitter l'écran de calcul", async () => {    const user = userEvent.setup();
     ipc.simulateProject.mockRejectedValue(new Error("moteur indisponible"));
     render(<App />);
 
