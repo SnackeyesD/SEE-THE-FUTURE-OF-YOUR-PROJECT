@@ -3132,6 +3132,7 @@ dependencies = [
 name = "see-the-future-desktop"
 version = "0.1.0"
 dependencies = [
+ "embed-resource",
  "keyring",
  "serde",
  "serde_json",

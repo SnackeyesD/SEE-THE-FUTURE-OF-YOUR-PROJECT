@@ -41,6 +41,9 @@ et le versionnage sémantique.
   `eol=lf` dans `.gitattributes`.
 - Un démontage du cockpit n'émet plus de draft ou de final différé, ce qui
   rendait le test de conservation des axes de surface instable.
+- `cargo test` sous Windows n'échoue plus au démarrage en
+  `STATUS_ENTRYPOINT_NOT_FOUND` : le manifeste Common Controls v6 est embarqué
+  dans les binaires de test comme dans l'exécutable.
 
 ### Limites connues
 

@@ -85,6 +85,14 @@
   (« called 1 times, but got 2 times »).
 - Suite UI vérifiée sur Linux (WSL, Node 22) : **277 tests** verts, comme sous
   Windows.
+- `cargo test` fonctionne à nouveau sous Windows : les binaires de test lient
+  wry et importent des fonctions de `comctl32` v6. `tauri-build` n'embarque son
+  manifeste que dans les binaires, pas dans les binaires de test ; `build.rs`
+  déclare donc le manifeste Common Controls et le compile pour **tous** les
+  artefacts du paquet (`embed-resource`), tandis que `tauri-build` ne fournit
+  plus que les versions et l'icône. Vérifié : manifeste et `VersionInfo`
+  présents dans l'exécutable, 9 tests Rust verts, `clippy --all-targets` sans
+  avertissement.
 
 ## Écarts assumés
 
@@ -124,10 +132,9 @@ npm run sidecar:test
 npm run sidecar:lint
 npm run reporting:test
 npm run reporting:lint
+cargo test
 cargo check
 cargo clippy --all-targets
 ```
 
-Résultats consignés dans le compte rendu de session. `cargo test` reste bloqué
-au démarrage du binaire de test Windows (`STATUS_ENTRYPOINT_NOT_FOUND`),
-indépendamment de ce lot : `cargo check` et `cargo clippy` passent.
+Résultats consignés dans le compte rendu de session.
