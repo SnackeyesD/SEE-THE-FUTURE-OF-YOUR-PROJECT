@@ -54,7 +54,7 @@
 - [x] Politique de confidentialité, CGU, mentions de transparence. *Provisoires, dans `docs/legal` et l'écran « À propos ».*
 - [ ] Suite E2E Playwright en mode web + shim IPC.
 - [ ] Tests de migration v2 → v3 sur base réelle.
-- [ ] `docs/perf/release.md` et `docs/release/checklist.md`. *Checklist livrée ; `docs/perf/release.md` reste à écrire.*
+- [x] `docs/perf/release.md` et `docs/release/checklist.md`. *Procédure livrée ; mesure de release sur machine modeste en attente.*
 - [ ] `CHANGELOG.md` et version `3.0.0`. *`CHANGELOG.md` livré ; bump de version à faire avec la release.*
 
 ## 4. Tâches détaillées

@@ -148,8 +148,18 @@ def _wrap(text: str, size: float, width: float, bold: bool = False) -> list[str]
 
 
 def _pdf_text(value: str) -> str:
-    cleaned = "".join(char if 32 <= ord(char) < 256 else " " for char in value)
+    cleaned = "".join(char if _encodable(char) else " " for char in value)
     return cleaned.replace("\\", r"\\").replace("(", r"\(").replace(")", r"\)")
+
+
+def _encodable(char: str) -> bool:
+    if ord(char) < 32:
+        return False
+    try:
+        char.encode("cp1252")
+    except UnicodeEncodeError:
+        return False
+    return True
 
 
 class _Canvas:

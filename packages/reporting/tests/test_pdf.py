@@ -61,6 +61,7 @@ def test_markdown_to_pdf_handles_accents_and_long_cells() -> None:
     assert "Dépôt" in decoded
     assert "Trésorerie minimale P50" in decoded
     assert "éàçù" in decoded
+    assert "—" in decoded
 
 
 def test_pdf_escapes_parentheses_in_metadata() -> None:

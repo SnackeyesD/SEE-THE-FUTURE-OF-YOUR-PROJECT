@@ -39,7 +39,9 @@
   mises à jour, responsabilité.
 - Carte « À propos » : version applicative, protocole, sidecar, licence MIT,
   mention de transparence et résumé dépliable de confidentialité/CGU.
-- `CHANGELOG.md` et `docs/release/checklist.md`.
+- `CHANGELOG.md`, `docs/release/checklist.md` et `docs/perf/release.md` :
+  procédure, budgets opposables et porte de publication. La mesure de release
+  sur la machine modeste reste à rejouer.
 
 ### Documentation
 
@@ -83,7 +85,7 @@
 npm run protocol:generate
 npm run protocol:check
 npm run typecheck
-npm test                 # protocole + 262+ tests UI
+npm test                 # protocole + 276 tests UI
 npm run sidecar:test
 npm run sidecar:lint
 npm run reporting:test
