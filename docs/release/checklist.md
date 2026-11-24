@@ -78,7 +78,7 @@
 - [ ] Mentions de transparence visibles dans l'écran « À propos ».
 - [ ] `CHANGELOG.md` publié avec limites connues.
 - [ ] Canal de support et procédure de rollback annoncés.
-- [ ] Guide utilisateur de deux pages maximum.
+- [x] Guide utilisateur de deux pages maximum. *[`docs/guide-utilisateur.md`](../guide-utilisateur.md) et guide rapide dans l'écran « À propos ».*
 
 ## 8. Après publication
 

@@ -42,6 +42,8 @@
 - `CHANGELOG.md`, `docs/release/checklist.md` et `docs/perf/release.md` :
   procédure, budgets opposables et porte de publication. La mesure de release
   sur la machine modeste reste à rejouer.
+- `docs/guide-utilisateur.md` (deux pages) et guide rapide dépliable dans
+  l'écran « À propos ».
 
 ### Documentation
 
@@ -71,6 +73,10 @@
 
 ## Écarts assumés
 
+- **Version non bumpée.** `package.json`, `tauri.conf.json` et `Cargo.toml`
+  restent en `0.1.0` : le passage à `3.0.0` accompagne la release signée, pas
+  une build de développement. L'écran « À propos » affiche donc la version
+  réellement compilée.
 - **Signature et packaging non réalisés.** Ils exigent le certificat Windows
   (démarré en phase 01), une VM propre et une machine Linux. Le code et la
   checklist sont prêts ; aucune release ne doit être publiée sans ces cases.

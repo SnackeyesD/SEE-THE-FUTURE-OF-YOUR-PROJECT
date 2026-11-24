@@ -373,6 +373,31 @@ export function SettingsScreen({
           moteur : deux runs ne se comparent que si ces valeurs sont identiques.
         </InlineAlert>
         <details className="details">
+          <summary>Guide rapide (2 minutes)</summary>
+          <ol className="ui-stack">
+            <li>
+              <strong>Projets</strong> → « Partir d'un projet d'exemple » :
+              importez le dépôt de Brazzaville.
+            </li>
+            <li>
+              Vérifiez les hypothèses marquées « estimation » dans
+              <strong> Hypothèses</strong>.
+            </li>
+            <li>
+              Lancez un calcul <strong>final</strong> dans <strong>Simulation</strong>.
+              Un brouillon n'est jamais conservé.
+            </li>
+            <li>
+              Lisez P10/P50/P90 et la probabilité de perte dans
+              <strong> Résultats</strong>, puis exportez le dossier ou le PDF.
+            </li>
+            <li>
+              Pour comparer deux runs, vérifiez qu'ils partagent la même graine
+              et la même version de moteur.
+            </li>
+          </ol>
+        </details>
+        <details className="details">
           <summary>Confidentialité et conditions d'utilisation (provisoires)</summary>
           <div className="ui-stack">
             <p>

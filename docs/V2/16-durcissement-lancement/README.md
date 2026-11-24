@@ -124,7 +124,7 @@
 - [ ] Checklist de release signée : version, hash, tests, captures, décisions.
 - [ ] Tag Git, artefacts, notes de version.
 - [ ] Canal de support et procédure de rollback.
-- [ ] Annonce interne et guide utilisateur (2 pages maximum).
+- [ ] Annonce interne et guide utilisateur (2 pages maximum). *Guide livré ; annonce interne à faire avec la release.*
 
 ## 5. Critères d'acceptation
 

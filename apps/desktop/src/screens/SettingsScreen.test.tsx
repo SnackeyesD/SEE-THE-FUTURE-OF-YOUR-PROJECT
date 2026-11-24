@@ -110,6 +110,7 @@ describe("SettingsScreen — diagnostic et transparence", () => {
     expect(
       screen.getByText("Confidentialité et conditions d'utilisation (provisoires)"),
     ).toBeInTheDocument();
+    expect(screen.getByText("Guide rapide (2 minutes)")).toBeInTheDocument();
     expect(screen.getByText(/aucun envoi automatique/i)).toBeInTheDocument();
   });
 });
