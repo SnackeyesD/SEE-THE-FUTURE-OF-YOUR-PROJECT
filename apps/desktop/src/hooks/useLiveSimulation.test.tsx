@@ -152,6 +152,23 @@ describe("useLiveSimulation", () => {
     expect(ctx.start).not.toHaveBeenCalled();
   });
 
+  it("n'émet aucun run après démontage", async () => {
+    const ctx = setup();
+    await flush();
+
+    act(() => ctx.hook.result.current.invalidate());
+    await flush();
+    expect(ctx.start).toHaveBeenCalledTimes(1);
+    expect(ctx.params(0).quality).toBe("draft");
+
+    ctx.hook.unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+
+    expect(ctx.start).toHaveBeenCalledTimes(1);
+  });
+
   it("applique les événements du run actif et ignore les périmés", async () => {
     const ctx = setup();
     await flush();

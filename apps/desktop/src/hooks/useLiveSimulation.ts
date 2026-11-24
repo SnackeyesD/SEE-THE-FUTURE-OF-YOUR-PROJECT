@@ -194,6 +194,19 @@ export function useLiveSimulation(options: LiveSimulationOptions): LiveSimulatio
     store.getState().cancelRun(activeRunId);
   }, [clearDraft, clearFinal, store]);
 
+  // Un démontage ne doit jamais laisser un draft ou un final programmé lancer
+  // une simulation dans un composant disparu.
+  useEffect(
+    () => () => {
+      generation.current += 1;
+      clearDraft();
+      clearFinal();
+      gesture.current = false;
+      gestureDirty.current = false;
+    },
+    [clearDraft, clearFinal],
+  );
+
   useEffect(() => {
     const subscribe = depsRef.current.subscribe;
     let disposed = false;

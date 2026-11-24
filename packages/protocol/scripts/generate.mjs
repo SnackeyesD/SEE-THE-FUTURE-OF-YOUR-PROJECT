@@ -212,7 +212,9 @@ const outputs = [
 
 let changed = false;
 for (const [path, content] of outputs) {
-  const current = existsSync(path) ? readFileSync(path, "utf8") : null;
+  const current = existsSync(path)
+    ? readFileSync(path, "utf8").replace(/\r\n/g, "\n")
+    : null;
   if (current === content) continue;
   changed = true;
   if (check) {

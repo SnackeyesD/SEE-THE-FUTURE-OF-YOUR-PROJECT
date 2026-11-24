@@ -34,6 +34,14 @@ et le versionnage sémantique.
 - Scripts générés exécutés uniquement après revue humaine et en sandbox.
 - Protocole IPC `1.16.0` généré depuis une source unique.
 
+### Corrigé
+
+- `protocol:check` ne signale plus de faux écart sur Windows : les fichiers
+  générés sont comparés après normalisation des fins de ligne et déclarés en
+  `eol=lf` dans `.gitattributes`.
+- Un démontage du cockpit n'émet plus de draft ou de final différé, ce qui
+  rendait le test de conservation des axes de surface instable.
+
 ### Limites connues
 
 - Signature Windows, installateur Linux et mises à jour signées à finaliser

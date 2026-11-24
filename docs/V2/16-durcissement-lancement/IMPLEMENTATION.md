@@ -71,6 +71,21 @@
 - Exécuté dans le job `web` de la CI. Un test manuel avec une fausse clé a
   confirmé le code de sortie `1` et le masquage.
 
+### Intégration continue
+
+- `protocol:check` compare désormais le contenu généré **après normalisation
+  des fins de ligne** ; `.gitattributes` impose `eol=lf` sur
+  `packages/protocol/src/generated.ts` et
+  `apps/desktop/src-tauri/sidecar/sidecar/protocol_models.py`. Un checkout
+  Windows avec `core.autocrlf=true` ne produit donc plus de faux « out of
+  date ».
+- `useLiveSimulation` efface les minuteurs de draft et de final au démontage :
+  un calcul programmé ne peut plus démarrer dans un écran disparu. Le test
+  `n'émet aucun run après démontage` reproduit l'assertion observée en CI
+  (« called 1 times, but got 2 times »).
+- Suite UI vérifiée sur Linux (WSL, Node 22) : **277 tests** verts, comme sous
+  Windows.
+
 ## Écarts assumés
 
 - **Version non bumpée.** `package.json`, `tauri.conf.json` et `Cargo.toml`
@@ -104,7 +119,7 @@
 npm run protocol:generate
 npm run protocol:check
 npm run typecheck
-npm test                 # protocole + 276 tests UI
+npm test                 # protocole + 277 tests UI
 npm run sidecar:test
 npm run sidecar:lint
 npm run reporting:test

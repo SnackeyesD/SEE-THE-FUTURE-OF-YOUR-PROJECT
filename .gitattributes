@@ -1,2 +1,6 @@
 data/benchmark-packs/packs/*.json -text
 data/benchmark-packs/packs/*.sig -text
+# Fichiers générés : LF imposé pour que `protocol:check` compare un contenu
+# identique sur toutes les plateformes, quel que soit `core.autocrlf`.
+packages/protocol/src/generated.ts text eol=lf
+apps/desktop/src-tauri/sidecar/sidecar/protocol_models.py text eol=lf
