@@ -10,6 +10,7 @@ vérité, sans second calculateur.
 from .formatting import format_date, format_money, format_number, format_ratio
 from .markdown import build_markdown
 from .models import ReportBranch, ReportInput, ReportProject, ReportVersion
+from .pdf import build_pdf, markdown_to_pdf
 
 __version__ = "0.1.0"
 
@@ -19,6 +20,8 @@ __all__ = [
     "ReportProject",
     "ReportVersion",
     "build_markdown",
+    "build_pdf",
+    "markdown_to_pdf",
     "format_date",
     "format_money",
     "format_number",

@@ -2,8 +2,13 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vitest/config";
 
+import pkg from "./package.json";
+
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   resolve: {
     alias: {
       "@see/protocol": fileURLToPath(

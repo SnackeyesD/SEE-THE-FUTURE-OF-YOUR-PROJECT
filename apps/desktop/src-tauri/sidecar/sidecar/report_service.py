@@ -8,12 +8,14 @@ scénario, les branches et les versions, puis délègue la mise en forme à
 
 from __future__ import annotations
 
+import base64
 import re
 import unicodedata
 from typing import Any
 
 from pydantic import ValidationError
 from see_reporting import ReportInput, build_markdown
+from see_reporting import build_pdf as render_pdf
 from see_storage import (
     ProjectStore,
     ScenarioRecord,
@@ -30,6 +32,38 @@ class ReportServiceError(StorageValidationError):
 
 
 def build(store: ProjectStore, params: dict[str, Any]) -> dict[str, Any]:
+    report, project_name, run, generated_at = _assemble(store, params)
+    return {
+        "format": "markdown",
+        "content": build_markdown(report),
+        "filename": _filename(project_name, generated_at, "md"),
+        "generatedAt": generated_at,
+        "runId": run.id,
+        "seed": run.seed,
+        "engineVersion": run.engine_version,
+    }
+
+
+def build_pdf(store: ProjectStore, params: dict[str, Any]) -> dict[str, Any]:
+    """Rend le même dossier en PDF local (donnée dérivée, aucun recalcul)."""
+
+    report, project_name, run, generated_at = _assemble(store, params)
+    content = render_pdf(report)
+    return {
+        "format": "pdf",
+        "contentBase64": base64.b64encode(content).decode("ascii"),
+        "byteLength": len(content),
+        "filename": _filename(project_name, generated_at, "pdf"),
+        "generatedAt": generated_at,
+        "runId": run.id,
+        "seed": run.seed,
+        "engineVersion": run.engine_version,
+    }
+
+
+def _assemble(
+    store: ProjectStore, params: dict[str, Any]
+) -> tuple[ReportInput, str, SimulationRun, str]:
     project_id = _required_text(params, "projectId")
     project = store.projects.require(project_id)
     run = _select_run(store, project_id, params.get("runId"))
@@ -70,17 +104,7 @@ def build(store: ProjectStore, params: dict[str, Any]) -> dict[str, Any]:
         report = ReportInput.model_validate(payload)
     except ValidationError as error:
         raise ReportServiceError(f"run final illisible pour le rapport: {error}") from error
-
-    content = build_markdown(report)
-    return {
-        "format": "markdown",
-        "content": content,
-        "filename": _filename(project.name, generated_at),
-        "generatedAt": generated_at,
-        "runId": run.id,
-        "seed": run.seed,
-        "engineVersion": run.engine_version,
-    }
+    return report, project.name, run, generated_at
 
 
 def _select_run(store: ProjectStore, project_id: str, run_id: Any) -> SimulationRun:
@@ -115,13 +139,13 @@ def _scenario_for_run(
     return records[0] if records else None
 
 
-def _filename(project_name: str, generated_at: str) -> str:
+def _filename(project_name: str, generated_at: str, extension: str) -> str:
     normalized = unicodedata.normalize("NFKD", project_name)
     ascii_name = normalized.encode("ascii", "ignore").decode("ascii").lower()
     words = [word for word in re.split(r"[^a-z0-9]+", ascii_name) if word]
     slug = "-".join(words) or "projet"
     date_part = generated_at[:10].replace("-", "") or "date"
-    return f"{slug}-dossier-{date_part}.md"
+    return f"{slug}-dossier-{date_part}.{extension}"
 
 
 def _required_text(params: dict[str, Any], key: str) -> str:

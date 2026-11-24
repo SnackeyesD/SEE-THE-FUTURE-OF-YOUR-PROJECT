@@ -25,8 +25,17 @@ import {
   listAgentPermissions,
   setAgentPermission,
 } from "../lib/ipc";
+import {
+  clearCrashEntries,
+  isCrashLogEnabled,
+  readCrashEntries,
+  setCrashLogEnabled,
+} from "../lib/crashlog";
+import { buildDiagnostic, diagnosticFilename } from "../lib/diagnostic";
+import { downloadText } from "../lib/download";
 import { formatDateTime } from "../lib/format";
 import type { LogLevel } from "../lib/logs";
+import { APP_VERSION } from "../lib/version";
 
 interface Props {
   project: Project;
@@ -56,6 +65,7 @@ export function SettingsScreen({
   const [permissions, setPermissions] = useState<AgentPermissionListResult | null>(null);
   const [tools, setTools] = useState<AgentToolsResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [crashLog, setCrashLog] = useState(isCrashLogEnabled);
 
   const loadPermissions = useCallback(async () => {
     if (disabled) return;
@@ -118,6 +128,44 @@ export function SettingsScreen({
       onLog("error", `Réinitialisation ${tool}: ${String(reason)}`);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const exportDiagnostic = () => {
+    const content = buildDiagnostic({
+      appVersion: APP_VERSION,
+      locale,
+      userAgent: navigator.userAgent,
+      status,
+      health,
+      logs,
+      crashes: readCrashEntries(),
+      projectNames: [project.name],
+    });
+    if (
+      !downloadText(
+        diagnosticFilename(),
+        content,
+        "application/json;charset=utf-8",
+      )
+    ) {
+      onLog("error", "Le téléchargement du diagnostic n'est pas disponible ici.");
+      return;
+    }
+    onLog("success", "Diagnostic local exporté (sans projet ni clé).");
+  };
+
+  const toggleCrashLog = (enabled: boolean) => {
+    if (!setCrashLogEnabled(enabled)) {
+      onLog("error", "La préférence n'a pas pu être enregistrée.");
+      return;
+    }
+    setCrashLog(enabled);
+    if (enabled) {
+      onLog("info", "Journal local des erreurs activé : aucun envoi réseau.");
+    } else {
+      clearCrashEntries();
+      onLog("info", "Journal local des erreurs désactivé et effacé.");
     }
   };
 
@@ -254,7 +302,23 @@ export function SettingsScreen({
               <Button variant="secondary" onClick={() => void onRestart()} disabled={disabled}>
                 Redémarrer
               </Button>
+              <Button variant="primary" onClick={exportDiagnostic}>
+                Exporter le diagnostic
+              </Button>
             </div>
+            <label className="ui-field ui-field--checkbox">
+              <input
+                type="checkbox"
+                checked={crashLog}
+                onChange={(event) => toggleCrashLog(event.target.checked)}
+              />
+              <span>Journal local des erreurs (désactivé par défaut)</span>
+            </label>
+            <p className="ui-muted">
+              {crashLog
+                ? `${readCrashEntries().length} entrée(s) locale(s), nettoyées avant export. Aucun envoi réseau.`
+                : "Aucun journal d'erreurs n'est conservé. Le diagnostic reste téléchargeable à la demande."}
+            </p>
           </div>
           <div>
             <h3>Journal récent</h3>
@@ -282,6 +346,58 @@ export function SettingsScreen({
           L'application reste utilisable avec Ollama. Aucun cloud n'est requis pour
           créer un brief, simuler ou lire les résultats.
         </InlineAlert>
+      </Card>
+
+      <Card>
+        <CardHeader
+          eyebrow="À propos"
+          title="See The Future"
+          description="Simulation Monte Carlo locale pour évaluer un projet avant de s'engager."
+        />
+        <Table
+          columns={[
+            { key: "label", header: "Élément" },
+            { key: "value", header: "Valeur", mono: true },
+          ]}
+          rows={[
+            { label: "Version de l'application", value: APP_VERSION },
+            { label: "Protocole IPC", value: health?.protocolVersion ?? "non disponible" },
+            { label: "Sidecar", value: health?.sidecarVersion ?? "non disponible" },
+            { label: "Licence", value: "MIT" },
+          ]}
+          rowKey={(row) => row.label}
+        />
+        <InlineAlert tone="warn" title="Mentions de transparence">
+          Les résultats sont des simulations basées sur vos hypothèses, pas une
+          prévision garantie. Chaque dossier porte sa graine et sa version de
+          moteur : deux runs ne se comparent que si ces valeurs sont identiques.
+        </InlineAlert>
+        <details className="details">
+          <summary>Confidentialité et conditions d'utilisation (provisoires)</summary>
+          <div className="ui-stack">
+            <p>
+              <strong>Données locales.</strong> Projets, scénarios, runs, branches
+              et diagnostics restent sur cette machine. Aucun compte ni
+              synchronisation n'est requis.
+            </p>
+            <p>
+              <strong>Fournisseur IA.</strong> Si vous configurez un fournisseur,
+              seuls le brief, les hypothèses et le payload de provenance minimal
+              lui sont envoyés pour produire une explication. La clé reste dans le
+              trousseau du système.
+            </p>
+            <p>
+              <strong>Télémétrie.</strong> Aucun envoi automatique. Le journal
+              local d'erreurs est désactivé par défaut et l'export de diagnostic
+              masque clés, chemins, courriels et noms de projets.
+            </p>
+            <p>
+              <strong>Usage.</strong> L'outil aide à décider, il ne garantit ni
+              profit, ni financement, ni conformité réglementaire. Vous restez
+              responsable des hypothèses saisies et des décisions prises.
+            </p>
+          </div>
+        </details>
       </Card>
     </div>
   );

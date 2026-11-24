@@ -7,9 +7,10 @@
 **Débloque** : 16 (lancement).
 **Profil** : produit + intermédiaire UI ; 7–8 jours.
 
-> **État** : lot A, le parcours guidé et le dossier Markdown sont livrés. Voir
-> [`IMPLEMENTATION.md`](IMPLEMENTATION.md) pour les écarts assumés (PDF,
-> signature du pack `2026.2`, test utilisateur).
+> **État** : lot A, le parcours guidé, le dossier Markdown et le PDF local sont
+> livrés (PDF en phase 16, ADR 0019). Voir
+> [`IMPLEMENTATION.md`](IMPLEMENTATION.md) pour les écarts assumés (signature
+> du pack `2026.2`, test utilisateur).
 
 ---
 
@@ -44,8 +45,8 @@ La v2 n'a pas de parcours d'accueil ni de projet d'exemple complet. `export_repo
 - [x] Commande/import « Créer le projet d'exemple ».
 - [x] `components/onboarding/GuidedTour.tsx` + étapes.
 - [x] `packages/reporting/` ou service `report.build` déterministe.
-- [ ] Export Markdown + PDF (via impression web ou moteur PDF local). *Markdown livré ; PDF reporté.*
-- [ ] Textes de transparence et mentions légales provisoires. *Mention de transparence livrée ; CGU/confidentialité provisoires restent en phase 16.*
+- [x] Export Markdown + PDF (via impression web ou moteur PDF local). *Markdown livré ; PDF local livré en phase 16 (ADR 0019).*
+- [x] Textes de transparence et mentions légales provisoires. *Mentions dans l'app, CGU et confidentialité provisoires livrées en phase 16.*
 - [ ] Tests et captures. *Tests automatisés livrés ; captures et test utilisateur à faire.*
 
 ## 4. Tâches détaillées
@@ -95,7 +96,7 @@ La v2 n'a pas de parcours d'accueil ni de projet d'exemple complet. `export_repo
   - avertissement « simulation basée sur vos hypothèses, pas une prévision garantie ».
 - [x] Aucun chiffre calculé par le rapport : uniquement formaté.
 - [x] Aucun secret, aucun chemin local, aucune clé.
-- [x] Export Markdown ; PDF via `window.print()` (mode webview) ou bibliothèque locale si nécessaire. *Markdown livré ; PDF laissé à la phase 16.*
+- [x] Export Markdown et PDF local (ADR 0019) ; aucune seconde chaîne de calcul.
 - [x] Si la phase 09 (rapports de la v2) n'est pas terminée, livrer la version minimale Markdown et le noter.
 - [x] Test snapshot : mêmes entrées → même sortie (hors date).
 

@@ -1,6 +1,6 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 # Source: packages/protocol/schema/messages.schema.json
-# Protocol version: 1.15.0
+# Protocol version: 1.16.0
 # Regenerate with: npm run protocol:generate
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-PROTOCOL_VERSION = "1.15.0"
+PROTOCOL_VERSION = "1.16.0"
 
 RequestId = int | str
 
@@ -78,6 +78,7 @@ MethodName = Literal[
     "project.simulate",
     "template.list",
     "report.build",
+    "report.buildPdf",
     "simulation.start",
     "simulation.cancel",
     "simulation.surface",
@@ -498,6 +499,19 @@ class ReportBuildResult(BaseModel):
 
     format: Literal["markdown"]
     content: str
+    filename: str
+    generatedAt: str
+    runId: str
+    seed: int | None
+    engineVersion: str
+
+
+class ReportPdfResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    format: Literal["pdf"]
+    contentBase64: str
+    byteLength: int
     filename: str
     generatedAt: str
     runId: str

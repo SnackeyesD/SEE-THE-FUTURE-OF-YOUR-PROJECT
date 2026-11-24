@@ -28,6 +28,7 @@ interface Props {
   error: string;
   onNarrate: () => Promise<void>;
   onExportReport: () => Promise<void>;
+  onExportPdf: () => Promise<void>;
   onBack: () => void;
 }
 
@@ -39,6 +40,7 @@ export function ResultsScreen({
   error,
   onNarrate,
   onExportReport,
+  onExportPdf,
   onBack,
 }: Props) {
   const result = run?.result ?? null;
@@ -82,6 +84,9 @@ export function ResultsScreen({
           <Badge>{formatDateTime(run.createdAt)}</Badge>
           <Button onClick={() => void onExportReport()} disabled={reportBusy}>
             {reportBusy ? "Préparation…" : "Exporter le dossier"}
+          </Button>
+          <Button variant="secondary" onClick={() => void onExportPdf()} disabled={reportBusy}>
+            {reportBusy ? "Préparation…" : "Exporter en PDF"}
           </Button>
         </div>
       </div>

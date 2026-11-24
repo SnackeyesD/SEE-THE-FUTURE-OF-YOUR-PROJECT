@@ -1,11 +1,14 @@
 # Rapport de test — See The Future (desktop)
 
 > **Note (2026-11-24)** : ce rapport décrit l'état du socle à la fin de la
-> phase 07. Le plan V3 a depuis livré les phases 01 à 14, puis la phase 15
-> (projet d'exemple, dossier Markdown, parcours guidé). Les chiffres de tests
-> ci-dessous ne sont donc plus à jour. Voir [`docs/V2/README.md`](docs/V2/README.md),
-> l'[ADR 0018](docs/adr/0018-projet-exemple-dossier-pitch.md) et la
-> [note d'implémentation de la phase 15](docs/V2/15-onboarding-exemple-pitch/IMPLEMENTATION.md).
+> phase 07. Le plan V3 a depuis livré les phases 01 à 15, puis la phase 16
+> (PDF local, diagnostic nettoyé, journal d'erreurs opt-in, textes légaux
+> provisoires). Les chiffres de tests ci-dessous ne sont donc plus à jour :
+> la session du 2026-11-24 compte **273 tests UI**, **100 tests sidecar** et
+> **17 tests reporting**. Voir [`docs/V2/README.md`](docs/V2/README.md),
+> l'[ADR 0018](docs/adr/0018-projet-exemple-dossier-pitch.md),
+> l'[ADR 0019](docs/adr/0019-export-pdf-local-et-diagnostic.md) et la
+> [note d'implémentation de la phase 16](docs/V2/16-durcissement-lancement/IMPLEMENTATION.md).
 
 **Projet** : `/home/foumou/Documents/projects/SEE-THE-FUTURE-OF-YOUR-PROJECT`
 **Remote** : `git@github.com:SnackeyesD/SEE-THE-FUTURE-OF-YOUR-PROJECT.git`

@@ -24,7 +24,7 @@
 - **3D** : Three.js + `@react-three/fiber`, chargement paresseux, détection WebGL, repli heatmap 2D obligatoire. Aucune information exclusive à la 3D (ADR 0013).
 - **État UI** : Zustand + commandes inversibles pour les entrées. Les **résultats ne sont pas annulables** : undo restaure les entrées et invalide le run courant (ADR 0014).
 - **Pas de nouvelle dépendance de calcul dans le moteur** : numpy et pydantic uniquement. Les lois sont inversées explicitement, sans scipy.
-- **Protocole** : `1.8.0` (métriques), `1.9.0` (événements), `1.10.0` (IPC de flux), `1.11.0` (surface/goal seek), `1.12.0` (provenance). Un seul propriétaire du schéma à la fois ; `protocol:generate` puis `protocol:check` obligatoires. `MethodName` ne contient que les méthodes requêtables ; les notifications serveur (ex. `simulate.progress`) vivent dans `NotificationName`.
+- **Protocole** : `1.8.0` (métriques), `1.9.0` (événements), `1.10.0` (IPC de flux), `1.11.0` (surface/goal seek), `1.12.0` (provenance), `1.15.0` (exemple/dossier), `1.16.0` (export PDF). Un seul propriétaire du schéma à la fois ; `protocol:generate` puis `protocol:check` obligatoires. `MethodName` ne contient que les méthodes requêtables ; les notifications serveur (ex. `simulate.progress`) vivent dans `NotificationName`.
 - **Persistance** : migration `0006` pour branches/versions/qualité ; toute migration destructive exige un test sur base réelle et une sauvegarde.
 - **Explication LLM** : payload de provenance minimal, validateur numérique côté sidecar, réparation limitée, repli déterministe hors ligne. Aucune clé, aucun chemin, aucun projet entier dans le payload, les logs ou le cache (ADR 0016).
 - **Performance** : toute régression > 20 % sur un budget de `docs/perf/baseline.md` bloque le merge. Mesurer sur la machine de référence modeste, pas sur un poste de développement rapide.
@@ -85,6 +85,8 @@ npm run bench:ui
 - `data/examples` : modèles de projets importables, versionnés et documentés.
 - `docs/adr` : décisions d'architecture.
 - `docs/perf` : machine de référence, baseline et rapports `npm run bench`.
+- `docs/legal` : politique de confidentialité et CGU provisoires.
+- `docs/release` : checklist de publication et procédure de rollback.
 - `scripts/perf` : bancs moteur/sidecar/UI et orchestrateur.
 - `docs/V2` : plan d'implémentation V3 et une phase par dossier.
 

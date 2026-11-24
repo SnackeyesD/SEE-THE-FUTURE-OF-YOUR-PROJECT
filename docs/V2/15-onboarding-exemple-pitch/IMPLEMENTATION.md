@@ -1,7 +1,7 @@
 # Phase 15 — note d'implémentation
 
 - **Date** : 2026-11-23
-- **Protocole** : `1.15.0`
+- **Protocole** : `1.15.0` (phase 15), étendu à `1.16.0` en phase 16 (`report.buildPdf`).
 - **ADR** : [0018](../../adr/0018-projet-exemple-dossier-pitch.md)
 
 ## Livré
@@ -60,8 +60,9 @@ reste dans `sourcing-pack-cg.md`.
 
 ## Écarts assumés
 
-- **PDF reporté.** Le plan autorisait un premier livrable Markdown ; le PDF
-  passera par l'impression de la webview, sans seconde chaîne de calcul.
+- **PDF livré en phase 16.** Le plan autorisait un premier livrable Markdown ;
+  le PDF est produit localement par `see_reporting.pdf`, à partir du même
+  Markdown, sans seconde chaîne de calcul ni dépendance lourde (ADR 0019).
 - **Téléchargement Markdown via la webview.** Le bouton produit un fichier
   `text/markdown` téléchargé par le navigateur/webview. Une boîte de dialogue
   d'enregistrement native (`tauri-plugin-dialog`) est laissée à la phase 16 ;

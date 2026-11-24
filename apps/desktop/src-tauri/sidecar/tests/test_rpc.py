@@ -139,7 +139,7 @@ def test_health_exposes_versions(sidecar: SidecarProcess) -> None:
     response = sidecar.call("health")
     result = response["result"]
     assert result["status"] == "ok"
-    assert result["protocolVersion"] == "1.15.0"
+    assert result["protocolVersion"] == "1.16.0"
     assert isinstance(result["pid"], int)
     assert result["sidecarVersion"]
 

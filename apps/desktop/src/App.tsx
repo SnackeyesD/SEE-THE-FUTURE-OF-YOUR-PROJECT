@@ -44,6 +44,8 @@ import {
 } from "./components/SandboxReviewPanel";
 import { GuidedTour } from "./components/onboarding/GuidedTour";
 import { useViewHotkeys } from "./hooks/useViewHotkeys";
+import { installCrashLogger } from "./lib/crashlog";
+import { downloadBase64, downloadText } from "./lib/download";
 import { BriefScreen } from "./screens/BriefScreen";
 import { BranchesScreen } from "./screens/BranchesScreen";
 import { TokenBoard } from "./components/TokenBoard";
@@ -59,6 +61,7 @@ import {
   agentState,
   agentTurn,
   buildReport,
+  buildReportPdf,
   createProject,
   createProjectFromTemplate,
   deleteAgentPermission,
@@ -119,24 +122,6 @@ const NAV: Array<{ id: View; fr: string; en: string }> = [
 let nextLogId = 1;
 
 const DEMO_TEMPLATE_ID = "retail-depot-brazzaville";
-
-function downloadText(filename: string, content: string): boolean {
-  try {
-    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.rel = "noopener";
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function timestamp(): string {
   return new Date().toLocaleTimeString("fr-FR", { hour12: false });
@@ -338,6 +323,8 @@ export function App() {
     void bootstrap();
   }, [bootstrap]);
 
+  useEffect(() => installCrashLogger(), []);
+
   useEffect(() => {
     const handleOnline = () => setOnline(true);
     const handleOffline = () => setOnline(false);
@@ -475,6 +462,36 @@ export function App() {
         return;
       }
       pushLog("success", `Dossier exporté : ${report.filename}.`);
+    } catch (reason) {
+      setError(humanize(reason));
+    } finally {
+      setReportBusy(false);
+    }
+  }, [activeProject, data?.run?.id, pushLog]);
+
+  const handleExportPdf = useCallback(async () => {
+    if (!activeProject) return;
+    setReportBusy(true);
+    setError("");
+    try {
+      const report = await buildReportPdf({
+        projectId: activeProject.id,
+        runId: data?.run?.id,
+      });
+      if (
+        !downloadBase64(
+          report.filename,
+          report.contentBase64,
+          "application/pdf",
+        )
+      ) {
+        setError("Le téléchargement du PDF n'est pas disponible dans cet environnement.");
+        return;
+      }
+      pushLog(
+        "success",
+        `Dossier PDF exporté : ${report.filename} (${report.byteLength} octets).`,
+      );
     } catch (reason) {
       setError(humanize(reason));
     } finally {
@@ -894,6 +911,7 @@ export function App() {
           error={error}
           onNarrate={handleNarrate}
           onExportReport={handleExportReport}
+          onExportPdf={handleExportPdf}
           onBack={() => navigate("simulation")}
         />
       ) : null}

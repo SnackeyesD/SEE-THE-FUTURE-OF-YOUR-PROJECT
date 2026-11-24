@@ -3,7 +3,7 @@
   "$id": "https://seethefuture.local/protocol/messages.schema.json",
   "title": "See The Future IPC protocol",
   "description": "Source unique des messages JSON-RPC 2.0 échangés entre le shell Tauri et le sidecar Python.",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "$defs": {
     "RequestId": {
       "description": "Identifiant de requête JSON-RPC (entier ou chaîne).",
@@ -84,6 +84,7 @@
         "project.simulate",
         "template.list",
         "report.build",
+        "report.buildPdf",
         "simulation.start",
         "simulation.cancel",
         "simulation.surface",
@@ -773,6 +774,30 @@
       "properties": {
         "format": { "enum": ["markdown"] },
         "content": { "type": "string" },
+        "filename": { "type": "string" },
+        "generatedAt": { "type": "string" },
+        "runId": { "type": "string" },
+        "seed": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+        "engineVersion": { "type": "string" }
+      }
+    },
+    "ReportPdfResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "contentBase64",
+        "byteLength",
+        "filename",
+        "generatedAt",
+        "runId",
+        "seed",
+        "engineVersion"
+      ],
+      "properties": {
+        "format": { "enum": ["pdf"] },
+        "contentBase64": { "type": "string" },
+        "byteLength": { "type": "integer" },
         "filename": { "type": "string" },
         "generatedAt": { "type": "string" },
         "runId": { "type": "string" },

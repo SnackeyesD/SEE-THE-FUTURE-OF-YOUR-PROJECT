@@ -73,6 +73,7 @@ import type {
   ProviderUsageResult,
   ReportBuildParams,
   ReportBuildResult,
+  ReportPdfResult,
   RoleAssignment,
   RoleAssignmentResult,
   RoleListResult,
@@ -159,6 +160,10 @@ export function createProjectFromTemplate(
 
 export function buildReport(params: ReportBuildParams): Promise<ReportBuildResult> {
   return invoke("report_build", { params });
+}
+
+export function buildReportPdf(params: ReportBuildParams): Promise<ReportPdfResult> {
+  return invoke("report_build_pdf", { params });
 }
 
 export function getProjectData(params: ProjectDataParams): Promise<ProjectDataResult> {

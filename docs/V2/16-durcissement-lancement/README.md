@@ -8,6 +8,12 @@
 **Profil** : senior infra/release + tous ; 8–10 jours.
 **Jalon D** : produit installable, signé, utilisable par un inconnu sans aide.
 
+> **État (2026-11-24)** : première tranche livrée — PDF local, diagnostic
+> nettoyé, journal d'erreurs opt-in, textes légaux provisoires, écran
+> « À propos », `CHANGELOG.md` et checklist de release. Voir
+> [`IMPLEMENTATION.md`](IMPLEMENTATION.md) pour les écarts (signature, VM,
+> Linux, E2E, migration réelle).
+
 ---
 
 ## 1. Contexte
@@ -44,12 +50,12 @@
 - [ ] Installateur Windows signé + vérification SmartScreen.
 - [ ] Build Linux (AppImage/deb) testé.
 - [ ] Configuration de mise à jour signée (ou procédure manuelle).
-- [ ] Rapports de crash opt-in (si activés) avec scrubbing.
-- [ ] Politique de confidentialité, CGU, mentions de transparence.
+- [x] Rapports de crash opt-in (si activés) avec scrubbing. *Journal local sans envoi, désactivé par défaut.*
+- [x] Politique de confidentialité, CGU, mentions de transparence. *Provisoires, dans `docs/legal` et l'écran « À propos ».*
 - [ ] Suite E2E Playwright en mode web + shim IPC.
 - [ ] Tests de migration v2 → v3 sur base réelle.
-- [ ] `docs/perf/release.md` et `docs/release/checklist.md`.
-- [ ] `CHANGELOG.md` et version `3.0.0`.
+- [ ] `docs/perf/release.md` et `docs/release/checklist.md`. *Checklist livrée ; `docs/perf/release.md` reste à écrire.*
+- [ ] `CHANGELOG.md` et version `3.0.0`. *`CHANGELOG.md` livré ; bump de version à faire avec la release.*
 
 ## 4. Tâches détaillées
 
@@ -72,18 +78,18 @@
 
 ### Lot C — Crash et diagnostic
 
-- [ ] Rapports de crash **opt-in** : activation explicite, contenu minimal (version, OS, stack), jamais le projet ni les clés.
-- [ ] Scrubbing des chemins, noms de projet, clés API, payloads.
-- [ ] Bouton « exporter un diagnostic » local (logs + version) pour le support.
-- [ ] Rétention et suppression documentées.
-- [ ] Si désactivé : aucun envoi réseau.
+- [x] Rapports de crash **opt-in** : activation explicite, contenu minimal (version, OS, stack), jamais le projet ni les clés. *Journal local : aucun envoi réseau dans cette version.*
+- [x] Scrubbing des chemins, noms de projet, clés API, payloads.
+- [x] Bouton « exporter un diagnostic » local (logs + version) pour le support.
+- [x] Rétention et suppression documentées.
+- [x] Si désactivé : aucun envoi réseau.
 
 ### Lot D — Légal et transparence
 
-- [ ] Politique de confidentialité : données locales, ce qui part vers le fournisseur IA, télémétrie.
-- [ ] CGU : usage, limites, absence de garantie de prévision.
-- [ ] Mentions dans l'app : « simulation basée sur vos hypothèses, pas une prévision garantie », graine, version moteur.
-- [ ] Écran « À propos » : versions, licences open source, contact.
+- [x] Politique de confidentialité : données locales, ce qui part vers le fournisseur IA, télémétrie. *Provisoire.*
+- [x] CGU : usage, limites, absence de garantie de prévision. *Provisoires.*
+- [x] Mentions dans l'app : « simulation basée sur vos hypothèses, pas une prévision garantie », graine, version moteur.
+- [x] Écran « À propos » : versions, licences open source, contact. *Contact à publier avec la release.*
 - [ ] Vérifier la conformité des packs de benchmarks (sources, licences).
 
 ### Lot E — E2E et non-régression

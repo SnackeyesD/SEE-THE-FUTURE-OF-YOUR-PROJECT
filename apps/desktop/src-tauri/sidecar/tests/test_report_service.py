@@ -227,3 +227,36 @@ def test_report_does_not_leak_paths_or_keys(
     assert "apikey" not in lowered
     assert "c:\\" not in lowered
     assert "/home/" not in lowered
+
+
+def test_pdf_report_is_deterministic_and_valid(
+    store: ProjectStore, service: template_service.TemplateService
+) -> None:
+    import base64
+
+    project_id, run, _payload = _final_run(store, service)
+    params = {
+        "projectId": project_id,
+        "runId": run.id,
+        "generatedAt": "2026-11-23T12:00:00+00:00",
+    }
+    first = report_service.build_pdf(store, params)
+    second = report_service.build_pdf(store, params)
+    assert first == second
+    assert first["format"] == "pdf"
+    assert first["filename"].endswith("-dossier-20261123.pdf")
+    assert first["filename"] != report_service.build(store, params)["filename"]
+    content = base64.b64decode(first["contentBase64"])
+    assert content.startswith(b"%PDF-1.4")
+    assert content.rstrip().endswith(b"%%EOF")
+    assert len(content) == first["byteLength"]
+    assert "Traçabilité".encode("cp1252") in content
+    assert b"C:\\" not in content
+
+
+def test_pdf_report_rejects_a_draft_or_missing_run(
+    store: ProjectStore, service: template_service.TemplateService
+) -> None:
+    imported = _import(store, service)
+    with pytest.raises(StorageValidationError):
+        report_service.build_pdf(store, {"projectId": imported["project"]["id"]})

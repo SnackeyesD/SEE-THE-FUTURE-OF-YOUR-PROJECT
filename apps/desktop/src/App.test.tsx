@@ -10,6 +10,7 @@ const ipc = vi.hoisted(() => ({
   listTemplates: vi.fn(),
   createProjectFromTemplate: vi.fn(),
   buildReport: vi.fn(),
+  buildReportPdf: vi.fn(),
   getProjectData: vi.fn(),
   agentState: vi.fn(),
   listRoles: vi.fn(),

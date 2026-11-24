@@ -519,6 +519,11 @@ def report_build(params: dict[str, Any], _context: RequestContext) -> dict[str, 
 
 
 @_storage_handler
+def report_build_pdf(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
+    return report_service.build_pdf(get_store(), params)
+
+
+@_storage_handler
 def project_open(params: dict[str, Any], _context: RequestContext) -> dict[str, Any]:
     return _project_result(get_store().open_project(_require_text(params, "projectId")))
 
@@ -871,6 +876,7 @@ def default_handlers() -> dict[str, Handler]:
         "project.createFromTemplate": project_create_from_template,
         "template.list": template_list,
         "report.build": report_build,
+        "report.buildPdf": report_build_pdf,
         "project.open": project_open,
         "project.rename": project_rename,
         "project.duplicate": project_duplicate,

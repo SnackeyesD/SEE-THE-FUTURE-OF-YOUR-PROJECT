@@ -177,6 +177,15 @@ fn report_build(
 }
 
 #[tauri::command]
+fn report_build_pdf(
+    state: tauri::State<'_, Mutex<SidecarManager>>,
+    params: Value,
+) -> Result<Value, String> {
+    let handle = state.lock().map_err(|error| error.to_string())?.handle();
+    handle.request("report.buildPdf", params)
+}
+
+#[tauri::command]
 fn project_data(
     state: tauri::State<'_, Mutex<SidecarManager>>,
     params: Value,
@@ -556,6 +565,7 @@ pub fn run() {
             project_create_from_template,
             template_list,
             report_build,
+            report_build_pdf,
             project_data,
             project_brief_save,
             project_scenario_save,

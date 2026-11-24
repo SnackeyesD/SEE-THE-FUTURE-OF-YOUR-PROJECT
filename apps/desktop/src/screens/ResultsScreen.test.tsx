@@ -14,6 +14,7 @@ function renderScreen(overrides: Partial<Parameters<typeof ResultsScreen>[0]> = 
     error: "",
     onNarrate: vi.fn().mockResolvedValue(undefined),
     onExportReport: vi.fn().mockResolvedValue(undefined),
+    onExportPdf: vi.fn().mockResolvedValue(undefined),
     onBack: vi.fn(),
     ...overrides,
   };
@@ -62,6 +63,14 @@ describe("ResultsScreen", () => {
 
     await user.click(screen.getByRole("button", { name: "Exporter le dossier" }));
     expect(props.onExportReport).toHaveBeenCalledTimes(1);
+  });
+
+  it("demande l'export PDF", async () => {
+    const user = userEvent.setup();
+    const props = renderScreen();
+
+    await user.click(screen.getByRole("button", { name: "Exporter en PDF" }));
+    expect(props.onExportPdf).toHaveBeenCalledTimes(1);
   });
 
   it("affiche un état vide sans run", () => {

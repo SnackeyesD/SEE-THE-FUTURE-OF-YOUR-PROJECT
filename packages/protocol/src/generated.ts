@@ -1,9 +1,9 @@
 // AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
 // Source: packages/protocol/schema/messages.schema.json
-// Protocol version: 1.15.0
+// Protocol version: 1.16.0
 // Regenerate with: npm run protocol:generate
 
-export const PROTOCOL_VERSION = "1.15.0";
+export const PROTOCOL_VERSION = "1.16.0";
 
 export type RequestId = number | string;
 
@@ -27,7 +27,7 @@ export interface JSONRPCResponse {
   error?: JSONRPCErrorObject;
 }
 
-export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "project.list" | "project.create" | "project.createFromTemplate" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.scenario.branch" | "project.scenario.list" | "project.scenario.get" | "project.scenario.rename" | "project.scenario.archive" | "project.scenario.unarchive" | "project.run.list" | "project.run.pin" | "project.run.compare" | "project.version.create" | "project.version.list" | "project.version.restore" | "project.version.delete" | "project.simulate" | "template.list" | "report.build" | "simulation.start" | "simulation.cancel" | "simulation.surface" | "simulation.goalseek" | "simulation.trajectories" | "simulation.run_params" | "simulation.provenance" | "simulation.explain" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools" | "benchmark.lookup" | "benchmark.pack.list" | "benchmark.pack.import";
+export type MethodName = "ping" | "health" | "log" | "shutdown" | "simulate" | "project.list" | "project.create" | "project.createFromTemplate" | "project.open" | "project.rename" | "project.duplicate" | "project.archive" | "project.restore" | "project.trash" | "project.delete" | "project.export" | "project.import" | "project.size" | "project.data" | "project.brief.save" | "project.scenario.save" | "project.scenario.branch" | "project.scenario.list" | "project.scenario.get" | "project.scenario.rename" | "project.scenario.archive" | "project.scenario.unarchive" | "project.run.list" | "project.run.pin" | "project.run.compare" | "project.version.create" | "project.version.list" | "project.version.restore" | "project.version.delete" | "project.simulate" | "template.list" | "report.build" | "report.buildPdf" | "simulation.start" | "simulation.cancel" | "simulation.surface" | "simulation.goalseek" | "simulation.trajectories" | "simulation.run_params" | "simulation.provenance" | "simulation.explain" | "integrity.check" | "storage.backup" | "provider.catalog" | "provider.profile.list" | "provider.profile.save" | "provider.profile.delete" | "provider.role.list" | "provider.role.set" | "provider.role.delete" | "provider.test" | "provider.models" | "provider.chat" | "provider.usage" | "provider.budget.get" | "provider.budget.set" | "provider.budget.delete" | "agent.prepare" | "agent.state" | "agent.start" | "agent.reset" | "agent.turn" | "agent.permission.list" | "agent.permission.set" | "agent.permission.delete" | "agent.trace" | "agent.trace.export" | "agent.tools" | "benchmark.lookup" | "benchmark.pack.list" | "benchmark.pack.import";
 
 export type NotificationName = "simulate.progress" | "simulation.progress" | "simulation.partial" | "simulation.surface.partial" | "simulation.done" | "simulation.cancelled" | "simulation.error";
 
@@ -323,6 +323,17 @@ export interface ReportBuildParams {
 export interface ReportBuildResult {
   format: "markdown";
   content: string;
+  filename: string;
+  generatedAt: string;
+  runId: string;
+  seed: number | null;
+  engineVersion: string;
+}
+
+export interface ReportPdfResult {
+  format: "pdf";
+  contentBase64: string;
+  byteLength: number;
   filename: string;
   generatedAt: string;
   runId: string;
